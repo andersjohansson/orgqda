@@ -4,22 +4,39 @@
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
+;; Created: 2014-10-12
+;; Modified: 2015-11-27
 ;; Package-Requires: ((xah-replace-pairs "2.0"))
 ;; Keywords: outlines, wp
-;; URL: TODO
+;; URL: http://www.github.com/andersjohansson/orgqda
+
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 2, or (at
+;; your option) any later version.
+
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with GNU Emacs; see the file COPYING.  If not, write to the
+;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+;; Boston, MA 02111-1307, USA.
 
 ;;; Commentary:
-;; BLBLBA TODO
-;; 
-
-
+;; orgqda defines a minor mode and several commands for making and
+;; collection of coded snippets possible in text written in org-mode.
+;; It works in a simple (and perhaps stupid) way by viewing org-mode
+;; tags added to degenerate inlinetasks as applying to the preceding
+;; paragraph.
 
 
 ;;(require 'cl-extra) ;;autoloaded?
-
 (require 'xah-replace-pairs)
 (require 'bookmark)
-
+(require 'org-inlinetask)
 
 (eval-when-compile
   (require 'cl-macs))
@@ -65,19 +82,20 @@ in csv-export."
   :group 'orgqda)
 
 (defcustom orgqda-convert-csv-to-encoding nil
-  "Encoding to use for saved csv files
-By default csv files are saved with the encoding used by emacs or the files.
-Setting this to a symbol that represents another encoding will
-ensure all characters are of this encoding and replace those that
-are not by ? in saved csv files."
-  :type (append
-         '(choice)
-         '((const nil :tag "don't convert") )
-         '((const t :tag "iso-8859-1"))
-         (mapcar
-          (lambda (cs) (list 'const cs))
-          coding-system-list))
-  :group 'orgqda)
+  "Encoding to use for saved csv files By default csv files are
+saved with the encoding used by emacs or the files. Setting this
+to a symbol that represents another encoding will ensure all
+characters are of this encoding and replace those that are not by
+? in saved csv files. t is a shortcut for
+\"iso-8859-1\""
+:type (append
+       '(choice)
+       '((const nil :tag "don't convert") )
+       '((const t :tag "iso-8859-1"))
+       (mapcar
+        (lambda (cs) (list 'const cs))
+        coding-system-list))
+:group 'orgqda)
 
 ;;;###autoload
   (defvar orgqda-tag-files nil
@@ -94,12 +112,39 @@ For directories, all .org-files (matched by
 (put 'orgqda-tag-files 'safe-local-variable
 	 (lambda (arg) (or (stringp arg) (and (listp arg) (cl-every 'stringp arg)))))
 
-;;(defvar orgqda-keymap nil)
-
-
-
+(defvar orgqda-mode-map nil
+  "Local keymap for orgqda-mode")
 
 ;;; Interactive commands
+
+(autoload 'org-inlinetask-in-task-p "org-inlinetask")
+;;;###autoload
+(defun orgqda-insert-inlinetask (&optional arg title coding)
+  "Insert a degenerate inlinetask after current paragraph or,
+with non-nil prefix arg, after current line.
+
+TITLE is a string defining a title for the inlinetask and CODING
+if non-nil additionally calls `org-set-tags-command`."
+  (interactive "P")
+  (unless (org-inlinetask-in-task-p) ; add nothing if already in task
+    (unless (and (bolp) (eolp)) ; only move if inside a line of text
+      (if arg (forward-line) (forward-paragraph)))
+    (unless (org-inlinetask-in-task-p) ; create inlinetask if not present
+      (unless (and (bolp) (eolp)) (newline)) ;newline at e.g. eof
+      (unless (and arg (bolp) (eolp)) (open-line 1)) ; open-line if at newline
+      (insert (concat (make-string
+                       (1+ org-inlinetask-min-level) 42) " " title))))
+  (when (and coding (org-inlinetask-in-task-p))
+    (org-set-tags-command)))
+
+
+;;;###autoload
+(defun orgqda-insert-inlinetask-coding (arg)
+  "Call `orqda-insert-inlinetask` with coding option and title \"∈\".
+Prefix arg is passed through."
+  (interactive "P")
+  (orgqda-insert-inlinetask arg "∈" t))
+
 ;;;###autoload
 (defun orgqda-list-buffer-tags (&optional alpha)
   "List all tags with counts, in a buffer and possibly all files
@@ -174,7 +219,7 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
 	;; (csv-mode)))
 	))
 
-;;TODO AUTOLOAD neccesary? hur funkar det egentligen?
+;;TODO AUTOLOAD neccessary?
 ;;;###autoload
 (defvar orgqda--csv-curr-mname nil)
 
@@ -389,9 +434,7 @@ each character in the buffer."
 	 (org-copy-subtree)
 	 (with-temp-buffer
 	   (insert "*")
-	   (org-paste-subtree)
-	   (pop kill-ring)
-	   (setq kill-ring-yank-pointer kill-ring)
+	   (org-paste-subtree nil nil nil t)
 	   (forward-line 1)
 	   (buffer-substring-no-properties
 		(point) (point-max)))))))
@@ -413,7 +456,6 @@ each character in the buffer."
       (substring-no-properties (org-get-heading t t)))))
 
 (defun orgqda-inlinetask-in-degenerate-task-p ()
-  (require 'org-inlinetask)
   (save-excursion
 	(let* ((case-fold-search t)
 		   (stars-re (org-inlinetask-outline-regexp))
@@ -604,14 +646,10 @@ of codes.
 Enables tag completion with tags from all files defined in `orgqda-tag-files'
 
 COMMANDS??"
-
+  ;;TODO Dok ^
   :lighter " QDA"
   :global t
-  ;;:keymap 'orgqda-keymap
-  ;; Minor modes may bind commands to key sequences consisting of `C-c'
-  ;; followed by a punctuation character.  However, sequences consisting of
-  ;; `C-c' followed by one of `{}<>:;', or a control character or digit, are
-  ;; reserved for major modes.  Also, `C-c LETTER' is reserved for users.
+  :keymap orgqda-mode-map
   :group 'orgqda
   (if orgqda-mode
       (progn
@@ -622,6 +660,14 @@ COMMANDS??"
     ;;deactivate
     (advice-remove 'org-agenda-files #'orgqda-tag-files)
     (setq org-complete-tags-always-offer-all-agenda-tags orgqda--save-ctao)))
+
+;;; Keybindings
+(unless orgqda-mode-map
+  (setq orgqda-mode-map (make-sparse-keymap)))
+
+(define-key orgqda-mode-map (kbd "C-c C-x m") #'orgqda-insert-inlinetask)
+(define-key orgqda-mode-map (kbd "C-c C-x n") #'orgqda-insert-inlinetask-coding)
+
 
 (provide 'orgqda)
 
