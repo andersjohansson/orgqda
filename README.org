@@ -1,0 +1,44 @@
+* orgqda: Qualitative Data Analysis for Emacs org-mode addicts
+
+~orgqda~ defines a minor mode and several commands for making [[https://en.wikipedia.org/wiki/Coding_%2528social_sciences%2529#Qualitative_approach][coding]] and collection of coded snippets possible in text written in org-mode. I created it for coding field notes and interview transcripts in my PhD project.
+
+It works in a simple (and perhaps stupid) way by viewing org-mode tags added to degenerate inlinetasks as applying to the preceding paragraph. Like this:
+
+#+BEGIN_EXAMPLE
+Some text that should be given some codes. We make this text reasonably long so that it appears to be some kind of paragraph and not only a few sentences. This is a third sentence. And this a fourth.
+*************** ∈ :stupidSentences:anotherCode:
+#+END_EXAMPLE
+
+Additionally, when tags are applied to ordinary headings or inlinetasks with content, the subtree or inlinetask is extracted instead of the preceding paragraph.
+
+Codes can be listed with ~orgqda-list-buffer-tags~, and all regions for a specific code extracted with ~orgqda-collect-tagged~. Both these functions creates a custom org-file with links to the original regions.
+
+** Minor mode
+It defines a minor mode ~orgqda-mode~ which, when enabled, gathers tags for listing and completion from all files defined via ~orgqda-tag-files~. This is helpful for instance when keeping different field journals and transcripts in different files but still using a common coding scheme for all of them.
+
+*Caveat:* ~orgqda-mode~ interferes with some agenda functions, so make sure to disable it when using the agenda in the same Emacs session (this could surely coded in a better way and perhaps disabled via a variable).
+
+** csv-export of coded regions
+I have been using the concept mapping software [[http://vue.tufts.edu/][VUE]] for sorting through coded regions graphically. The csv-export functions is a way of importing regions into VUE, or other programs.
+The csv-export code is currently not so generalized and may be changed.
+
+** List of commands
+See docstrings for further info
+#+BEGIN_EXAMPLE
+ orgqda-list-buffer-tags (&optional alpha)
+ orgqda-list-buffer-tags-full (&optional alpha)
+ orgqda-collect-tagged (&optional match)
+ orgqda-collect-tagged-csv (&optional match)
+ orgqda-collect-tagged-csv-save (&optional match)
+ orgqda-collect-tagged-csv-save-all (&optional threshold)
+#+END_EXAMPLE
+
+** List of customizable variables
+#+BEGIN_EXAMPLE
+orgqda-csv-dir "~"
+orgqda-tag-collect-extra-info nil
+orgqda-collect-from-all-files t
+orgqda-tag-collect-extra-info-csv nil
+orgqda-tag-collect-extra-info2-csv nil
+orgqda-convert-csv-to-encoding nil
+#+END_EXAMPLE
