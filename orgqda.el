@@ -88,18 +88,18 @@ to a symbol that represents another encoding will ensure all
 characters are of this encoding and replace those that are not by
 ? in saved csv files. t is a shortcut for
 \"iso-8859-1\""
-:type (append
-       '(choice)
-       '((const nil :tag "don't convert") )
-       '((const t :tag "iso-8859-1"))
-       (mapcar
-        (lambda (cs) (list 'const cs))
-        coding-system-list))
-:group 'orgqda)
+  :type (append
+         '(choice)
+         '((const nil :tag "don't convert") )
+         '((const t :tag "iso-8859-1"))
+         (mapcar
+          (lambda (cs) (list 'const cs))
+          coding-system-list))
+  :group 'orgqda)
 
 ;;;###autoload
-  (defvar orgqda-tag-files nil
-    "Extra files from which tags should be fetched for completion.
+(defvar orgqda-tag-files nil
+  "Extra files from which tags should be fetched for completion.
 A list of files and directories, or a the name of a file
 containing such a list. Relative paths in such a file are read as
 relative to the file itself.
@@ -152,14 +152,14 @@ in `orgqda-tag-files'. Sorted by count or alphabetically
 if optional (prefix) argument is non-nil."
   (interactive "P")
   (let ((tcl (orgqda--buffer-tags-list alpha))
-		(fn (buffer-file-name)))
-	(switch-to-buffer-other-window (generate-new-buffer "*orgqda-taglist*"))
-	(mapc (lambda (x)
-			(insert (format "- [[otag:%s:%s][%s]] (%d)\n"
+        (fn (buffer-file-name)))
+    (switch-to-buffer-other-window (generate-new-buffer "*orgqda-taglist*"))
+    (mapc (lambda (x)
+            (insert (format "- [[otag:%s:%s][%s]] (%d)\n"
                             fn (car x) (car x) (cadr x))))
-		  tcl)
-	(goto-char (point-min))
-	(org-mode)))
+          tcl)
+    (goto-char (point-min))
+    (org-mode)))
 
 ;;;###autoload
 (defun orgqda-list-buffer-tags-full (&optional alpha)
