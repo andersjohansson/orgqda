@@ -594,10 +594,9 @@ if optional (prefix) argument is t."
 
 ;;; internal functions
 (defun orgqda-tag-files (&optional unrestricted archives)
-  "Returns list of files in addition to the current which should
-be searched for tags. Based on value of variable
-`orgqda-tag-files' which could be a list of files and
-directories, or a file containing such a list.
+  "Returns list of files which should be searched for tags. Based
+on value of variable `orgqda-tag-files' which could be a list of
+files and directories, or a file containing such a list.
 
 Used for overriding `org-agenda-files' when `orgqda-mode' is
 active.
@@ -625,15 +624,12 @@ org-agenda-files."
                     (if (file-directory-p f)
                         (directory-files f t org-agenda-file-regexp)
                       (list f))) files)))
-    ;; delete unreadable and current file (silently)
+    ;; delete unreadable files
     (setq files (delq nil
                       (mapcar
                        (function
                         (lambda (file)
                           (and (file-readable-p file)
-                               ;; (not (string= file
-                               ;; (buffer-file-name)));;TODO, tror
-                               ;; inte att den ska vara där i alla fall
                                file)))
                        files)))
     files))
