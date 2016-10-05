@@ -112,8 +112,16 @@ For directories, all .org-files (matched by
 (put 'orgqda-tag-files 'safe-local-variable
 	 (lambda (arg) (or (stringp arg) (and (listp arg) (cl-every 'stringp arg)))))
 
+;;; Keybindings
+;;;###autoload
 (defvar orgqda-mode-map nil
   "Local keymap for orgqda-mode")
+;;;###autoload
+(unless orgqda-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-x m") #'orgqda-insert-inlinetask)
+    (define-key map (kbd "C-c C-x n") #'orgqda-insert-inlinetask-coding)
+    (setq orgqda-mode-map map)))
 
 ;;; Interactive commands
 
@@ -143,7 +151,8 @@ if non-nil additionally calls `org-set-tags-command`."
   "Call `orqda-insert-inlinetask` with coding option and title \"∈\".
 Prefix arg is passed through."
   (interactive "P")
-  (orgqda-insert-inlinetask arg "∈" t))
+  (orgqda-insert-inlinetask arg "∈" t)
+  (move-end-of-line nil))
 
 ;;;###autoload
 (defun orgqda-list-buffer-tags (&optional alpha)
@@ -429,7 +438,7 @@ each character in the buffer."
 		(save-excursion (org-inlinetask-goto-beginning)
 						(end-of-line) (point))
 		(save-excursion (org-inlinetask-goto-end)
-						(forward-line -1) (point)))))
+						(forward-line 0) (point)))))
 	((org-at-heading-p)
 	 (org-copy-subtree)
 	 (with-temp-buffer
@@ -539,12 +548,12 @@ if optional (prefix) argument is t."
   (save-excursion
 	(goto-char (point-min))
 	(while (re-search-forward
-			(org-re "[ \t]:\\([[:alnum:]_@#%:]+\\):[ \t\r\n]") nil t)
+			"[ \t]:\\([[:alnum:]_@#%:]+\\):[ \t\r\n]" nil t)
 	  (when (equal (char-after (point-at-bol 0)) ?*)
 		(mapc (lambda (x)
 				(let ((ov (gethash x tagscount 0))) ; gethash def=0
 				  (puthash x (1+ ov) tagscount)))
-			  (org-split-string (org-match-string-no-properties 1) ":")))))
+			  (org-split-string (match-string-no-properties 1) ":")))))
   tagscount)
 
 
@@ -569,7 +578,7 @@ if optional (prefix) argument is t."
 
 (defun orgqda-otag-store-link ()
   "Store a link to a org-mode file and tag."
-  (let* ((oir (org-in-regexp (org-re "\\(:[[:alnum:]_@#%:]+\\):[ \t]*$"))))
+  (let* ((oir (org-in-regexp "\\(:[[:alnum:]_@#%:]+\\):[ \t]*$")))
 	(when (and (equal major-mode 'org-mode) oir)
 	  (let* ((fn (buffer-file-name))
 			 (tagpos (org-between-regexps-p ":" ":" (car oir) (cdr oir)))
@@ -661,9 +670,6 @@ COMMANDS??"
     (advice-remove 'org-agenda-files #'orgqda-tag-files)
     (setq org-complete-tags-always-offer-all-agenda-tags orgqda--save-ctao)))
 
-;;; Keybindings
-(unless orgqda-mode-map
-  (setq orgqda-mode-map (make-sparse-keymap)))
 
 (define-key orgqda-mode-map (kbd "C-c C-x m") #'orgqda-insert-inlinetask)
 (define-key orgqda-mode-map (kbd "C-c C-x n") #'orgqda-insert-inlinetask-coding)
