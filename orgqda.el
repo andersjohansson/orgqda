@@ -6,7 +6,7 @@
 ;; Version: 0.1
 ;; Created: 2014-10-12
 ;; Modified: 2015-11-27
-;; Package-Requires: ((xah-replace-pairs "2.0"))
+;; Package-Requires: ((emacs "24.4") (xah-replace-pairs "2.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
 
@@ -593,16 +593,13 @@ if optional (prefix) argument is t."
 
 
 ;;; internal functions
-(defun orgqda-tag-files (&optional unrestricted archives)
+(defun orgqda-tag-files ()
   "Returns list of files which should be searched for tags. Based
 on value of variable `orgqda-tag-files' which could be a list of
 files and directories, or a file containing such a list.
 
 Used for overriding `org-agenda-files' when `orgqda-mode' is
-active.
-
-Parameters have no meaning and are just for compatibility with
-org-agenda-files."
+active."
   ;; Based on org-agenda-files
   (require 'org-agenda)
   (let ((files
@@ -634,9 +631,6 @@ org-agenda-files."
                        files)))
     files))
 
-;;; internal variables
-
-(defvar orgqda--save-ctao nil)
 
 ;;; minor mode definition
 ;;;###autoload
@@ -655,20 +649,29 @@ Enables tag completion with tags from all files defined in `orgqda-tag-files'
 COMMANDS??"
   ;;TODO Dok ^
   :lighter " QDA"
-  :global t
   :keymap orgqda-mode-map
   :group 'orgqda
   (if orgqda-mode
-      (progn
-        (setq orgqda--save-ctao org-complete-tags-always-offer-all-agenda-tags)
-        (when orgqda-tag-files
-          (setq org-complete-tags-always-offer-all-agenda-tags t)
-          (advice-add 'org-agenda-files :override #'orgqda-tag-files)))
-    ;;deactivate
-    (advice-remove 'org-agenda-files #'orgqda-tag-files)
-    (setq org-complete-tags-always-offer-all-agenda-tags orgqda--save-ctao)))
+      (when orgqda-tag-files
+        (setq-local org-complete-tags-always-offer-all-agenda-tags t))
+    (kill-local-variable org-complete-tags-always-offer-all-agenda-tags)))
 
+;;; Advice
 
+;;;###autoload
+(advice-add 'org-agenda-files :around #'orgqda-agenda-files-override)
+;;;###autoload
+(advice-add 'org-set-tags :around #'orgqda-set-tags-override)
+;;;###autoload
+(defun orgqda-agenda-files-override (oldfun &rest args)
+  (if orgqda-mode
+      (orgqda-tag-files)
+    (apply oldfun args)))
+;;;###autoload
+(defun orgqda-set-tags-override (oldfun &rest args)
+  (let ((org-current-tag-alist
+         (if orgqda-mode nil org-current-tag-alist)))
+    (apply oldfun args)))
 
 
 (provide 'orgqda)
