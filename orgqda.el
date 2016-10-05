@@ -302,7 +302,8 @@ per tag) in `orgqda-csv-dir'"
 
 (defun orgqda--coll-tagged-in-buffer (matcher &optional level)
   "Returns cons-cell with count in buffer as car and string of taglist as cdr."
-  (let ((orgqda--ct-level (or level 2)))
+  (let ((orgqda--ct-level (or level 2))
+        (org-use-tag-inheritance nil))
 	(save-excursion
 	  (save-restriction
 		(widen) (goto-char (point-min))
@@ -360,12 +361,13 @@ per tag) in `orgqda-csv-dir'"
 
 (defun orgqda--coll-tagged-in-buffer-csv (matcher)
   "Returns cons-cell with count in buffer as car and string of taglist as cdr."
-  (save-excursion
-	(save-restriction
-	  (widen) (goto-char (point-min))
-	  (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
-							   (cdr matcher) nil)))
-		(mapconcat 'identity tl "")))))
+  (let ((org-use-tag-inheritance nil))
+    (save-excursion
+      (save-restriction
+        (widen) (goto-char (point-min))
+        (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
+                                 (cdr matcher) nil)))
+          (mapconcat 'identity tl ""))))))
 
 (defun orgqda--get-paragraph-or-sub-to-csv () 
   (save-excursion
