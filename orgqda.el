@@ -669,8 +669,6 @@ COMMANDS??"
     (setq org-complete-tags-always-offer-all-agenda-tags orgqda--save-ctao)))
 
 
-(define-key orgqda-mode-map (kbd "C-c C-x m") #'orgqda-insert-inlinetask)
-(define-key orgqda-mode-map (kbd "C-c C-x n") #'orgqda-insert-inlinetask-coding)
 
 
 (provide 'orgqda)
