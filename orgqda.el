@@ -1,4 +1,4 @@
-;;; orgqda.el --- Qualitative data analysis using org-mode
+;;; orgqda.el --- Qualitative data analysis using org-mode  -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2015 Anders Johansson
 
@@ -6,7 +6,7 @@
 ;; Version: 0.1
 ;; Created: 2014-10-12
 ;; Modified: 2015-11-27
-;; Package-Requires: ((emacs "24.4") (xah-replace-pairs "2.0"))
+;; Package-Requires: ((emacs "25") (xah-replace-pairs "2.0") (org-mode "9.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
 
@@ -32,11 +32,11 @@
 ;; tags added to degenerate inlinetasks as applying to the preceding
 ;; paragraph.
 
-
-;;(require 'cl-extra) ;;autoloaded?
 (require 'xah-replace-pairs)
 (require 'bookmark)
 (require 'org-inlinetask)
+(require 'cl-lib)
+(require 'subr-x) ;if-let
 
 (eval-when-compile
   (require 'cl-macs))
@@ -97,20 +97,46 @@ characters are of this encoding and replace those that are not by
           coding-system-list))
   :group 'orgqda)
 
+(defcustom orgqda-exclude-tags nil
+  "Tags to exclude when listing coding tags in `orgqda-list-tags'
+  and `orgqda-list-tags-full'"
+  :type '(choice
+          (const :tag "None" nil)
+          (repeat :tag "List of tags" string))
+  :safe #'orgqda--list-of-strings-p)
+
 ;;;###autoload
-(defvar orgqda-tag-files nil
+(defvar-local orgqda-tag-files nil
   "Extra files from which tags should be fetched for completion.
-A list of files and directories, or a the name of a file
+A list of files and directories, or the name of a file
 containing such a list. Relative paths in such a file are read as
 relative to the file itself.
 
 For directories, all .org-files (matched by
-`org-agenda-file-regexp') are added.")
-;;;###autoload
-(make-variable-buffer-local 'orgqda-tag-files)
+`org-agenda-file-regexp') are added.
+
+Usually set by the user as a file or dir local variable.")
 ;;;###autoload
 (put 'orgqda-tag-files 'safe-local-variable
-	 (lambda (arg) (or (stringp arg) (and (listp arg) (cl-every 'stringp arg)))))
+	 #'orgqda--string-or-list-of-strings-p)
+
+(defun orgqda--string-or-list-of-strings-p (arg)
+  "Returns t if ARG is a string or a list of strings"
+  (or (stringp arg)
+      (orgqda--list-of-strings-p arg)))
+
+(defun orgqda--list-of-strings-p (arg)
+  "Returns t if ARG is a list of strings"
+  (and (listp arg) (cl-every 'stringp arg)))
+
+;;;###autoload
+(defvar-local orgqda--originating-buffer nil
+  "Buffer where the call for the current orgqda tag listing or
+  collected regions listing were made")
+
+;;;###autoload
+(defvar-local orgqda--old-org-current-tag-alist nil
+  "Saves state of `org-current-tag-alist' between enabling and disabling `orgqda-mode'.")
 
 ;;; Keybindings
 ;;;###autoload
@@ -122,6 +148,51 @@ For directories, all .org-files (matched by
     (define-key map (kbd "C-c C-x m") #'orgqda-insert-inlinetask)
     (define-key map (kbd "C-c C-x n") #'orgqda-insert-inlinetask-coding)
     (setq orgqda-mode-map map)))
+
+(defvar orgqda-list-mode-map nil
+  "Local keymap for orgqda-list-mode")
+;;;###autoload
+(unless orgqda-list-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "<drag-mouse-1>") #'orgqda-drag-merge-tags)
+    (setq orgqda-list-mode-map map)))
+
+;;; Minor mode definitions
+;;;###autoload
+(define-minor-mode orgqda-mode
+  "Toggle orgqda mode.
+Interactively with no argument, this command toggles the mode. A
+positive prefix argument enables the mode, any other prefix
+argument disables it. From Lisp, argument omitted or nil enables
+the mode, `toggle' toggles the state.
+
+Minor mode for qualitative coding of text material and extraction
+of codes.
+
+Enables tag completion with tags from all files defined in `orgqda-tag-files'
+
+COMMANDS??"
+  ;;TODO Dok ^
+  :lighter " QDA"
+  :keymap orgqda-mode-map
+  :group 'orgqda
+  (if orgqda-mode
+      (progn
+        (when orgqda-tag-files
+          (setq-local org-complete-tags-always-offer-all-agenda-tags t))
+        (setq orgqda--old-org-current-tag-alist org-current-tag-alist
+              org-current-tag-alist nil)
+        (setq-local org-open-at-point-functions '(orgqda-collect-tags-at-point)))
+    (kill-local-variable org-complete-tags-always-offer-all-agenda-tags)
+    (kill-local-variable org-open-at-point-functions)
+    (setq org-current-tag-alist orgqda--old-org-current-tag-alist)))
+
+
+;;;###autoload
+(define-minor-mode orgqda-list-mode
+  "list mode"
+  :keymap orgqda-list-mode-map
+  :lighter " QDAl")
 
 ;;; Interactive commands
 
@@ -148,55 +219,82 @@ if non-nil additionally calls `org-set-tags-command`."
 
 ;;;###autoload
 (defun orgqda-insert-inlinetask-coding (arg)
-  "Call `orqda-insert-inlinetask` with coding option and title \"∈\".
+  "Call `orqda-insert-inlinetask' with coding option and title \"∈\".
 Prefix arg is passed through."
   (interactive "P")
   (orgqda-insert-inlinetask arg "∈" t)
   (move-end-of-line nil))
 
 ;;;###autoload
-(defun orgqda-list-buffer-tags (&optional alpha)
-  "List all tags with counts, in a buffer and possibly all files
-in `orgqda-tag-files'. Sorted by count or alphabetically
-if optional (prefix) argument is non-nil."
+(defun orgqda-list-tags (&optional alpha buf)
+  "List all tags with counts, in this buffer and possibly all
+files in `orgqda-tag-files'. Sorted by count or alphabetically if
+optional (prefix) argument is non-nil. If buffer is provided as
+second arg BUF overwrite this buffer with the list instead of
+creating a new."
   (interactive "P")
-  (let ((tcl (orgqda--buffer-tags-list alpha))
+  (let ((tcl (orgqda--get-tags-list alpha))
+        (cb (current-buffer))
         (fn (buffer-file-name)))
-    (switch-to-buffer-other-window (generate-new-buffer "*orgqda-taglist*"))
+    (if buf
+        (progn (switch-to-buffer buf)
+               (widen)
+               (delete-region (point-min) (point-max)))
+      (switch-to-buffer-other-window (generate-new-buffer "*orgqda-taglist*")))
     (mapc (lambda (x)
             (insert (format "- [[otag:%s:%s][%s]] (%d)\n"
                             fn (car x) (car x) (cadr x))))
           tcl)
     (goto-char (point-min))
-    (org-mode)))
+    (org-mode) (orgqda-list-mode)
+    (setq orgqda--originating-buffer cb)))
+
 
 ;;;###autoload
-(defun orgqda-list-buffer-tags-full (&optional alpha)
-  "List all tags with counts, in a buffer and possibly all files
+(defun orgqda-list-tags-full (&optional alpha buf)
+  "List all tags with counts, in this buffer and possibly all files
 in `orgqda-tag-files'. Insert extracted paragraphs as a subtree for all tags.
 Sorted by count or alphabetically if optional (prefix) argument is t."
   (interactive "P")
-  (let ((tcl (orgqda--buffer-tags-list alpha))
+  (let ((tcl (orgqda--get-tags-list alpha))
 		(fn (buffer-file-name))
 		(cb (current-buffer)))
-	(switch-to-buffer-other-window
-     (generate-new-buffer "*orgqda-taglist-full*"))
-	(mapc (lambda (x)
-			(let* ((todo-only nil)
-                   (matcher (org-make-tags-matcher (car x))))
+    (if buf
+        (progn (switch-to-buffer buf)
+               (widen)
+               (delete-region (point-min) (point-max)))
+      (switch-to-buffer-other-window (generate-new-buffer "*orgqda-taglist-full*")))
+    (mapc (lambda (x)
+			(let ((matcher (org-make-tags-matcher (car x))))
 			  (insert (format "* [[otag:%s:%s][%s]] (%d)\n%s"
 							  fn (car x) (car x) (cadr x)
 							  (with-current-buffer cb
                                 (cdr (orgqda--coll-tagged matcher)))))))
 		  tcl)
 	(goto-char (point-min))
-	(org-mode)))
+	(org-mode) (orgqda-list-mode)
+    (setq orgqda--originating-buffer cb)))
+
+(defun orgqda-revert-taglist ()
+  (interactive)
+  (let ((bn (buffer-name))
+        (cb (current-buffer))
+        (pos (point)))
+    (when (and orgqda-list-mode orgqda--originating-buffer
+               (string-match "\\*orgqda-taglist\\(-full\\)?" bn))
+      (if (match-string 1 bn)
+          (progn
+            (with-current-buffer orgqda--originating-buffer
+              (orgqda-list-tags-full nil cb))
+            (goto-char pos))
+        (with-current-buffer orgqda--originating-buffer
+          (orgqda-list-tags nil cb))
+        (goto-char pos)))))
 
 ;;;###autoload
 (defun orgqda-collect-tagged (&optional match)
   (interactive)
-  (let* ((todo-only nil)
-		 (matcher (org-make-tags-matcher match))
+  (let* ((matcher (org-make-tags-matcher match))
 		 (mname (car matcher))
 		 (cont (orgqda--coll-tagged matcher)))
 	(switch-to-buffer-other-window (generate-new-buffer
@@ -213,10 +311,73 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
 ;; (level (if (and orgqda-collect-from-all-files orgqda-tag-files) 2 1))
 
 ;;;###autoload
+(defun orgqda-drag-merge-tags (ev)
+  (interactive "e")
+  (let* ((start (event-start ev))
+         (end (event-end ev))
+         (stag (orgqda--otag-at-point (posn-point start)))
+         (etag (orgqda--otag-at-point (posn-point end))))
+    (when (and stag etag
+               (eq (posn-window start) (posn-window end))
+               (y-or-n-p (format "Merge tags %s 🠖 %s" stag etag)))
+      (orgqda-rename-tag stag etag)
+      (orgqda-revert-taglist))))
+
+(defmacro orgqda--with-current-buffer-if (buffer &rest body)
+  "Execute BODY in BUFFER if it exists, otherwise just execute BODY.
+The value returned is the value of the last form in BODY."
+  (declare (indent 1) (debug t))
+  `(if (and ,buffer (bufferp ,buffer))
+       (with-current-buffer ,buffer ,@body)
+     ,@body))
+
+;;;; TODO, check org-with-remote-undo, would it be a solution for
+;;;; undoing in all buffers? Or org-agenda-undo? (probably not)
+(defun orgqda-rename-tag (oldname newname)
+  (interactive (let ((complist (orgqda--get-tags-for-completion)))
+                 (list
+                  (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
+                  (completing-read "New tag name: " (reverse complist) nil nil))))
+  (if-let ((manyfiles
+            (orgqda--with-current-buffer-if orgqda--originating-buffer
+              (and orgqda-collect-from-all-files (orgqda-tag-files)))))
+      (orgqda--with-current-buffer-if orgqda--originating-buffer
+        (dolist (file manyfiles)
+          (with-current-buffer (find-file-noselect file)
+            (orgqda--rename-tag-in-buffer oldname newname))))
+    (orgqda--rename-tag-in-buffer oldname newname)))
+
+(defun orgqda--rename-tag-in-buffer (oldname newname)
+  (save-excursion
+    (save-restriction
+      (widen)
+      (while (search-forward (concat ":" oldname ":") nil t)
+        (org-set-tags-to
+         (cl-remove-duplicates
+          (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
+          :test 'string=))))))
+
+
+(defun orgqda--get-tags-for-completion ()
+  (let ((btl (orgqda--with-current-buffer-if
+                 orgqda--originating-buffer
+               (orgqda--get-tags-list))))
+    (mapcar #'car btl)))
+
+(defun orgqda--otag-at-point (&optional pos)
+  (save-excursion
+    (when pos (goto-char pos))
+    (let ((context (org-element-lineage (org-element-context) '(link) t)))
+      (when (and (eq (org-element-type context) 'link)
+                 (string= (org-element-property :type context) "otag"))
+        (cadr (split-string (org-element-property :path context) ":"))))))
+
+(defvar orgqda--csv-curr-mname nil)
+
+;;;###autoload
 (defun orgqda-collect-tagged-csv (&optional match)
   (interactive)
-  (let* ((todo-only nil)
-		 (matcher (org-make-tags-matcher match))
+  (let* ((matcher (org-make-tags-matcher match))
 		 (orgqda--csv-curr-mname (car matcher))
 		 (cont (orgqda--coll-tagged-csv matcher)))
 	(switch-to-buffer-other-window
@@ -228,16 +389,11 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
 	;; (csv-mode)))
 	))
 
-;;TODO AUTOLOAD neccessary?
-;;;###autoload
-(defvar orgqda--csv-curr-mname nil)
-
 ;;;###autoload
 (defun orgqda-collect-tagged-csv-save (&optional match)
   "Collect  and save a file in `orgqda-csv-dir'"
   (interactive)
-  (let* ((todo-only nil)
-		 (matcher (org-make-tags-matcher match))
+  (let* ((matcher (org-make-tags-matcher match))
 		 (orgqda--csv-curr-mname (car matcher))
 		 (cont (orgqda--coll-tagged-csv matcher)))
 	(with-temp-buffer
@@ -247,15 +403,13 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
       (write-region (point-min) (point-max)
 					(concat orgqda-csv-dir orgqda--csv-curr-mname ".csv")))))
 
-
 ;;;###autoload
 (defun orgqda-collect-tagged-csv-save-all (&optional threshold)
   "Save all tags used THRESHOLD or more times in csv-files (one
 per tag) in `orgqda-csv-dir'"
   (interactive "P")
-  (let ((tags (orgqda--buffer-tags-list))
-		(tn (prefix-numeric-value threshold))
-		tc)
+  (let ((tags (orgqda--get-tags-list))
+		(tn (prefix-numeric-value threshold)))
 	(dolist (tc tags)
 	  (when (or (not threshold)
 				(<= tn (cadr tc)))
@@ -451,13 +605,19 @@ each character in the buffer."
 		(point) (point-max)))))))
 
 
-;; inspired by: http://endlessparentheses.com/meta-binds-part-2-a-peeve-with-paragraphs.html
+;; inspired by:
+;; http://endlessparentheses.com/meta-binds-part-2-a-peeve-with-paragraphs.html
+;; org-backward-paragraph is better in some sense, but does a little
+;; too much, so we hack around a bit here.
+
 (defun orgqda--backward-paragraph ()
-  "Go back to last blank line."
+  "Go back to last blank line, but after headlines."
   (skip-chars-backward "\n[:blank:]")
   (if (search-backward-regexp
        "\n[[:blank:]]*\n[[:blank:]]*" nil t 1)
-      (goto-char (match-end 0))
+      (progn (goto-char (match-end 0))
+             (when (looking-at org-heading-regexp)
+               (forward-line 1)))
     (goto-char (point-min))))
 
 ;;;; General helper-functions
@@ -484,7 +644,17 @@ each character in the buffer."
 
 
 ;;;; link types
-(org-add-link-type "opbm" 'orgqda-opbm-open 'orgqda-link-desc-export)
+(defvar orgqda-bm-link-encode-table
+  '(["\n" "\\\\n"] ["[" "᚛"] ["]" "᚜"]))
+(defvar orgqda-bm-link-decode-table
+  '(["᚛" "["] ["᚜" "]"]))
+
+(org-link-set-parameters "opbm"
+                         :follow #'orgqda-opbm-open
+                         :export #'orgqda-link-desc-export)
+
+
+
 (defun orgqda-opbm-open (opbm)
   (save-current-buffer
 	(let ((bm (cons "n" (read (xah-replace-pairs-in-string
@@ -494,7 +664,7 @@ each character in the buffer."
       (recenter)))
   (switch-to-buffer-other-window (current-buffer))) ; extremt hackigt
 
-(defun orgqda-link-desc-export (link desc format)
+(defun orgqda-link-desc-export (_link desc format)
   "We can't export these links nicely, always export desc."
   (format
    (cl-case format
@@ -502,10 +672,6 @@ each character in the buffer."
      (html "<em>%s</em>")
      (t "%s"))
    (substring-no-properties desc)))
-(defvar orgqda-bm-link-encode-table
-  '(["\n" "\\\\n"] ["[" "᚛"] ["]" "᚜"]))
-(defvar orgqda-bm-link-decode-table
-  '(["᚛" "["] ["᚜" "]"]))
 
 (defun orgqda-get-bm ()
   (require 'bookmark)
@@ -524,22 +690,31 @@ each character in the buffer."
 
 
 
-;;;; List-buffer-tags-functions
+;;;; List tags functions
 
-(defun orgqda--buffer-tags-list (&optional alpha)
-  "Return an alist of all tags with with counts, in a buffer and possibly all files
-in `orgqda-tag-files'. Sorted by count or alphabetically
-if optional (prefix) argument is t."
+(defun orgqda--get-tags-list (&optional alpha)
+  "Return an alist of all tags with counts, in this buffer or
+in all files in `orgqda-tag-files'. Sorted by count or
+alphabetically if optional (prefix) argument is t."
   (let ((tagscount (make-hash-table :test 'equal))
         (manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files)))
 		tcl)
     (if manyfiles ;list only from orgqda-tag-files
         (dolist (file manyfiles tagscount)
-          (with-temp-buffer
-            (insert-file-contents file)
-            (setq tagscount (orgqda--get-tags-with-count tagscount))))
+          (let ((visiting (find-buffer-visiting file)))
+            (if visiting
+                (with-current-buffer visiting
+                  (save-excursion
+                    (save-restriction
+                      (setq tagscount
+                            (orgqda--get-tags-with-count tagscount)))))
+              (with-temp-buffer
+                (insert-file-contents file)
+                (setq tagscount (orgqda--get-tags-with-count tagscount))))))
       ;;only this buffer
       (setq tagscount (orgqda--get-tags-with-count tagscount)))
+    (dolist (ex orgqda-exclude-tags)
+      (remhash ex tagscount))
     (setq tcl (orgqda--hash-to-list tagscount))
 	(if alpha
 		(sort tcl (lambda (a b) (string< (car a) (car b))))
@@ -559,7 +734,7 @@ if optional (prefix) argument is t."
   tagscount)
 
 
-;;från: http://ergoemacs.org/emacs/elisp_hash_table.html
+;;from: http://ergoemacs.org/emacs/elisp_hash_table.html
 (defun orgqda--hash-to-list (hashtable)
   "Return a list that represent the HASHTABLE."
   (let (myList)
@@ -568,8 +743,10 @@ if optional (prefix) argument is t."
 
 ;;;;; link type for taglist
 
-(org-add-link-type "otag" 'orgqda-otag-open 'orgqda-link-desc-export) ;;link to org-tag display
-(add-hook 'org-store-link-functions 'orgqda-otag-store-link)
+(org-link-set-parameters "otag"
+                         :follow #'orgqda-otag-open
+                         :export #'orgqda-link-desc-export
+                         :store #'orgqda-otag-store-link)
 
 (defun orgqda-otag-open (otag)
   "Visit line number in file"
@@ -632,46 +809,72 @@ active."
     files))
 
 
-;;; minor mode definition
-;;;###autoload
-(define-minor-mode orgqda-mode
-  "Toggle orgqda mode.
-Interactively with no argument, this command toggles the mode. A
-positive prefix argument enables the mode, any other prefix
-argument disables it. From Lisp, argument omitted or nil enables
-the mode, `toggle' toggles the state.
+;;; Clicking on tags should open a orgqda tag view
 
-Minor mode for qualitative coding of text material and extraction
-of codes.
+;; we could as well add-to-list this fn to
+;; org-open-at-point-functions, as it checks for orgqda-mode.
 
-Enables tag completion with tags from all files defined in `orgqda-tag-files'
+(defun orgqda-collect-tags-at-point ()
+  "Supposed to be run as one of the hooks in `org-open-at-point-functions'
 
-COMMANDS??"
-  ;;TODO Dok ^
-  :lighter " QDA"
-  :keymap orgqda-mode-map
-  :group 'orgqda
-  (if orgqda-mode
-      (when orgqda-tag-files
-        (setq-local org-complete-tags-always-offer-all-agenda-tags t))
-    (kill-local-variable org-complete-tags-always-offer-all-agenda-tags)))
+ In `orgqda-mode' this function calls `orgqda-collect-tagged'
+ for the single tag at point."
+  (when (and orgqda-mode
+             (progn
+               (save-excursion (beginning-of-line)
+                               (looking-at org-complex-heading-regexp))
+               (and (match-beginning 5)
+                    (>= (point) (match-beginning 5)))))
+    (let ((min (match-beginning 5))
+          (max (point-at-eol)))
+      (when-let ((end (save-excursion (search-forward ":" max t)))
+                 (beg (save-excursion (search-backward ":" min t))))
+        (orgqda-collect-tagged
+         (buffer-substring-no-properties (1+ beg) (1- end)))
+        t))))
+
 
 ;;; Advice
 
 ;;;###autoload
 (advice-add 'org-agenda-files :around #'orgqda-agenda-files-override)
 ;;;###autoload
-(advice-add 'org-set-tags :around #'orgqda-set-tags-override)
-;;;###autoload
 (defun orgqda-agenda-files-override (oldfun &rest args)
+  "Overrides with `orgqda-tag-files' when `orgqda-mode' is non-nil."
   (if orgqda-mode
       (orgqda-tag-files)
     (apply oldfun args)))
+
 ;;;###autoload
-(defun orgqda-set-tags-override (oldfun &rest args)
-  (let ((org-current-tag-alist
-         (if orgqda-mode nil org-current-tag-alist)))
+(advice-add 'org-global-tags-completion-table :around #'orgqda-tags-completion-table-wrap)
+;;;###autoload
+(defun orgqda-tags-completion-table-wrap (oldfun &rest args)
+  "Lets `org-mode-hook' and `text-mode-hook' be nil for the
+execution to speed up loading of tags from related files when
+`orgqda-mode' is non-nil."
+  (if orgqda-mode
+      (let ((org-mode-hook nil)
+            (text-mode-hook nil))
+        (apply oldfun args))
     (apply oldfun args)))
+
+;; ;;;###autoload
+;; (advice-add 'org-set-tags :around #'orgqda-set-tags-override)
+;; ;;;###autoload
+;; (defun orgqda-set-tags-override (oldfun &rest args)
+;;   (let ((org-current-tag-alist
+;;          (if orgqda-mode nil org-current-tag-alist)))
+;;     (apply oldfun args)))
+
+;;; We really need to avoid org-persistent-tags-alist.
+;;; org-current-tag-alist is set when loading an org buffer and if
+;;; org-persistent-tags-alist is nil prevents getting all buffer tags
+;;; for completion both for current buffer in org-set-tags and for
+;;; "agenda"-buffers in org-global-tags-completion-table (where files
+;;; are loaded with find-file-noselect). We can't make sure all files
+;;; get orgqda-mode enabled so the easiest thing is to use #+STARTUP:
+;;; noptags in all files. But orgqda-mode will set
+;;; org-current-tag-alist to nil as well.
 
 
 (provide 'orgqda)

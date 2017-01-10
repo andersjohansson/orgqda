@@ -11,7 +11,9 @@ Some text that should be given some codes. We make this text reasonably long so 
 
 Additionally, when tags are applied to ordinary headings or inlinetasks with content, the subtree or inlinetask is extracted instead of the preceding paragraph.
 
-Codes can be listed with ~orgqda-list-buffer-tags~, and all regions for a specific code extracted with ~orgqda-collect-tagged~. Both these functions creates a custom org-mode buffer with links to the original regions.
+"Codes" can be listed with ~orgqda-list-tags~ and all regions for a specific code extracted with ~orgqda-collect-tagged~ (or by clicking on a tag or =C-c C-o= on it). Both these functions creates a custom org-mode buffer with links to the original regions.
+
+Codes can also be renamed with ~orgqda-rename-tags~ and merged via drag and drop in the code-listing buffer created by ~orgqda-list-tags~. These operations find and replace tags across all files defined in ~orgqda-tag-files~, so undoing can be messy, make sure to use version control.
 
 ** Minor mode
 It defines a minor mode ~orgqda-mode~ which, when enabled, gathers tags for listing and completion from all files defined via ~orgqda-tag-files~. This is helpful for instance when keeping different field journals and transcripts in different files but still using a common coding scheme for all of them.
@@ -23,12 +25,15 @@ The csv-export code is currently not so generalized and may be changed.
 ** List of commands
 See docstrings for further info
 #+BEGIN_EXAMPLE
- orgqda-list-buffer-tags (&optional alpha)
- orgqda-list-buffer-tags-full (&optional alpha)
- orgqda-collect-tagged (&optional match)
- orgqda-collect-tagged-csv (&optional match)
- orgqda-collect-tagged-csv-save (&optional match)
- orgqda-collect-tagged-csv-save-all (&optional threshold)
+ orgqda-insert-inlinetask
+ orgqda-insert-inlinetask-coding
+ orgqda-list-tags
+ orgqda-list-tags-full
+ orgqda-collect-tagged
+ orgqda-rename-tag
+ orgqda-collect-tagged-csv
+ orgqda-collect-tagged-csv-save
+ orgqda-collect-tagged-csv-save-all
 #+END_EXAMPLE
 
 ** List of customizable variables with default values
@@ -39,4 +44,5 @@ orgqda-collect-from-all-files t
 orgqda-tag-collect-extra-info-csv nil
 orgqda-tag-collect-extra-info2-csv nil
 orgqda-convert-csv-to-encoding nil
+orgqda-exclude-tags nil
 #+END_EXAMPLE
