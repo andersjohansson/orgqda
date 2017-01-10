@@ -46,3 +46,9 @@ orgqda-tag-collect-extra-info2-csv nil
 orgqda-convert-csv-to-encoding nil
 orgqda-exclude-tags nil
 #+END_EXAMPLE
+
+** orgqda-transcript
+Included in the repository is a library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with ordain). It uses ~mplayer-mode~, currently and unfortunately kind of depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things:  https://github.com/andersjohansson/mplayer-mode/tree/org-sessions.
+(see discussion about the future of ~mplayer-mode~ here: https://github.com/markhepburn/mplayer-mode/issues/10).
+
+~orgqda-transcript-mode~ defines a few functions and variables for defining a list of speakers, inserting timestamps, speaker names, switching speakers (if something was misattributed), measuring speaking time, etc. Take a look at the commands and custom variables if you are interested. As everything here, it is of course kind of idiosyncratic and aligned with my current workflow, and also more or less a work in progress.
