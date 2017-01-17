@@ -183,8 +183,8 @@ COMMANDS??"
         (setq orgqda--old-org-current-tag-alist org-current-tag-alist
               org-current-tag-alist nil)
         (setq-local org-open-at-point-functions '(orgqda-collect-tags-at-point)))
-    (kill-local-variable org-complete-tags-always-offer-all-agenda-tags)
-    (kill-local-variable org-open-at-point-functions)
+    (kill-local-variable 'org-complete-tags-always-offer-all-agenda-tags)
+    (kill-local-variable 'org-open-at-point-functions)
     (setq org-current-tag-alist orgqda--old-org-current-tag-alist)))
 
 
