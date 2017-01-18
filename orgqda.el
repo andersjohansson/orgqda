@@ -351,6 +351,7 @@ The value returned is the value of the last form in BODY."
   (save-excursion
     (save-restriction
       (widen)
+      (goto-char (point-min))
       (while (search-forward (concat ":" oldname ":") nil t)
         (org-set-tags-to
          (cl-remove-duplicates
