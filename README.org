@@ -52,3 +52,11 @@ Included in the repository is a library with some functions for helping in trans
 (see discussion about the future of ~mplayer-mode~ here: https://github.com/markhepburn/mplayer-mode/issues/10).
 
 ~orgqda-transcript-mode~ defines a few functions and variables for defining a list of speakers, inserting timestamps, speaker names, switching speakers (if something was misattributed), measuring speaking time, etc. Take a look at the commands and custom variables if you are interested. As everything here, it is of course kind of idiosyncratic and aligned with my current workflow, and also more or less a work in progress.
+
+** Notes on configuration
+I often load ~orgqda-mode~ through file or dir local variables, and as activation of the mode can depend on other variables being defined locally (most importantly ~orgqda-tag-files~) loading order is important (i.e. that ~orgqda-mode~ gets activated after local variables are set). A solution is to activate it in a locally defined ~hack-local-variables-hook~. So adding this to a ~.dir-locals.el~ file for example works:
+
+#+BEGIN_EXAMPLE
+((org-mode
+   (eval add-hook 'hack-local-variables-hook 'orgqda-mode nil t)))
+#+END_EXAMPLE
