@@ -320,8 +320,7 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
     (when (and stag etag
                (eq (posn-window start) (posn-window end))
                (y-or-n-p (format "Merge tags %s 🠖 %s" stag etag)))
-      (orgqda-rename-tag stag etag)
-      (orgqda-revert-taglist))))
+      (orgqda-rename-tag stag etag))))
 
 (defmacro orgqda--with-current-buffer-if (buffer &rest body)
   "Execute BODY in BUFFER if it exists, otherwise just execute BODY.
@@ -334,6 +333,7 @@ The value returned is the value of the last form in BODY."
 ;;;; TODO, check org-with-remote-undo, would it be a solution for
 ;;;; undoing in all buffers? Or org-agenda-undo? (probably not)
 (defun orgqda-rename-tag (oldname newname)
+  "Rename tag OLDNAME to NEWNAME in all current collection of orgqda files"
   (interactive (let ((complist (orgqda--get-tags-for-completion)))
                  (list
                   (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
@@ -345,9 +345,22 @@ The value returned is the value of the last form in BODY."
         (dolist (file manyfiles)
           (with-current-buffer (find-file-noselect file)
             (orgqda--rename-tag-in-buffer oldname newname))))
-    (orgqda--rename-tag-in-buffer oldname newname)))
+    (orgqda--rename-tag-in-buffer oldname newname))
+  (orgqda-revert-taglist))
+
+(defun orgqda-prefix-tag (oldname prefix)
+  "Add a prefix PREFIX to existing tag OLDNAME in current
+collection of orgqda files"
+  (interactive (let* ((complist (orgqda--get-tags-for-completion))
+                      (preflist (orgqda--get-prefixes-for-completion complist)))
+                 (list
+                  (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
+                  (completing-read "Prefix:"  preflist nil nil))))
+  (orgqda-rename-tag oldname (concat prefix "_" oldname)))
+
 
 (defun orgqda--rename-tag-in-buffer (oldname newname)
+  "Rename all ocurrences of OLDNAME as an org tag with NEWNAME."
   (save-excursion
     (save-restriction
       (widen)
@@ -358,14 +371,28 @@ The value returned is the value of the last form in BODY."
           (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
           :test 'string=))))))
 
-
 (defun orgqda--get-tags-for-completion ()
+  "Return current list of tags in orgqda (possibly many files)"
   (let ((btl (orgqda--with-current-buffer-if
                  orgqda--originating-buffer
                (orgqda--get-tags-list))))
     (mapcar #'car btl)))
 
+(defun orgqda--get-prefixes-for-completion (&optional taglist)
+  "Return the current list of tag prefixes (delimited with _) for
+tags in orgqda (possibly many files)
+
+TAGLIST can be passed or else will be fetched with
+`orgqda--get-tags-for-completion'"
+  (let ((taglist (or taglist (orgqda--get-tags-for-completion)))
+        prefixes)
+    (dolist (tag taglist)
+      (when (string-match "^\\([[:alnum:]@#%:]+\\)_.+$" tag)
+        (push (match-string 1 tag) prefixes)))
+    (cl-remove-duplicates prefixes :test 'string=)))
+
 (defun orgqda--otag-at-point (&optional pos)
+  "Get the tag name of the otag-link at point."
   (save-excursion
     (when pos (goto-char pos))
     (let ((context (org-element-lineage (org-element-context) '(link) t)))

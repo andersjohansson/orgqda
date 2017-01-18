@@ -31,6 +31,7 @@ See docstrings for further info
  orgqda-list-tags-full
  orgqda-collect-tagged
  orgqda-rename-tag
+ orgqda-prefix-tag
  orgqda-collect-tagged-csv
  orgqda-collect-tagged-csv-save
  orgqda-collect-tagged-csv-save-all
