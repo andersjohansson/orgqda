@@ -741,10 +741,8 @@ alphabetically if optional (prefix) argument is t."
           (let ((visiting (find-buffer-visiting file)))
             (if visiting
                 (with-current-buffer visiting
-                  (save-excursion
-                    (save-restriction
-                      (setq tagscount
-                            (orgqda--get-tags-with-count tagscount)))))
+                  (setq tagscount
+                        (orgqda--get-tags-with-count tagscount)))
               (with-temp-buffer
                 (insert-file-contents file)
                 (setq tagscount (orgqda--get-tags-with-count tagscount))))))
@@ -753,21 +751,22 @@ alphabetically if optional (prefix) argument is t."
     (dolist (ex orgqda-exclude-tags)
       (remhash ex tagscount))
     (setq tcl (orgqda--hash-to-list tagscount))
-	(if alpha
-		(sort tcl (lambda (a b) (string< (car a) (car b))))
-	  (sort tcl (lambda (a b) (> (cadr a) (cadr b)))))))
+    (if alpha
+        (sort tcl (lambda (a b) (string< (car a) (car b))))
+      (sort tcl (lambda (a b) (> (cadr a) (cadr b)))))))
 
 (defun orgqda--get-tags-with-count (tagscount)
   "Expects a hash-table TAGSCOUNT and returns it modified"
   (save-excursion
-	(goto-char (point-min))
-	(while (re-search-forward
-			"[ \t]:\\([[:alnum:]_@#%:]+\\):[ \t\r\n]" nil t)
-	  (when (equal (char-after (point-at-bol 0)) ?*)
-		(mapc (lambda (x)
-				(let ((ov (gethash x tagscount 0))) ; gethash def=0
-				  (puthash x (1+ ov) tagscount)))
-			  (org-split-string (match-string-no-properties 1) ":")))))
+    (save-restriction
+      (widen) (goto-char (point-min))
+      (while (re-search-forward
+              "[ \t]:\\([[:alnum:]_@#%:]+\\):[ \t\r\n]" nil t)
+        (when (equal (char-after (point-at-bol 0)) ?*)
+          (mapc (lambda (x)
+                  (let ((ov (gethash x tagscount 0))) ; gethash def=0
+                    (puthash x (1+ ov) tagscount)))
+                (org-split-string (match-string-no-properties 1) ":"))))))
   tagscount)
 
 
