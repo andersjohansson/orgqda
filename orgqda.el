@@ -276,6 +276,7 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
     (setq orgqda--originating-buffer cb)))
 
 (defun orgqda-revert-taglist ()
+  "Reverts current `orgqda-list-mode' buffer."
   (interactive)
   (let ((bn (buffer-name))
         (cb (current-buffer))
@@ -338,15 +339,20 @@ The value returned is the value of the last form in BODY."
                  (list
                   (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
                   (completing-read "New tag name: " (reverse complist) nil nil))))
-  (if-let ((manyfiles
-            (orgqda--with-current-buffer-if orgqda--originating-buffer
-              (and orgqda-collect-from-all-files (orgqda-tag-files)))))
-      (orgqda--with-current-buffer-if orgqda--originating-buffer
-        (dolist (file manyfiles)
-          (with-current-buffer (find-file-noselect file)
-            (orgqda--rename-tag-in-buffer oldname newname))))
-    (orgqda--rename-tag-in-buffer oldname newname))
-  (orgqda-revert-taglist))
+  (let (repslist)
+    (if-let ((manyfiles
+              (orgqda--with-current-buffer-if orgqda--originating-buffer
+                (and orgqda-collect-from-all-files (orgqda-tag-files)))))
+        (orgqda--with-current-buffer-if orgqda--originating-buffer
+          (dolist (file manyfiles)
+            (with-current-buffer (find-file-noselect file)
+              (push repslist (cons (file-name-base file) (orgqda--rename-tag-in-buffer oldname newname))))))
+      (push repslist (cons (buffer-name) (orgqda--rename-tag-in-buffer oldname newname))))
+    (orgqda-revert-taglist)
+    (setq repslist (cl-remove-if (lambda (x) (= 0 (cdr x))) repslist))
+    (message "Σ:%d; %s"
+             (apply #'+ (mapcar (lambda (x) (cdr x)) repslist))
+             (mapconcat (lambda (x) (concat (car x) ":" (number-to-string (cdr x)))) repslist " "))))
 
 (defun orgqda-prefix-tag (oldname prefix)
   "Add a prefix PREFIX to existing tag OLDNAME in current
@@ -361,15 +367,18 @@ collection of orgqda files"
 
 (defun orgqda--rename-tag-in-buffer (oldname newname)
   "Rename all ocurrences of OLDNAME as an org tag with NEWNAME."
-  (save-excursion
-    (save-restriction
-      (widen)
-      (goto-char (point-min))
-      (while (search-forward (concat ":" oldname ":") nil t)
-        (org-set-tags-to
-         (cl-remove-duplicates
-          (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
-          :test 'string=))))))
+  (let ((numberofreps 0))
+    (save-excursion
+      (save-restriction
+        (widen)
+        (goto-char (point-min))
+        (while (search-forward (concat ":" oldname ":") nil t)
+          (org-set-tags-to
+           (cl-remove-duplicates
+            (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
+            :test 'string=))
+          (setq numberofreps (1+ numberofreps)))))
+    numberofreps))
 
 (defun orgqda--get-tags-for-completion ()
   "Return current list of tags in orgqda (possibly many files)"
