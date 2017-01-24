@@ -38,9 +38,6 @@
 (require 'cl-lib)
 (require 'subr-x) ;if-let
 
-(eval-when-compile
-  (require 'cl-macs))
-
 ;;; Variables
 (defgroup orgqda '((orgqda-mode custom-variable))
   "Customizations for orgqda-mode"
@@ -190,7 +187,9 @@ COMMANDS??"
 
 ;;;###autoload
 (define-minor-mode orgqda-list-mode
-  "list mode"
+  "Mode for displaying lists of tags in orgqda.
+
+\\{orgqda-list-mode-map}"
   :keymap orgqda-list-mode-map
   :lighter " QDAl")
 
@@ -503,8 +502,6 @@ per tag) in `orgqda-csv-dir'"
 		  (cons (length tl)
 				(mapconcat 'identity tl "\n\n")))))))
 
-
-
 (defun orgqda--get-paragraph-or-sub () 
   (save-excursion
 	(if (or (org-at-heading-p) (org-inlinetask-in-task-p))
@@ -525,7 +522,6 @@ per tag) in `orgqda-csv-dir'"
 		  ;;sätt ihop det
 		  (concat hl contents))
 	  "Inte heading eller inlinetask???")))
-
 
 ;;;; CSV-collection-functions
 ;;TODO, perhaps more duplication could be avoided
@@ -565,8 +561,7 @@ per tag) in `orgqda-csv-dir'"
 	(if (or (org-at-heading-p) (org-inlinetask-in-task-p))
 		(let* ((ln (line-number-at-pos))
 			   (fl (file-name-base
-					(abbreviate-file-name
-                     (buffer-file-name (buffer-base-buffer)))))
+					(buffer-file-name (buffer-base-buffer))))
                                         ;(bm (orgqda-get-bm))
                                         ;(link (format "opbm:%s" bm))
 			   (head (substring-no-properties (org-get-heading)))
@@ -787,8 +782,7 @@ alphabetically if optional (prefix) argument is t."
 (defun orgqda-otag-open (otag)
   "Visit line number in file"
   (let ((fln (split-string otag ":")))
-                                        ;(find-file (car fln))
-	(with-current-buffer (find-file-noselect (car fln))
+    (with-current-buffer (find-file-noselect (car fln))
 	  (orgqda-collect-tagged (cadr fln)))))
 
 (defun orgqda-otag-store-link ()
