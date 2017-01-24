@@ -345,11 +345,14 @@ The value returned is the value of the last form in BODY."
         (orgqda--with-current-buffer-if orgqda--originating-buffer
           (dolist (file manyfiles)
             (with-current-buffer (find-file-noselect file)
-              (push repslist (cons (file-name-base file) (orgqda--rename-tag-in-buffer oldname newname))))))
-      (push repslist (cons (buffer-name) (orgqda--rename-tag-in-buffer oldname newname))))
+              (push (cons (file-name-base file) (orgqda--rename-tag-in-buffer oldname newname))
+                    repslist))))
+      (push (cons (buffer-name) (orgqda--rename-tag-in-buffer oldname newname))
+            repslist))
     (orgqda-revert-taglist)
     (setq repslist (cl-remove-if (lambda (x) (= 0 (cdr x))) repslist))
-    (message "Σ:%d; %s"
+    (message "Replaced %s → %s. Σ:%d; %s"
+             oldname newname
              (apply #'+ (mapcar (lambda (x) (cdr x)) repslist))
              (mapconcat (lambda (x) (concat (car x) ":" (number-to-string (cdr x)))) repslist " "))))
 
