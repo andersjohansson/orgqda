@@ -102,6 +102,19 @@ characters are of this encoding and replace those that are not by
           (repeat :tag "List of tags" string))
   :safe #'orgqda--list-of-strings-p)
 
+(defcustom orgqda-hierarchy-delimiter ?_
+  "The character to use for delimiting a hierarchy within tags.
+One of: _@#%"
+  :type '(choice (const :tag "_" ?_)
+                 (const :tag "@" ?@)
+                 (const :tag "#" ?#)
+                 (const :tag "%" ?%)))
+
+(defcustom orgqda-use-tag-hierarchy t
+  "If tags delimited with `orgqda-hierarchy-delimiter' should be considered grouped.
+Currently only works for one level."
+  :type 'boolean)
+
 ;;;###autoload
 (defvar-local orgqda-tag-files nil
   "Extra files from which tags should be fetched for completion.
@@ -130,6 +143,10 @@ Usually set by the user as a file or dir local variable.")
 (defvar-local orgqda--originating-buffer nil
   "Buffer where the call for the current orgqda tag listing or
   collected regions listing were made")
+(defvar-local orgqda--taglist-sort-alpha nil
+  "Whether current taglist buffer is alphabetically sorted")
+(defvar-local orgqda--taglist-full nil
+  "Whether current taglist buffer includes extracts")
 
 ;;;###autoload
 (defvar-local orgqda--old-org-current-tag-alist nil
@@ -152,6 +169,8 @@ Usually set by the user as a file or dir local variable.")
 (unless orgqda-list-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "<drag-mouse-1>") #'orgqda-drag-merge-tags)
+    (define-key map (kbd "g") #'orgqda-revert-taglist)
+    (define-key map (kbd "q") #'kill-this-buffer)
     (setq orgqda-list-mode-map map)))
 
 ;;; Minor mode definitions
@@ -194,7 +213,7 @@ COMMANDS??"
   :lighter " QDAl")
 
 ;;; Interactive commands
-
+;;;; Commands for inserting
 (autoload 'org-inlinetask-in-task-p "org-inlinetask")
 ;;;###autoload
 (defun orgqda-insert-inlinetask (&optional arg title coding)
@@ -215,7 +234,6 @@ if non-nil additionally calls `org-set-tags-command`."
   (when (and coding (org-inlinetask-in-task-p))
     (org-set-tags-command)))
 
-
 ;;;###autoload
 (defun orgqda-insert-inlinetask-coding (arg)
   "Call `orqda-insert-inlinetask' with coding option and title \"∈\".
@@ -224,30 +242,45 @@ Prefix arg is passed through."
   (orgqda-insert-inlinetask arg "∈" t)
   (move-end-of-line nil))
 
+;;;; Commands for listing tags
+(defvar orgqda--current-list-fn nil
+  "Used internally for keeping track of filename to link to")
+
 ;;;###autoload
-(defun orgqda-list-tags (&optional alpha buf)
+(defun orgqda-list-tags (&optional alpha full buf)
   "List all tags with counts, in this buffer and possibly all
 files in `orgqda-tag-files'. Sorted by count or alphabetically if
 optional (prefix) argument is non-nil. If buffer is provided as
 second arg BUF overwrite this buffer with the list instead of
 creating a new."
   (interactive "P")
-  (let ((tcl (orgqda--get-tags-list alpha))
-        (cb (current-buffer))
-        (fn (buffer-file-name)))
+  (let ((taglist (orgqda--get-tags-list alpha))
+        (cb (current-buffer)))
+    (setq orgqda--current-list-fn (buffer-file-name))
     (if buf
         (progn (switch-to-buffer buf)
                (widen)
                (delete-region (point-min) (point-max)))
       (switch-to-buffer-other-window (generate-new-buffer "*orgqda-taglist*")))
-    (mapc (lambda (x)
-            (insert (format "- [[otag:%s:%s][%s]] (%d)\n"
-                            fn (car x) (car x) (cadr x))))
-          tcl)
+    (if full
+        (mapc (lambda (x) ;TODO: hierarchical here as well
+                (let ((matcher (org-make-tags-matcher (car x))))
+                  (insert (format "* [[otag:%s:%s][%s]] (%d)\n%s"
+                                  orgqda--current-list-fn
+                                  (car x) (car x) (cadr x)
+                                  (with-current-buffer cb
+                                    (cdr (orgqda--coll-tagged matcher)))))))
+              taglist)
+      (insert (orgqda--format-hierarchical-taglist
+               (if orgqda-use-tag-hierarchy
+                   (orgqda--hierarchalize-taglist taglist alpha)
+                 taglist))))
     (goto-char (point-min))
-    (org-mode) (orgqda-list-mode)
-    (setq orgqda--originating-buffer cb)))
-
+    (org-mode) (orgqda-list-mode) (flyspell-mode -1)
+    (setq buffer-read-only t
+          orgqda--originating-buffer cb
+          orgqda--taglist-sort-alpha alpha
+          orgqda--taglist-full full)))
 
 ;;;###autoload
 (defun orgqda-list-tags-full (&optional alpha buf)
@@ -255,54 +288,31 @@ creating a new."
 in `orgqda-tag-files'. Insert extracted paragraphs as a subtree for all tags.
 Sorted by count or alphabetically if optional (prefix) argument is t."
   (interactive "P")
-  (let ((tcl (orgqda--get-tags-list alpha))
-		(fn (buffer-file-name))
-		(cb (current-buffer)))
-    (if buf
-        (progn (switch-to-buffer buf)
-               (widen)
-               (delete-region (point-min) (point-max)))
-      (switch-to-buffer-other-window (generate-new-buffer "*orgqda-taglist-full*")))
-    (mapc (lambda (x)
-			(let ((matcher (org-make-tags-matcher (car x))))
-			  (insert (format "* [[otag:%s:%s][%s]] (%d)\n%s"
-							  fn (car x) (car x) (cadr x)
-							  (with-current-buffer cb
-                                (cdr (orgqda--coll-tagged matcher)))))))
-		  tcl)
-	(goto-char (point-min))
-	(org-mode) (orgqda-list-mode)
-    (setq orgqda--originating-buffer cb)))
+  (orgqda-list-tags alpha t buf))
 
 (defun orgqda-revert-taglist ()
   "Reverts current `orgqda-list-mode' buffer."
   (interactive)
-  (let ((bn (buffer-name))
-        (cb (current-buffer))
-        (pos (point)))
-    (when (and orgqda-list-mode orgqda--originating-buffer
-               (string-match "\\*orgqda-taglist\\(-full\\)?" bn))
-      (if (match-string 1 bn)
-          (progn
-            (with-current-buffer orgqda--originating-buffer
-              (orgqda-list-tags-full nil cb))
-            (goto-char pos))
-        (with-current-buffer orgqda--originating-buffer
-          (orgqda-list-tags nil cb))
-        (goto-char pos)))))
+  (when (and orgqda-list-mode orgqda--originating-buffer)
+    (let ((cb (current-buffer))
+          (pos (point)))
+      (with-current-buffer orgqda--originating-buffer
+        (orgqda-list-tags orgqda--taglist-sort-alpha orgqda--taglist-full cb))
+      (goto-char pos))))
 
+;;;; Commands for collecting
 ;;;###autoload
 (defun orgqda-collect-tagged (&optional match)
   (interactive)
   (let* ((matcher (org-make-tags-matcher match))
-		 (mname (car matcher))
-		 (cont (orgqda--coll-tagged matcher)))
-	(switch-to-buffer-other-window (generate-new-buffer
+         (mname (car matcher))
+         (cont (orgqda--coll-tagged matcher)))
+    (switch-to-buffer-other-window (generate-new-buffer
                                     (format "*tags:%s*" mname)))
-	;;(insert (format "* Taggat: %s " mname))
-	(org-insert-time-stamp (current-time) t t
+    ;;(insert (format "* Taggat: %s " mname))
+    (org-insert-time-stamp (current-time) t t
                            (format "* Taggat: %s, (%d) " mname (car cont)) "\n")
-	(insert (cdr cont))
+    (insert (cdr cont))
     (goto-char (point-min))
     (org-mode)
     (org-content 2)))
@@ -310,6 +320,49 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
 ;; if we have manyfiles: level can be let along the lines of:
 ;; (level (if (and orgqda-collect-from-all-files orgqda-tag-files) 2 1))
 
+(defvar orgqda--csv-curr-mname nil)
+
+;;;###autoload
+(defun orgqda-collect-tagged-csv (&optional match)
+  (interactive)
+  (let* ((matcher (org-make-tags-matcher match))
+		 (orgqda--csv-curr-mname (car matcher))
+		 (cont (orgqda--coll-tagged-csv matcher)))
+	(switch-to-buffer-other-window
+     (generate-new-buffer (format "*csvtags:%s*" orgqda--csv-curr-mname)))
+	(when orgqda-convert-csv-to-encoding
+      (orgqda--csv-convert-buffer-to-encoding))
+	(insert cont)
+	(goto-char (point-min))))
+
+;;;###autoload
+(defun orgqda-collect-tagged-csv-save (&optional match)
+  "Collect  and save a file in `orgqda-csv-dir'"
+  (interactive)
+  (let* ((matcher (org-make-tags-matcher match))
+		 (orgqda--csv-curr-mname (car matcher))
+		 (cont (orgqda--coll-tagged-csv matcher)))
+	(with-temp-buffer
+  (insert cont)
+  (when orgqda-convert-csv-to-encoding
+        (orgqda--csv-convert-buffer-to-encoding))
+      (write-region (point-min) (point-max)
+					(concat orgqda-csv-dir orgqda--csv-curr-mname ".csv")))))
+
+;;;###autoload
+(defun orgqda-collect-tagged-csv-save-all (&optional threshold)
+  "Save all tags used THRESHOLD or more times in csv-files (one
+per tag) in `orgqda-csv-dir'"
+  (interactive "P")
+  (let ((tags (orgqda--get-tags-list))
+		(tn (prefix-numeric-value threshold)))
+	(dolist (tc tags)
+	  (when (or (not threshold)
+				(<= tn (cadr tc)))
+		(orgqda-collect-tagged-csv-save (car tc))))))
+
+
+;;;; Commands for renaming tags
 ;;;###autoload
 (defun orgqda-drag-merge-tags (ev)
   (interactive "e")
@@ -364,95 +417,7 @@ collection of orgqda files"
                  (list
                   (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
                   (completing-read "Prefix:"  preflist nil nil))))
-  (orgqda-rename-tag oldname (concat prefix "_" oldname)))
-
-
-(defun orgqda--rename-tag-in-buffer (oldname newname)
-  "Rename all ocurrences of OLDNAME as an org tag with NEWNAME."
-  (let ((numberofreps 0))
-    (save-excursion
-      (save-restriction
-        (widen)
-        (goto-char (point-min))
-        (while (search-forward (concat ":" oldname ":") nil t)
-          (org-set-tags-to
-           (cl-remove-duplicates
-            (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
-            :test 'string=))
-          (setq numberofreps (1+ numberofreps)))))
-    numberofreps))
-
-(defun orgqda--get-tags-for-completion ()
-  "Return current list of tags in orgqda (possibly many files)"
-  (let ((btl (orgqda--with-current-buffer-if
-                 orgqda--originating-buffer
-               (orgqda--get-tags-list))))
-    (mapcar #'car btl)))
-
-(defun orgqda--get-prefixes-for-completion (&optional taglist)
-  "Return the current list of tag prefixes (delimited with _) for
-tags in orgqda (possibly many files)
-
-TAGLIST can be passed or else will be fetched with
-`orgqda--get-tags-for-completion'"
-  (let ((taglist (or taglist (orgqda--get-tags-for-completion)))
-        prefixes)
-    (dolist (tag taglist)
-      (when (string-match "^\\([[:alnum:]@#%:]+\\)_.+$" tag)
-        (push (match-string 1 tag) prefixes)))
-    (cl-remove-duplicates prefixes :test 'string=)))
-
-(defun orgqda--otag-at-point (&optional pos)
-  "Get the tag name of the otag-link at point."
-  (save-excursion
-    (when pos (goto-char pos))
-    (let ((context (org-element-lineage (org-element-context) '(link) t)))
-      (when (and (eq (org-element-type context) 'link)
-                 (string= (org-element-property :type context) "otag"))
-        (cadr (split-string (org-element-property :path context) ":"))))))
-
-(defvar orgqda--csv-curr-mname nil)
-
-;;;###autoload
-(defun orgqda-collect-tagged-csv (&optional match)
-  (interactive)
-  (let* ((matcher (org-make-tags-matcher match))
-		 (orgqda--csv-curr-mname (car matcher))
-		 (cont (orgqda--coll-tagged-csv matcher)))
-	(switch-to-buffer-other-window
-     (generate-new-buffer (format "*csvtags:%s*" orgqda--csv-curr-mname)))
-	(when orgqda-convert-csv-to-encoding
-      (orgqda--csv-convert-buffer-to-encoding))
-	(insert cont)
-	(goto-char (point-min))
-	;; (csv-mode)))
-	))
-
-;;;###autoload
-(defun orgqda-collect-tagged-csv-save (&optional match)
-  "Collect  and save a file in `orgqda-csv-dir'"
-  (interactive)
-  (let* ((matcher (org-make-tags-matcher match))
-		 (orgqda--csv-curr-mname (car matcher))
-		 (cont (orgqda--coll-tagged-csv matcher)))
-	(with-temp-buffer
-	  (insert cont)
-      (when orgqda-convert-csv-to-encoding
-        (orgqda--csv-convert-buffer-to-encoding))
-      (write-region (point-min) (point-max)
-					(concat orgqda-csv-dir orgqda--csv-curr-mname ".csv")))))
-
-;;;###autoload
-(defun orgqda-collect-tagged-csv-save-all (&optional threshold)
-  "Save all tags used THRESHOLD or more times in csv-files (one
-per tag) in `orgqda-csv-dir'"
-  (interactive "P")
-  (let ((tags (orgqda--get-tags-list))
-		(tn (prefix-numeric-value threshold)))
-	(dolist (tc tags)
-	  (when (or (not threshold)
-				(<= tn (cadr tc)))
-		(orgqda-collect-tagged-csv-save (car tc))))))
+  (orgqda-rename-tag oldname (concat prefix (char-to-string orgqda-hierarchy-delimiter) oldname)))
 
 
 
@@ -468,8 +433,8 @@ per tag) in `orgqda-csv-dir'"
           ;; iterate over files assume this file is included in
           ;; orgqda-tag-files (or shouldn't be)
           (if manyfiles
-              (let ;avoid running unneccesary hooks on extra selected files
-                  ((org-mode-hook nil)
+    (let ;avoid running unneccesary hooks on extra selected files
+    ((org-mode-hook nil)
                    (text-mode-hook nil))
                 (dolist (file manyfiles tags)
                   (with-current-buffer (find-file-noselect file)
@@ -485,11 +450,11 @@ per tag) in `orgqda-csv-dir'"
               (cdr ct)))))
     (cons totalcount str)))
 
-  (defun orgqda--taglist-file-heading (number)
-    (let ((fl (abbreviate-file-name
-               (buffer-file-name (buffer-base-buffer)))))
-      (format "** [[file:%s][%s]] (%d)\n"
-              fl (file-name-nondirectory fl) number)))
+(defun orgqda--taglist-file-heading (number)
+  (let ((fl (abbreviate-file-name
+             (buffer-file-name (buffer-base-buffer)))))
+    (format "** [[file:%s][%s]] (%d)\n"
+            fl (file-name-nondirectory fl) number)))
 
 (defvar orgqda--ct-level 2)
 
@@ -505,7 +470,7 @@ per tag) in `orgqda-csv-dir'"
 		  (cons (length tl)
 				(mapconcat 'identity tl "\n\n")))))))
 
-(defun orgqda--get-paragraph-or-sub () 
+(defun orgqda--get-paragraph-or-sub ()
   (save-excursion
 	(if (or (org-at-heading-p) (org-inlinetask-in-task-p))
 		(let* ((ln (line-number-at-pos))
@@ -536,8 +501,8 @@ per tag) in `orgqda-csv-dir'"
 	 "citat,fil,fil:rad,file:hash,head,matchad,extra,extra2\n" ;;TODO, give reasonable names here
      ;; iterate orgqda-tag-files
      (if manyfiles
-         (let ;avoid running unneccesary hooks on extra selected files
-             ((org-mode-hook nil)
+    (let ;avoid running unneccesary hooks on extra selected files
+    ((org-mode-hook nil)
               (text-mode-hook nil)) 
            (dolist (file manyfiles tags)
              (with-current-buffer (find-file-noselect file)
@@ -547,15 +512,13 @@ per tag) in `orgqda-csv-dir'"
        ;;only this buffer
        (orgqda--coll-tagged-in-buffer-csv matcher)))))
 
-
-
 (defun orgqda--coll-tagged-in-buffer-csv (matcher)
   "Returns cons-cell with count in buffer as car and string of taglist as cdr."
   (let ((org-use-tag-inheritance nil))
     (save-excursion
-      (save-restriction
-        (widen) (goto-char (point-min))
-        (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
+  (save-restriction
+  (widen) (goto-char (point-min))
+  (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
                                  (cdr matcher) nil)))
           (mapconcat 'identity tl ""))))))
 
@@ -623,7 +586,7 @@ each character in the buffer."
    (cond
 	((org-inlinetask-in-task-p)
 	 (if (orgqda-inlinetask-in-degenerate-task-p)
-		 (buffer-substring-no-properties
+    (buffer-substring-no-properties
 		  (point) (progn (orgqda--backward-paragraph) (point)))
 	   (buffer-substring-no-properties
 		(save-excursion (org-inlinetask-goto-beginning)
@@ -633,12 +596,11 @@ each character in the buffer."
 	((org-at-heading-p)
 	 (org-copy-subtree)
 	 (with-temp-buffer
-	   (insert "*")
-	   (org-paste-subtree nil nil nil t)
-	   (forward-line 1)
-	   (buffer-substring-no-properties
+  (insert "*")
+  (org-paste-subtree nil nil nil t)
+  (forward-line 1)
+  (buffer-substring-no-properties
 		(point) (point-max)))))))
-
 
 ;; inspired by:
 ;; http://endlessparentheses.com/meta-binds-part-2-a-peeve-with-paragraphs.html
@@ -650,7 +612,7 @@ each character in the buffer."
   (skip-chars-backward "\n[:blank:]")
   (if (search-backward-regexp
        "\n[[:blank:]]*\n[[:blank:]]*" nil t 1)
-      (progn (goto-char (match-end 0))
+    (progn (goto-char (match-end 0))
              (when (looking-at org-heading-regexp)
                (forward-line 1)))
     (goto-char (point-min))))
@@ -719,11 +681,7 @@ each character in the buffer."
 ;;   (let ((bm (cons "name" (read (cdr (assoc "AJFBM" (org-entry-properties)))))))
 ;; 	(bookmark-jump-other-window bm)))
 
-
-
 ;;(add-hook 'org-store-link-functions 'orgqda-ofl-store-link)
-
-
 
 ;;;; List tags functions
 
@@ -735,23 +693,23 @@ alphabetically if optional (prefix) argument is t."
         (manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files)))
 		tcl)
     (if manyfiles ;list only from orgqda-tag-files
-        (dolist (file manyfiles tagscount)
+    (dolist (file manyfiles tagscount)
           (let ((visiting (find-buffer-visiting file)))
             (if visiting
-                (with-current-buffer visiting
+    (with-current-buffer visiting
                   (setq tagscount
                         (orgqda--get-tags-with-count tagscount)))
               (with-temp-buffer
-                (insert-file-contents file)
-                (setq tagscount (orgqda--get-tags-with-count tagscount))))))
+  (insert-file-contents file)
+  (setq tagscount (orgqda--get-tags-with-count tagscount))))))
       ;;only this buffer
       (setq tagscount (orgqda--get-tags-with-count tagscount)))
     (dolist (ex orgqda-exclude-tags)
       (remhash ex tagscount))
     (setq tcl (orgqda--hash-to-list tagscount))
     (if alpha
-        (sort tcl (lambda (a b) (string< (car a) (car b))))
-      (sort tcl (lambda (a b) (> (cadr a) (cadr b)))))))
+    (sort tcl (lambda (a b) (string< (car a) (car b))))
+  (sort tcl (lambda (a b) (> (cadr a) (cadr b)))))))
 
 (defun orgqda--get-tags-with-count (tagscount)
   "Expects a hash-table TAGSCOUNT and returns it modified"
@@ -774,6 +732,68 @@ alphabetically if optional (prefix) argument is t."
   (let (myList)
     (maphash (lambda (kk vv) (setq myList (cons (list kk vv) myList))) hashtable)
 	myList))
+
+;;TODO, not needed?
+;; (defun orgqda--not-hierarchy-delimiter ()
+;;   "Returns a string of the characters _@#% which are not used as
+;;   `orgqda-hierarchy-delimiter'"
+;;   (apply #'concat (split-string "_@#%" (char-to-string orgqda-hierarchy-delimiter) t)))
+
+
+(defun orgqda--hierarchalize-taglist (taglist &optional alpha)
+  "Takes a list of tags (alist of (name . count)) and makes it
+  hierarchical according to `orgqda-hierarchy-delimiter'"
+  (let (newlist)
+    (mapc (lambda (x)
+            (let* ((tag (car x))
+                   (splittag (split-string tag (char-to-string orgqda-hierarchy-delimiter) t)))
+              (if (> (safe-length splittag) 1)
+                  ;; DO sublist stuff.
+                  (setq newlist (orgqda--add-subtaglists newlist tag splittag (cadr x)))
+                (push x newlist))))
+          taglist)
+    ;;TODO: sorting again, stupid, should do this in
+    ;;get-tag-list but list-full isn't prepared yet
+    (if alpha
+        (sort newlist (lambda (a b) (string< (car a) (car b))))
+      (sort newlist (lambda (a b) (> (car (last a)) (car (last b))))))))
+
+(defun orgqda--add-subtaglists (hlist tag split count)
+  (let* ((pref (concat (car split)
+                       (char-to-string orgqda-hierarchy-delimiter)))
+         (exists (cl-position pref hlist :test #'string= :key #'car)))
+    (if exists
+        (progn
+          (cl-incf (car (last (nth exists hlist))) count)
+          (push (list tag count) (cdr (nth exists hlist))))
+      (push (list pref (list tag count) count) hlist)))
+  hlist)
+
+
+(defun orgqda--format-hierarchical-taglist (reclist &optional level)
+  (let ((level (or level 0)))
+    (mapconcat
+     (lambda (x)
+       (concat (format "%s- [[otag:%s:%s][%s]] (%d)\n"
+                       (make-string (* 2 level) 32)
+                       orgqda--current-list-fn
+                       (if (string=
+                            (char-to-string orgqda-hierarchy-delimiter)
+                            (substring (car x) -1))
+                           (concat "{" (car x) "}") ;make regexp-match for prefix
+                         (car x))
+                       (car x) (car (last x)))
+
+               ;; (format "%s %s: (%d)\n"
+               ;;         (make-string level 42)
+               ;;         (car x) (car (last x)))
+               (mapconcat
+                (lambda (y)
+                  (when (listp y)
+                    (orgqda--format-hierarchical-taglist (list y) (1+ level))))
+                (cdr (butlast x)) "")))
+     reclist "")))
+
 
 ;;;;; link type for taglist
 
@@ -801,8 +821,52 @@ alphabetically if optional (prefix) argument is t."
 		 :link link
 		 :description tag)))))
 
+;;;; Functions for rename commands
+(defun orgqda--rename-tag-in-buffer (oldname newname)
+  "Rename all ocurrences of OLDNAME as an org tag with NEWNAME."
+  (let ((numberofreps 0))
+    (save-excursion
+      (save-restriction
+        (widen)
+        (goto-char (point-min))
+        (while (search-forward (concat ":" oldname ":") nil t)
+          (org-set-tags-to
+           (cl-remove-duplicates
+            (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
+            :test 'string=))
+          (setq numberofreps (1+ numberofreps)))))
+    numberofreps))
 
-;;; internal functions
+(defun orgqda--get-tags-for-completion ()
+  "Return current list of tags in orgqda (possibly many files)"
+  (let ((btl (orgqda--with-current-buffer-if
+                 orgqda--originating-buffer
+               (orgqda--get-tags-list))))
+    (mapcar #'car btl)))
+
+(defun orgqda--get-prefixes-for-completion (&optional taglist)
+  "Return the current list of tag prefixes (delimited with _) for
+tags in orgqda (possibly many files)
+
+TAGLIST can be passed or else will be fetched with
+`orgqda--get-tags-for-completion'"
+  (let ((taglist (or taglist (orgqda--get-tags-for-completion)))
+        prefixes)
+    (dolist (tag taglist)
+      (when (string-match "^\\([[:alnum:]@#%:]+\\)_.+$" tag)
+        (push (match-string 1 tag) prefixes)))
+    (cl-remove-duplicates prefixes :test 'string=)))
+
+(defun orgqda--otag-at-point (&optional pos)
+  "Get the tag name of the otag-link at point."
+  (save-excursion
+  (when pos (goto-char pos))
+  (let ((context (org-element-lineage (org-element-context) '(link) t)))
+      (when (and (eq (org-element-type context) 'link)
+                 (string= (org-element-property :type context) "otag"))
+        (cadr (split-string (org-element-property :path context) ":"))))))
+
+;;;; Various functions
 (defun orgqda-tag-files ()
   "Returns list of files which should be searched for tags. Based
 on value of variable `orgqda-tag-files' which could be a list of
@@ -828,15 +892,15 @@ active."
           (apply 'append
                  (mapcar
                   (lambda (f)
-                    (if (file-directory-p f)
-                        (directory-files f t org-agenda-file-regexp)
-                      (list f))) files)))
+  (if (file-directory-p f)
+    (directory-files f t org-agenda-file-regexp)
+  (list f))) files)))
     ;; delete unreadable files
     (setq files (delq nil
                       (mapcar
                        (function
                         (lambda (file)
-                          (and (file-readable-p file)
+  (and (file-readable-p file)
                                file)))
                        files)))
     files))
@@ -854,7 +918,7 @@ active."
  for the single tag at point."
   (when (and orgqda-mode
              (progn
-               (save-excursion (beginning-of-line)
+  (save-excursion (beginning-of-line)
                                (looking-at org-complex-heading-regexp))
                (and (match-beginning 5)
                     (>= (point) (match-beginning 5)))))
@@ -865,7 +929,6 @@ active."
         (orgqda-collect-tagged
          (buffer-substring-no-properties (1+ beg) (1- end)))
         t))))
-
 
 ;;; Advice
 
