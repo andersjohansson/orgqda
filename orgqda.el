@@ -152,7 +152,7 @@ Usually set by the user as a file or dir local variable.")
 (defvar-local orgqda--old-org-current-tag-alist nil
   "Saves state of `org-current-tag-alist' between enabling and disabling `orgqda-mode'.")
 
-;;; Keybindings
+;;; KEYBINDINGS
 ;;;###autoload
 (defvar orgqda-mode-map nil
   "Local keymap for orgqda-mode")
@@ -674,7 +674,7 @@ each character in the buffer."
 
 ;;;; List tags functions
 
-(defun orgqda--get-tags-list (&optional alpha)
+(defun orgqda--get-tags-list (&optional alpha nohierarchy)
   "Return an alist of all tags with counts, in this buffer or
 in all files in `orgqda-tag-files'. Sorted by count or
 alphabetically if optional (prefix) argument is t."
@@ -696,7 +696,7 @@ alphabetically if optional (prefix) argument is t."
     (dolist (ex orgqda-exclude-tags)
       (remhash ex tagscount))
     (setq tcl (orgqda--hash-to-list tagscount))
-    (if orgqda-use-tag-hierarchy
+    (if (and orgqda-use-tag-hierarchy (not nohierarchy))
         (orgqda--hierarchalize-taglist tcl alpha)
       (if alpha
           (sort tcl (lambda (a b) (string< (car a) (car b))))
