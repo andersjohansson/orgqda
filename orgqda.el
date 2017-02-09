@@ -301,7 +301,7 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
                            (format "* Taggat: %s, (%d) " mname (car cont)) "\n")
     (insert (cdr cont))
     (goto-char (point-min))
-    (org-mode)
+    (org-mode) (flyspell-mode -1) (setq buffer-read-only t)
     (org-content 2)))
 ;; TODO, maybe make level of org-content here customizable and in that case depend on
 ;; if we have manyfiles: level can be let along the lines of:
