@@ -11,7 +11,7 @@ Some text that should be given some codes. We make this text reasonably long so 
 
 Additionally, when tags are applied to ordinary headings or inlinetasks with content, the subtree or inlinetask is extracted instead of the preceding paragraph.
 
-"Codes" can be listed with ~orgqda-list-tags~ and all regions for a specific code extracted with ~orgqda-collect-tagged~ (or by clicking on a tag or =C-c C-o= on it). Both these functions creates a custom org-mode buffer with links to the original regions.
+"Codes" can be listed with ~orgqda-list-tags~ and all regions for a specific code extracted with ~orgqda-collect-tagged~ (or by clicking on a tag or =C-c C-o= on it). Both these functions creates a custom org-mode buffer (with the minor mode ~orgqda-list-mode~) with links to the original regions . The command ~orgqda-revert-taglist~ updates a tag list buffer (key: ~g~), and alternatively updates counts for tag lists in any file with ~otag~-links (this can be useful for writing and updating a codebook, an index with descriptions of used tags).
 
 Codes can also be renamed with ~orgqda-rename-tags~ and merged via drag and drop in the code-listing buffer created by ~orgqda-list-tags~. These operations find and replace tags across all files defined in ~orgqda-tag-files~, so undoing can be messy, make sure to use version control.
 

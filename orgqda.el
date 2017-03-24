@@ -252,21 +252,23 @@ Prefix arg is passed through."
 ;;;; Commands for listing tags
 
 ;;;###autoload
-(defun orgqda-list-tags (&optional alpha full buf)
+(defun orgqda-list-tags (&optional alpha full buf taglist newbufname)
   "List all tags with counts, in this buffer and possibly all
 files in `orgqda-tag-files'. Sorted by count or alphabetically if
 optional (prefix) argument is non-nil. If buffer is provided as
 second arg BUF overwrite this buffer with the list instead of
-creating a new."
+creating a new. List of sorted tags can be provided in TAGLISTS,
+NEWBUFNAME gives name of new buffer "
   (interactive "P")
-  (let ((taglist (orgqda--get-tags-list alpha))
+  (let ((taglist (or taglist (orgqda--get-tags-list alpha)))
         (origbuffer (current-buffer))
         (origfile (buffer-file-name)))
     (if buf
         (progn (switch-to-buffer buf)
                (widen)
                (delete-region (point-min) (point-max)))
-      (switch-to-buffer-other-window (generate-new-buffer "*orgqda-taglist*")))
+      (switch-to-buffer-other-window
+       (generate-new-buffer (or newbufname "*orgqda-taglist*"))))
     (insert
      (orgqda--format-hierarchical-taglist taglist full origbuffer origfile))
     (goto-char (point-min))
@@ -285,14 +287,17 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
   (orgqda-list-tags alpha t buf))
 
 (defun orgqda-revert-taglist ()
-  "Reverts current `orgqda-list-mode' buffer."
+  "Reverts current `orgqda-list-mode' buffer.
+If not in `orgqda-list-mode', calls
+`orgqda-update-taglist-general'."
   (interactive)
-  (when (and orgqda-list-mode orgqda--originating-buffer)
-    (let ((cb (current-buffer))
-          (pos (point)))
-      (with-current-buffer orgqda--originating-buffer
-        (orgqda-list-tags orgqda--taglist-sort-alpha orgqda--taglist-full cb))
-      (goto-char pos))))
+  (if (and orgqda-list-mode orgqda--originating-buffer)
+      (let ((cb (current-buffer))
+            (pos (point)))
+        (with-current-buffer orgqda--originating-buffer
+          (orgqda-list-tags orgqda--taglist-sort-alpha orgqda--taglist-full cb))
+        (goto-char pos))
+    (orgqda-update-taglist-general)))
 
 ;;;; Commands for collecting
 ;;;###autoload
@@ -701,12 +706,12 @@ non-nil. If NOHIERARCHY is non-nil, returns flat list."
       (setq tagscount (orgqda--get-tags-with-count tagscount)))
     (dolist (ex orgqda-exclude-tags)
       (remhash ex tagscount))
-    (setq tcl (orgqda--hash-to-list tagscount))
-    (if (and orgqda-use-tag-hierarchy (not nohierarchy))
-        (orgqda--hierarchalize-taglist tcl alpha)
-      (if alpha
-          (sort tcl (lambda (a b) (string< (car a) (car b))))
-        (sort tcl (lambda (a b) (> (cadr a) (cadr b))))))))
+    (let ((tcl (orgqda--hash-to-list tagscount)))
+      (if (and orgqda-use-tag-hierarchy (not nohierarchy))
+          (orgqda--hierarchalize-taglist tcl alpha)
+        (if alpha
+            (sort tcl (lambda (a b) (string< (car a) (car b))))
+          (sort tcl (lambda (a b) (> (cadr a) (cadr b)))))))))
 
 (defun orgqda--get-tags-with-count (tagscount)
   "Expects a hash-table TAGSCOUNT and returns it modified"
@@ -799,6 +804,7 @@ generation takes too long with long tag names."
                (setq org-cached-props nil)
                (member ,tag tags-list))))
 
+
 ;;;;; link type for taglist
 (org-link-set-parameters "otag"
                          :follow #'orgqda-otag-open
@@ -823,6 +829,80 @@ generation takes too long with long tag names."
 		 :type "otag"
 		 :link link
 		 :description tag)))))
+
+
+;;;; Functions for taglist update
+(defvar orgqda--current-taghash (make-hash-table :test 'equal))
+(defvar orgqda--pending-tag-count-replacements nil)
+
+
+(defun orgqda-update-taglist-general ()
+  "Updates taglists in any org buffer.
+Expects to find otag-links and updates any count number
+following them. If `orgqda--originating-buffer' is set, uses
+that, otherwise assumes tags can be found in this buffer or the
+ones defined by `orgqda-tag-files'.
+
+Generates a list of \"new\" tags, tags not linked to in this
+buffer."
+  (let ((taglist (orgqda--with-current-buffer-if orgqda--originating-buffer
+                   (orgqda--get-tags-list)))
+        newtags
+        orgqda--pending-tag-count-replacements)
+    (clrhash orgqda--current-taghash)
+    (orgqda--flatten-taglist-to-hash taglist) ;; update orgqda--current-taghash
+    (save-match-data
+      (org-element-map (org-element-parse-buffer) 'link #'orgqda--update-tag-count-link)
+      ;; do the replacements
+      (cl-loop for x in orgqda--pending-tag-count-replacements
+               do
+               (set-match-data (car x))
+               (replace-match (cdr x))
+               (set-match-data (car x) t)))
+    ;; new tags
+    (maphash
+     (lambda (key val)
+       (unless (listp val)
+         (push (list key val) newtags)))
+     orgqda--current-taghash)
+    (orgqda-list-tags nil nil nil newtags "*Possible new tags*")))
+
+(defun orgqda--update-tag-count-link (link)
+  (when (string= "otag" (org-element-property :type link))
+    (let* ((path (org-element-property :path link))
+           (sp (split-string path ":"))
+           (tag (or (cadr sp) (car sp)))
+           (tag (if (string-match-p "^{[^{}]+}$" tag)
+                    (substring tag 1 -1)
+                  tag))
+           (found (gethash tag orgqda--current-taghash))
+           (count (if (listp found) (car found) found))
+           (count (concat "("
+                          (if count (number-to-string count) "0?")
+                          ")")))
+      (when (and found (not (listp found)))
+        ;;mark the ones found by making the count a list
+        (puthash tag (list found) orgqda--current-taghash))
+      (save-excursion
+        (goto-char (org-element-property :end link))
+        (when (looking-at "([0-9]+)")
+          (push (cons (match-data) count)
+                orgqda--pending-tag-count-replacements))))))
+
+(defun orgqda--flatten-taglist-to-hash (reclist)
+  "Take a hierarchical taglist and make a flat hashtable of it.
+Hashtable is stored in `orgqda--current-taghash', assumed to
+already be initialized "
+  ;; Yes, this may seem very stupid...
+  (cl-loop for x in reclist
+           do (puthash (car x) (car (last x)) orgqda--current-taghash)
+           ;;recurse into possible subtags.
+           (unless (numberp (cadr x))
+             (cl-loop for y in (cdr (butlast x))
+                      do (when (listp y)
+                           (orgqda--flatten-taglist-to-hash
+                            (list y)))))))
+
 
 ;;;; Functions for rename commands
 (defun orgqda--rename-tag-in-buffer (oldname newname)
