@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2017-01-10
+;; Modified: 2017-03-24
 ;; Package-Requires: ((emacs "25") (xah-replace-pairs "2.0") (org-mode "9.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -187,7 +187,15 @@ of codes.
 
 Enables tag completion with tags from all files defined in `orgqda-tag-files'
 
-COMMANDS??"
+Relevant commands not bound to any keys are:
+`orgqda-list-tags', `orgqda-list-tags-full' and `orgqda-collect-tagged'.
+
+CSV files can be exported as well with
+`orgqda-collect-tagged-csv', `orgqda-collect-tagged-csv-save',
+and `orgqda-collect-tagged-csv-save-all'. Be sure to customize
+`orgqda-csv-dir' first.
+
+\\{orgqda-mode-map}"
   ;;TODO Dok ^
   :lighter " QDA"
   :keymap orgqda-mode-map
@@ -202,7 +210,6 @@ COMMANDS??"
     (kill-local-variable 'org-complete-tags-always-offer-all-agenda-tags)
     (kill-local-variable 'org-open-at-point-functions)
     (setq org-current-tag-alist orgqda--old-org-current-tag-alist)))
-
 
 ;;;###autoload
 (define-minor-mode orgqda-list-mode
@@ -290,6 +297,8 @@ Sorted by count or alphabetically if optional (prefix) argument is t."
 ;;;; Commands for collecting
 ;;;###autoload
 (defun orgqda-collect-tagged (&optional match)
+  "Collect all segments marked with tags matching MATCH,
+In an interactive call, MATCH is prompted for."
   (interactive)
   (let* ((matcher (org-make-tags-matcher match))
          (mname (car matcher))
@@ -370,8 +379,6 @@ The value returned is the value of the last form in BODY."
        (with-current-buffer ,buffer ,@body)
      ,@body))
 
-;;;; TODO, check org-with-remote-undo, would it be a solution for
-;;;; undoing in all buffers? Or org-agenda-undo? (probably not)
 (defun orgqda-rename-tag (oldname newname)
   "Rename tag OLDNAME to NEWNAME in all current collection of orgqda files"
   (interactive (let ((complist (orgqda--get-tags-for-completion)))
@@ -673,14 +680,13 @@ each character in the buffer."
 ;;(add-hook 'org-store-link-functions 'orgqda-ofl-store-link)
 
 ;;;; List tags functions
-
 (defun orgqda--get-tags-list (&optional alpha nohierarchy)
-  "Return an alist of all tags with counts, in this buffer or
-in all files in `orgqda-tag-files'. Sorted by count or
-alphabetically if optional (prefix) argument is t."
+  "Return a recursive (only depth 1, for now) list of all tags
+with counts, in this buffer or in all files in
+`orgqda-tag-files'. Sorted by count or alphabetically if ALPHA is
+non-nil. If NOHIERARCHY is non-nil, returns flat list."
   (let ((tagscount (make-hash-table :test 'equal))
-        (manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files)))
-		tcl)
+        (manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files))))
     (if manyfiles ;list only from orgqda-tag-files
         (dolist (file manyfiles tagscount)
           (let ((visiting (find-buffer-visiting file)))
