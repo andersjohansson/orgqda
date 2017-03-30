@@ -169,6 +169,8 @@ Usually set by the user as a file or dir local variable.")
 (unless orgqda-list-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "<drag-mouse-1>") #'orgqda-drag-merge-tags)
+    (define-key map (kbd "R") #'orgqda-rename-tag)
+    (define-key map (kbd "P") #'orgqda-prefix-tag)
     (define-key map (kbd "g") #'orgqda-revert-taglist)
     (define-key map (kbd "q") #'kill-this-buffer)
     (setq orgqda-list-mode-map map)))
