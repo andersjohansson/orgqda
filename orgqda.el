@@ -404,13 +404,22 @@ The value returned is the value of the last form in BODY."
                     repslist))))
       (push (cons (buffer-name) (orgqda--rename-tag-in-buffer oldname newname))
             repslist))
-    (orgqda-revert-taglist)
-    (setq repslist (cl-remove-if (lambda (x) (= 0 (cdr x))) repslist))
-    (message "Replaced %s → %s. Σ:%d; %s"
-             oldname newname
-             ;;TODO, replace with loops?
-             (apply #'+ (mapcar (lambda (x) (cdr x)) repslist))
-             (mapconcat (lambda (x) (concat (car x) ":" (number-to-string (cdr x)))) repslist " "))))
+    (setq repslist (nreverse repslist))
+    (cl-loop with total = 0
+             for x in repslist
+             unless (= 0 (cdr x))
+             do (cl-incf total (cdr x))
+             and concat (concat (car x) " "
+                                (propertize (number-to-string (cdr x))
+                                            'face 'bold) ", ")
+             into filesums
+             finally do
+             (message "Replaced %s → %s. Σ %s, %s"
+                      (propertize oldname 'face 'italic)
+                      (propertize newname 'face 'italic)
+                      (propertize (number-to-string total) 'face 'bold)
+                      filesums))
+    (orgqda-revert-taglist)))
 
 (defun orgqda-prefix-tag (oldname prefix)
   "Add a prefix PREFIX to existing tag OLDNAME in current
@@ -909,7 +918,8 @@ already be initialized "
 
 ;;;; Functions for rename commands
 (defun orgqda--rename-tag-in-buffer (oldname newname)
-  "Rename all ocurrences of OLDNAME as an org tag with NEWNAME."
+  "Rename all ocurrences of OLDNAME as an org tag with NEWNAME.
+Return number of replacements done."
   (let ((numberofreps 0))
     (save-excursion
       (save-restriction
