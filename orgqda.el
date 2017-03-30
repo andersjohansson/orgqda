@@ -296,6 +296,7 @@ If not in `orgqda-list-mode', calls
   (if (and orgqda-list-mode orgqda--originating-buffer)
       (let ((cb (current-buffer))
             (pos (point)))
+        (setq buffer-read-only nil)
         (with-current-buffer orgqda--originating-buffer
           (orgqda-list-tags orgqda--taglist-sort-alpha orgqda--taglist-full cb))
         (goto-char pos))
