@@ -594,26 +594,26 @@ each character in the buffer."
 ;;;; common collection-functions
 
 (defun orgqda--get-paragraph-or-sub-contents ()
-  (require 'subr-x)
-  (string-trim
-   (cond
-	((org-inlinetask-in-task-p)
-	 (if (orgqda-inlinetask-in-degenerate-task-p)
+  (let ((inhibit-message t))
+    (string-trim
+     (cond
+      ((org-inlinetask-in-task-p)
+       (if (orgqda-inlinetask-in-degenerate-task-p)
+           (buffer-substring-no-properties
+            (point) (progn (orgqda--backward-paragraph) (point)))
          (buffer-substring-no-properties
-		  (point) (progn (orgqda--backward-paragraph) (point)))
-	   (buffer-substring-no-properties
-		(save-excursion (org-inlinetask-goto-beginning)
-						(end-of-line) (point))
-		(save-excursion (org-inlinetask-goto-end)
-						(forward-line 0) (point)))))
-	((org-at-heading-p)
-	 (org-copy-subtree)
-	 (with-temp-buffer
-       (insert "*")
-       (org-paste-subtree nil nil nil t)
-       (forward-line 1)
-       (buffer-substring-no-properties
-		(point) (point-max)))))))
+          (save-excursion (org-inlinetask-goto-beginning)
+                          (end-of-line) (point))
+          (save-excursion (org-inlinetask-goto-end)
+                          (forward-line 0) (point)))))
+      ((org-at-heading-p)
+       (org-copy-subtree)
+       (with-temp-buffer
+         (insert "*")
+         (org-paste-subtree nil nil nil t)
+         (forward-line 1)
+         (buffer-substring-no-properties
+          (point) (point-max))))))))
 
 ;; inspired by:
 ;; http://endlessparentheses.com/meta-binds-part-2-a-peeve-with-paragraphs.html
