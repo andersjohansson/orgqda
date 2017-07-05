@@ -356,13 +356,19 @@ Else, move to indentation position of this line."
 
 Activates when `mplayer-mode' and `orgqda-transcript-mode' are
 active"
+  (when-let (lpl (orgqda-transcript--get-link-plist))
+    (apply #'org-store-link-props lpl)))
+
+(defun orgqda-transcript--get-link-plist ()
+  "Returns the plist for an `oqdats' link"
   (when (and mplayer-mode orgqda-transcript-mode)
     (when-let ((time (mplayer--get-time))
                (file (mplayer--get-filename)))
-      (org-store-link-props
+      (list
        :type "oqdats"
        :link (format "oqdats:%s:%s" time file)
        :description (mplayer--format-time time "%H:%M:%S")))))
+
 
 ;;; Internal functions
 ;;;###autoload
@@ -405,9 +411,10 @@ FN with SPEAKER as single argument."
     (goto-char (match-end 0))))
 
 (defun orgqda-transcript--get-link ()
-  (let ((link (org-store-link nil)))
-    (when (and link (string= "oqdats" (plist-get org-store-link-plist :type)))
-      link)))
+  (when-let ((linkpl (orgqda-transcript--get-link-plist)))
+    (format "[[oqdats:%s][%s]]"
+            (plist-get linkpl :link)
+            (plist-get linkpl :description))))
 
 (defun orgqda-transcript--get-other-name ()
   "Get the name of the next, or other speaker.

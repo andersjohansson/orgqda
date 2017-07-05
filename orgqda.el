@@ -667,9 +667,18 @@ each character in the buffer."
 
 (org-link-set-parameters "opbm"
                          :follow #'orgqda-opbm-open
-                         :export #'orgqda-link-desc-export)
+                         :export #'orgqda-link-desc-export
+                         :store #'orgqda-opbm-store-link)
 
-
+(defun orgqda-opbm-store-link ()
+  "Store a bookmark-link to a position in an org-mode-buffer."
+  (when (and (equal major-mode 'org-mode)
+             orgqda-mode)
+    (org-store-link-props
+     :type "opbm"
+     :link (format "opbm:%s" (orgqda-get-bm))
+     :description (format "bm at: %s:%s"
+                          (buffer-file-name) (line-number-at-pos)))))
 
 (defun orgqda-opbm-open (opbm)
   (save-current-buffer
@@ -695,12 +704,6 @@ each character in the buffer."
   (xah-replace-pairs-in-string (prin1-to-string
                                 (bookmark-make-record-default))
                                orgqda-bm-link-encode-table))
-
-;; (defun orgqda-goto-prop-bm ()
-;;   (let ((bm (cons "name" (read (cdr (assoc "AJFBM" (org-entry-properties)))))))
-;; 	(bookmark-jump-other-window bm)))
-
-;;(add-hook 'org-store-link-functions 'orgqda-ofl-store-link)
 
 ;;;; List tags functions
 (defun orgqda--get-tags-list (&optional alpha nohierarchy)
