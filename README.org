@@ -51,6 +51,7 @@ orgqda-convert-csv-to-encoding nil
 orgqda-exclude-tags nil
 orgqda-hierarchy-delimiter ?_
 orgqda-use-tag-hierarchy t
+orgqda-exclude-empty-file-trees t
 #+END_EXAMPLE
 
 ** orgqda-helm-tags

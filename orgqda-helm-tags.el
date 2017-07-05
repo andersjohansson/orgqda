@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2017-02-22
+;; Modified: 2017-06-06
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -39,11 +39,13 @@
   :group 'orgqda
   :type 'boolean)
 
-(defcustom orgqda-helm-tags-sort-alpha nil
-  "Whether to sort alphabetically in `orgqda-helm-set-tags'. If
-  nil sorts by usage"
+(defcustom orgqda-helm-tags-sort 'count-decreasing
+  "Sorting scheme used in `orgqda-helm-set-tags'."
   :group 'orgqda
-  :type 'boolean)
+  :type '(choice (const :tag "By count, decreasing" count-decreasing)
+                 (const :tag "By count, increasing" count-increasing)
+                 (const :tag "A-Z" a-z)
+                 (const :tag "Z-A" z-a)))
 
 (defvar 'orgqda-helm-tags-history)
 
@@ -89,7 +91,7 @@ Continues completing until exited with C-RET,M-RET or C-g"
   (if (org-at-heading-p)
       (let* ((helm-exit-status 0)
              (current (nreverse (org-get-local-tags)))
-             (cl1 (orgqda--get-tags-list orgqda-helm-tags-sort-alpha t))
+             (cl1 (orgqda--get-tags-alist orgqda-helm-tags-sort))
              cllast
              (clfirst (cl-loop for x in cl1
                                if (cl-member x current
@@ -130,20 +132,10 @@ Continues completing until exited with C-RET,M-RET or C-g"
    (orgqda-helm-tags-propertize-if incurrent?
      (concat
       (car x) " "
-      (propertize (format "(%d)" (cadr x))
+      (propertize (format "(%d)" (cdr x))
                   'face 'font-lock-function-name-face))
      'face '(font-lock-comment-face (:strike-through t)))
    (car x)))
-
-;; (defun orgqda-helm-tags--format-list-item (x current)
-;;   (cons
-;;    (orgqda-helm-tags-propertize-if (cl-member (car x) current :test #'string=)
-;;      (concat
-;;       (car x) " "
-;;       (propertize (format "(%d)" (cadr x))
-;;                   'face 'font-lock-function-name-face))
-;;      'face '(font-lock-comment-face (:strike-through t)))
-;;    (car x)))
 
 (provide 'orgqda-helm-tags)
 
