@@ -55,6 +55,8 @@
     :action  '(("Set tags to" . (lambda (_c) (helm-marked-candidates))))
     :candidates 'orgqda-helm-tags-comp-list))
 
+;;TODO, add action to remove a current item.
+
 (defun orgqda-helm-tags--fallback-source ()
   (helm-build-dummy-source "Add new tag"
     :keymap helm-comp-read-map
@@ -87,10 +89,14 @@ Continues completing until exited with C-RET,M-RET or C-g"
   (if (org-at-heading-p)
       (let* ((helm-exit-status 0)
              (current (nreverse (org-get-local-tags)))
-             (orgqda-helm-tags-comp-list
-              (cl-loop for x in (orgqda--get-tags-list orgqda-helm-tags-sort-alpha t)
-                       collect (orgqda-helm-tags--format-list-item x current) into list
-                       finally return (cl-remove nil list))))
+             (cl1 (orgqda--get-tags-list orgqda-helm-tags-sort-alpha t))
+             cllast
+             (clfirst (cl-loop for x in cl1
+                               if (cl-member x current
+                                             :test (lambda (a b) (string= (car a) b)))
+                               do (push (orgqda-helm-tags--format-list-item x t) cllast)
+                               else collect (orgqda-helm-tags--format-list-item x)))
+             (orgqda-helm-tags-comp-list (nconc clfirst (nreverse cllast))))
         (org-set-tags-to
          (cl-remove-duplicates
           (cl-loop with x
@@ -99,28 +105,45 @@ Continues completing until exited with C-RET,M-RET or C-g"
                                     (list (orgqda-helm-tags--source) (orgqda-helm-tags--fallback-source))
                                     :candidate-number-limit 99999
                                     :buffer "*helm orgqda tags*"))
-                   do (when (listp x)
-                        (dolist (y x)
-                          (push y current)
-                          (if-let ((n (cl-position y orgqda-helm-tags-comp-list :test (lambda (a b) (string= a (cdr b))))))
-                              (cl-callf orgqda-helm-tags--reformat-added-list-item (nth n orgqda-helm-tags-comp-list))
-                            (nconc orgqda-helm-tags-comp-list (list (cons (propertize (concat y " +1") 'face 'bold) y))))))
+                   if (listp x)
+                   do (dolist (y x)
+                        (push y current)
+                        (setq orgqda-helm-tags-comp-list
+                              (if-let ((n (cl-position y orgqda-helm-tags-comp-list
+                                                       :test (lambda (a b) (string= a (cdr b))))))
+                                  (nconc (cl-subseq orgqda-helm-tags-comp-list 0 n)
+                                         (cl-subseq orgqda-helm-tags-comp-list (1+ n))
+                                         (orgqda-helm-tags--reformat-added-list-item
+                                          (nth n orgqda-helm-tags-comp-list)))
+                                (nconc orgqda-helm-tags-comp-list
+                                       (orgqda-helm-tags--reformat-added-list-item (cons y y))))))
                    finally return (nreverse current))
           :test 'string=)))
     (user-error "Not at org heading")))
 
 (defun orgqda-helm-tags--reformat-added-list-item (li)
-  (cons (propertize (concat (car li) " +1") 'face 'bold) (cdr li)))
+  (list (cons (propertize (concat (car li) " +1") 'face 'bold) (cdr li))))
 
-(defun orgqda-helm-tags--format-list-item (x current)
+
+(defun orgqda-helm-tags--format-list-item (x &optional incurrent?)
   (cons
-   (orgqda-helm-tags-propertize-if (cl-member (car x) current :test #'string=)
+   (orgqda-helm-tags-propertize-if incurrent?
      (concat
       (car x) " "
       (propertize (format "(%d)" (cadr x))
                   'face 'font-lock-function-name-face))
      'face '(font-lock-comment-face (:strike-through t)))
    (car x)))
+
+;; (defun orgqda-helm-tags--format-list-item (x current)
+;;   (cons
+;;    (orgqda-helm-tags-propertize-if (cl-member (car x) current :test #'string=)
+;;      (concat
+;;       (car x) " "
+;;       (propertize (format "(%d)" (cadr x))
+;;                   'face 'font-lock-function-name-face))
+;;      'face '(font-lock-comment-face (:strike-through t)))
+;;    (car x)))
 
 (provide 'orgqda-helm-tags)
 
