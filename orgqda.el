@@ -531,9 +531,9 @@ collection of orgqda files"
   "Returns cons-cell with count in buffer as car and string of taglist as cdr."
   (let ((org-use-tag-inheritance nil))
     (save-excursion
-  (save-restriction
-  (widen) (goto-char (point-min))
-  (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
+      (save-restriction
+        (widen) (goto-char (point-min))
+        (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
                                  (cdr matcher) nil)))
           (mapconcat 'identity tl ""))))))
 
@@ -958,8 +958,8 @@ TAGLIST can be passed or else will be fetched with
 (defun orgqda--otag-at-point (&optional pos)
   "Get the tag name of the otag-link at point."
   (save-excursion
-  (when pos (goto-char pos))
-  (let ((context (org-element-lineage (org-element-context) '(link) t)))
+    (when pos (goto-char pos))
+    (let ((context (org-element-lineage (org-element-context) '(link) t)))
       (when (and (eq (org-element-type context) 'link)
                  (string= (org-element-property :type context) "otag"))
         (cadr (split-string (org-element-property :path context) ":"))))))
