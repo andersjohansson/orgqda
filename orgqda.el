@@ -345,22 +345,23 @@ In an interactive call, MATCH is prompted for."
 (defun orgqda-collect-tagged-csv-save (&optional match)
   "Collect  and save a file in `orgqda-csv-dir'"
   (interactive)
-  (let* ((matcher (org-make-tags-matcher match))
+  (let* ((matcher (orgqda--make-simple-tags-matcher match))
 		 (orgqda--csv-curr-mname (car matcher))
 		 (cont (orgqda--coll-tagged-csv matcher)))
-	(with-temp-buffer
-  (insert cont)
-  (when orgqda-convert-csv-to-encoding
-        (orgqda--csv-convert-buffer-to-encoding))
-      (write-region (point-min) (point-max)
-					(concat orgqda-csv-dir orgqda--csv-curr-mname ".csv")))))
+    (let ((current-orgqda-csv-dir orgqda-csv-dir)) ;to use buffer-local value
+      (with-temp-buffer
+        (insert cont)
+        (when orgqda-convert-csv-to-encoding
+          (orgqda--csv-convert-buffer-to-encoding))
+        (write-region (point-min) (point-max)
+                      (concat current-orgqda-csv-dir orgqda--csv-curr-mname ".csv"))))))
 
 ;;;###autoload
 (defun orgqda-collect-tagged-csv-save-all (&optional threshold)
   "Save all tags used THRESHOLD or more times in csv-files (one
 per tag) in `orgqda-csv-dir'"
   (interactive "P")
-  (let ((tags (orgqda--get-tags-list))
+  (let ((tags (orgqda--get-tags-list nil t))
 		(tn (prefix-numeric-value threshold)))
 	(dolist (tc tags)
 	  (when (or (not threshold)
@@ -562,9 +563,12 @@ collection of orgqda files"
 										;typ sönder om extrainfo inte
 										;är definierat
                (contents
-                (format "\"%s\","
-                        (replace-regexp-in-string
-                         "\\\"" "»" (orgqda--get-paragraph-or-sub-contents))))
+                (format
+                 "\"%s\","
+                 (org-export-string-as
+                  (orgqda--get-paragraph-or-sub-contents)
+                  'ascii t
+                  '(:with-smart-quotes t :ascii-charset utf-8 :ascii-inner-margin 0 :ascii-text-width 99999))))
                (secondary
                 (format "\"%s\",\"%s:%s\",\"%s:%s\",\"%s\",\"%s\""
                         fl fl ln fl (secure-hash 'md5 contents)
