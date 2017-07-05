@@ -39,7 +39,7 @@
 (require 'subr-x) ;if-let
 
 ;;; Variables
-(defgroup orgqda '((orgqda-mode custom-variable))
+(defgroup orgqda nil
   "Customizations for orgqda-mode"
   :group 'org)
 
@@ -58,7 +58,8 @@ An example that adds a possible parent heading on level 4 for
 buffers with names containing 'fieldnotes':
 '((\"fieldnotes\" . (format \" (from: %s)\" (orgqda-get-parent-hl 4))))
 "
-  :type '(alist :key-type regexp :value-type sexp))
+  :type '(alist :key-type regexp :value-type sexp)
+  :group 'orgqda)
 
 (defcustom orgqda-collect-from-all-files t
   "Whether the tag listing and collection commands in orgqda should
@@ -113,7 +114,8 @@ One of: _@#%"
 (defcustom orgqda-use-tag-hierarchy t
   "If tags delimited with `orgqda-hierarchy-delimiter' should be considered grouped.
 Currently only works for one level."
-  :type 'boolean)
+  :type 'boolean
+  :group 'orgqda)
 
 ;;;###autoload
 (defvar-local orgqda-tag-files nil
