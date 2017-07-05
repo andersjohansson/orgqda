@@ -946,7 +946,7 @@ Return number of replacements done."
   "Return current list of tags in orgqda (possibly many files)"
   (let ((btl (orgqda--with-current-buffer-if
                  orgqda--originating-buffer
-               (orgqda--get-tags-list))))
+               (orgqda--get-tags-list nil t))))
     (mapcar #'car btl)))
 
 (defun orgqda--get-prefixes-for-completion (&optional taglist)
@@ -956,11 +956,25 @@ tags in orgqda (possibly many files)
 TAGLIST can be passed or else will be fetched with
 `orgqda--get-tags-for-completion'"
   (let ((taglist (or taglist (orgqda--get-tags-for-completion)))
+        (delim (char-to-string orgqda-hierarchy-delimiter))
         prefixes)
     (dolist (tag taglist)
-      (when (string-match "^\\([[:alnum:]@#%:]+\\)_.+$" tag)
-        (push (match-string 1 tag) prefixes)))
+      (let* ((splittag (split-string tag delim t))
+             (cats (butlast splittag)))
+        (when cats
+          (setq prefixes
+                (append prefixes (orgqda--build-prefixes cats delim))))))
     (cl-remove-duplicates prefixes :test 'string=)))
+
+(defun orgqda--build-prefixes (preflist delim &optional pref)
+  (when preflist
+    (let ((curr (if pref
+                    (concat pref delim (car preflist))
+                  (car preflist))))
+      (cons curr
+            (orgqda--build-prefixes
+             (cdr preflist) delim
+             curr)))))
 
 (defun orgqda--otag-at-point (&optional pos)
   "Get the tag name of the otag-link at point."
