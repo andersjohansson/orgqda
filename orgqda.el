@@ -5,8 +5,8 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2017-03-24
-;; Package-Requires: ((emacs "25") (xah-replace-pairs "2.0") (org-mode "9.0"))
+;; Modified: 2017-06-06
+;; Package-Requires: ((emacs "25.1") (xah-replace-pairs "2.0") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
 
@@ -37,6 +37,7 @@
 (require 'org-inlinetask)
 (require 'cl-lib)
 (require 'subr-x) ;if-let
+(require 'hierarchy)
 
 ;;; Variables
 (defgroup orgqda nil
@@ -104,17 +105,22 @@ characters are of this encoding and replace those that are not by
           (repeat :tag "List of tags" string))
   :safe #'orgqda--list-of-strings-p)
 
-(defcustom orgqda-hierarchy-delimiter ?_
+(defcustom orgqda-hierarchy-delimiter "_"
   "The character to use for delimiting a hierarchy within tags.
 One of: _@#%"
-  :type '(choice (const :tag "_" ?_)
-                 (const :tag "@" ?@)
-                 (const :tag "#" ?#)
-                 (const :tag "%" ?%)))
+  :type '(choice (const :tag "_" "_")
+                 (const :tag "@" "@")
+                 (const :tag "#" "#")
+                 (const :tag "%" "%")))
 
 (defcustom orgqda-use-tag-hierarchy t
   "If tags delimited with `orgqda-hierarchy-delimiter' should be considered grouped.
 Currently only works for one level."
+  :type 'boolean
+  :group 'orgqda)
+
+(defcustom orgqda-exclude-empty-file-trees t
+  "When non-nil, excludes listing files where the current tag was not found when collecting occurences of tags"
   :type 'boolean
   :group 'orgqda)
 
@@ -257,25 +263,28 @@ Prefix arg is passed through."
 ;;;; Commands for listing tags
 
 ;;;###autoload
-(defun orgqda-list-tags (&optional alpha full buf taglist newbufname)
+(defun orgqda-list-tags (&optional alpha full buf noupdate newbufname)
   "List all tags with counts, in this buffer and possibly all
 files in `orgqda-tag-files'. Sorted by count or alphabetically if
 optional (prefix) argument is non-nil. If buffer is provided as
 second arg BUF overwrite this buffer with the list instead of
-creating a new. List of sorted tags can be provided in TAGLISTS,
-NEWBUFNAME gives name of new buffer "
+creating a new. The taglist is normally updated via `orgqda--create-hierarchical-taglist', but this can be prevented by giving a non-nil NOUPDATE.
+Then a special list can be used by setting `orgqda--current-htl' suitably.
+NEWBUFNAME gives name of new buffer"
   (interactive "P")
-  (let ((taglist (or taglist (orgqda--get-tags-list alpha)))
-        (origbuffer (current-buffer))
+  (let ((origbuffer (current-buffer))
         (origfile (buffer-file-name)))
+    (unless noupdate
+      (orgqda--create-hierarchical-taglist (when alpha 'a-z)))
+                                        ; TODO, expose more sort possibilities?
     (if buf
         (progn (switch-to-buffer buf)
                (widen)
                (delete-region (point-min) (point-max)))
       (switch-to-buffer-other-window
        (generate-new-buffer (or newbufname "*orgqda-taglist*"))))
-    (insert
-     (orgqda--format-hierarchical-taglist taglist full origbuffer origfile))
+
+    (orgqda--insert-hierarchical-taglist full origbuffer origfile)
     (goto-char (point-min))
     (org-mode) (orgqda-list-mode) (flyspell-mode -1)
     (setq buffer-read-only t
@@ -365,12 +374,13 @@ In an interactive call, MATCH is prompted for."
   "Save all tags used THRESHOLD or more times in csv-files (one
 per tag) in `orgqda-csv-dir'"
   (interactive "P")
-  (let ((tags (orgqda--get-tags-list nil t))
+  (let ((tags (orgqda--get-tags-hash))
 		(tn (prefix-numeric-value threshold)))
-	(dolist (tc tags)
-	  (when (or (not threshold)
-				(<= tn (cadr tc)))
-		(orgqda-collect-tagged-csv-save (car tc))))))
+    (maphash (lambda (tag count)
+               (when (or (not threshold)
+                         (<= tn count))
+                 (orgqda-collect-tagged-csv-save tag)))
+             tags)))
 
 
 ;;;; Commands for renaming tags
@@ -436,7 +446,7 @@ collection of orgqda files"
                  (list
                   (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
                   (completing-read "Prefix:"  preflist nil nil))))
-  (orgqda-rename-tag oldname (concat prefix (char-to-string orgqda-hierarchy-delimiter) oldname)))
+  (orgqda-rename-tag oldname (concat prefix orgqda-hierarchy-delimiter oldname)))
 
 
 ;;; internal functions
@@ -457,11 +467,14 @@ collection of orgqda files"
                 (dolist (file manyfiles tags)
                   (with-current-buffer (find-file-noselect file)
                     (let ((ct (orgqda--coll-tagged-in-buffer matcher (1+ level))))
-                      (setq totalcount (+ totalcount (car ct)))
-                      (setq tags (concat tags
-                                         (orgqda--taglist-file-heading (car ct) level)
-                                         (cdr ct)
-                                         "\n\n"))))))
+                      (unless (and orgqda-exclude-empty-file-trees
+                                   (= 0 (car ct)))
+                        (setq totalcount (+ totalcount (car ct)))
+                        (setq tags (concat tags
+                                           (orgqda--taglist-file-heading
+                                            (car ct) level)
+                                           (cdr ct)
+                                           "\n\n")))))))
             ;;only this buffer
             (let ((ct (orgqda--coll-tagged-in-buffer matcher level)))
               (setq totalcount (+ totalcount (car ct)))
@@ -489,7 +502,6 @@ collection of orgqda files"
                                  (cdr matcher) nil)))
           (cons (length tl)
                 (mapconcat 'identity tl "\n")))))))
-;; TODO, replace with loop?
 
 (defun orgqda--get-paragraph-or-sub ()
   (save-excursion
@@ -515,8 +527,8 @@ collection of orgqda files"
 ;;TODO, perhaps more duplication could be avoided
 (defun orgqda--coll-tagged-csv (matcher)
   "Return body of csv"
-  (let* ((manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files)))
-		 tags)
+  (let ((manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files)))
+        tags)
 	(concat
 	 "citat,fil,fil:rad,file:hash,head,matchad,extra,extra2\n" ;;TODO, give reasonable names here
      ;; iterate orgqda-tag-files
@@ -711,11 +723,9 @@ each character in the buffer."
                                orgqda-bm-link-encode-table))
 
 ;;;; List tags functions
-(defun orgqda--get-tags-list (&optional alpha nohierarchy)
-  "Return a recursive (only depth 1, for now) list of all tags
-with counts, in this buffer or in all files in
-`orgqda-tag-files'. Sorted by count or alphabetically if ALPHA is
-non-nil. If NOHIERARCHY is non-nil, returns flat list."
+(defun orgqda--get-tags-hash ()
+  "Return a hash of all tags with counts.
+In this buffer or in all files in `orgqda-tag-files'."
   (let ((tagscount (make-hash-table :test 'equal))
         (manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files))))
     (if manyfiles ;list only from orgqda-tag-files
@@ -732,95 +742,125 @@ non-nil. If NOHIERARCHY is non-nil, returns flat list."
       (setq tagscount (orgqda--get-tags-with-count tagscount)))
     (dolist (ex orgqda-exclude-tags)
       (remhash ex tagscount))
-    (let ((tcl (orgqda--hash-to-list tagscount)))
-      (if (and orgqda-use-tag-hierarchy (not nohierarchy))
-          (orgqda--hierarchalize-taglist tcl alpha)
-        (if alpha
-            (sort tcl (lambda (a b) (string< (car a) (car b))))
-          (sort tcl (lambda (a b) (> (cadr a) (cadr b)))))))))
+    tagscount))
+
+(defun orgqda--get-tags-alist (&optional sort)
+  "Return an alist of all tags with counts.
+In this buffer or in all files in `orgqda-tag-files'.
+Optional SORT can be symbols: count-decreasing, count-increasing,
+a-z, or z-a."
+  (let ((tl (cl-loop for k being the hash-keys of (orgqda--get-tags-hash)
+                     using (hash-values v)
+                     collect (cons k v))))
+    (cl-case sort
+      (count-decreasing (cl-sort tl '> :key 'cdr))
+      (count-increasing (cl-sort tl '< :key 'cdr))
+      (a-z (cl-sort tl #'orgqda--string-lessp :key 'car))
+      (z-a (cl-sort tl #'orgqda--string-greaterp :key 'car))
+      (t tl))))
+
+(cl-defstruct (orgqda--hierarchical-taglist
+               (:constructor orgqda--make-htl)
+               (:conc-name orgqda--htl-))
+  (hierarchy (hierarchy-new))
+  (counts (make-hash-table :test 'equal)))
+
+(defvar orgqda--current-htl (orgqda--make-htl)
+  "Variable holding the current hierarchical list of tags with
+  counts")
+
+(defun orgqda--create-hierarchical-taglist (&optional sort taghash)
+  "Store a hierarchical taglist in `orgqda--current-htl'.
+Optional SORT can be symbols: count-decreasing (default),
+count-increasing, a-z, or z-a. TAGHASH specifies a custom taghash
+not loaded with `orgqda--get-tags-hash'"
+  (let ((taghash (or taghash (orgqda--get-tags-hash)))
+        (sortfn
+         (cl-case sort
+           (count-decreasing #'orgqda--hierarchy-count-sort-decr)
+           (count-increasing #'orgqda--hierarchy-count-sort-incr)
+           (a-z #'orgqda--string-lessp)
+           (z-a #'orgqda--string-greaterp)
+           (t #'orgqda--hierarchy-count-sort-decr))))
+    (setq orgqda--current-htl
+          (orgqda--make-htl
+           :counts taghash))
+    (hierarchy-add-trees (orgqda--htl-hierarchy orgqda--current-htl)
+                         (hash-table-keys taghash)
+                         (if orgqda-use-tag-hierarchy
+                             #'orgqda--hierarchy-parentfn
+                           (lambda (_) nil)))
+    (hierarchy-sort (orgqda--htl-hierarchy orgqda--current-htl) sortfn)))
+
+(defun orgqda--insert-hierarchical-taglist (full origbuffer filename &optional startlevel)
+  (hierarchy-map
+   (hierarchy-labelfn-indent
+    (lambda (item indent)
+      (orgqda--insert-taglist-item
+       item filename)
+      (when (and full
+                 (not (string=
+                       orgqda-hierarchy-delimiter
+                       (substring item -1))))
+        (insert
+         (with-current-buffer origbuffer
+           (cdr (orgqda--coll-tagged (orgqda--make-simple-tags-matcher item)
+                                     (+ 2 indent))))
+         "\n")))
+    "*")
+   (orgqda--htl-hierarchy orgqda--current-htl)
+   (or startlevel 0)))
+
+(defun orgqda--insert-taglist-item (item filename)
+  (insert
+   (format "* [[otag:%s:%s][%s]] (%d)\n"
+           filename
+           (if (string=
+                orgqda-hierarchy-delimiter
+                (substring item -1))
+               (concat "{" item "}") ;make regexp-match for prefix
+             item)
+           item
+           (gethash item (orgqda--htl-counts orgqda--current-htl) 0))))
+
+(defun orgqda--hierarchy-parentfn (tag)
+  "Function returning parent of a tag. Also updates count of parent."
+  (let* ((splittag (split-string tag orgqda-hierarchy-delimiter t)))
+    (when (> (safe-length splittag) 1)
+      (let* ((parent (replace-regexp-in-string (concat (car (last splittag)) orgqda-hierarchy-delimiter "?$") "" tag))
+             (c (gethash tag (orgqda--htl-counts orgqda--current-htl) 0))
+             (pc (gethash parent (orgqda--htl-counts orgqda--current-htl) 0)))
+        (puthash parent (+ c pc) (orgqda--htl-counts orgqda--current-htl))
+        parent))))
+
+(defun orgqda--hierarchy-count-sort-decr (x y)
+  (> (gethash x (orgqda--htl-counts orgqda--current-htl) -1)
+     (gethash y (orgqda--htl-counts orgqda--current-htl) -2)))
+(defun orgqda--hierarchy-count-sort-incr (x y)
+  (< (gethash x (orgqda--htl-counts orgqda--current-htl) -2)
+     (gethash y (orgqda--htl-counts orgqda--current-htl) -1)))
+
+
+(defun orgqda--string-lessp (x y)
+  "Case insensitive `string-lessp'"
+  (string-lessp (downcase x) (downcase y)))
+(defun orgqda--string-greaterp (x y)
+  "Case insensitive `string-greaterp'"
+  (string-greaterp (downcase x) (downcase y)))
 
 (defun orgqda--get-tags-with-count (tagscount)
-  "Expects a hash-table TAGSCOUNT and returns it modified"
+  "Counts occurences of org tags in buffer.
+Expects a hash-table TAGSCOUNT and returns it modified"
   (save-excursion
     (save-restriction
       (widen) (goto-char (point-min))
       (while (re-search-forward
               "[ \t]:\\([[:alnum:]_@#%:]+\\):[ \t\r\n]" nil t)
         (when (equal (char-after (point-at-bol 0)) ?*)
-          (mapc (lambda (x) ;; TODO, replace with loops
-                  (let ((ov (gethash x tagscount 0))) ; gethash def=0
-                    (puthash x (1+ ov) tagscount)))
-                (org-split-string (match-string-no-properties 1) ":"))))))
+          (dolist (x (split-string (match-string-no-properties 1) ":" t))
+            (let ((ov (gethash x tagscount 0)))
+              (puthash x (1+ ov) tagscount)))))))
   tagscount)
-
-
-;;from: http://ergoemacs.org/emacs/elisp_hash_table.html
-(defun orgqda--hash-to-list (hashtable)
-  "Return a list that represent the HASHTABLE."
-  (let (myList)
-    (maphash (lambda (kk vv) (setq myList (cons (list kk vv) myList))) hashtable)
-	myList))
-
-(defun orgqda--hierarchalize-taglist (taglist &optional alpha)
-  "Takes a list of tags (alist of (name . count)) and makes it
-  hierarchical according to `orgqda-hierarchy-delimiter'"
-  (let (newlist)
-    (mapc (lambda (x) ; TODO, replace with loop
-            (let* ((tag (car x))
-                   (splittag (split-string tag (char-to-string orgqda-hierarchy-delimiter) t)))
-              (if (> (safe-length splittag) 1)
-                  ;; DO sublist stuff.
-                  (setq newlist (orgqda--add-subtaglists newlist tag splittag (cadr x)))
-                (push x newlist))))
-          taglist)
-    (if alpha
-        (sort newlist (lambda (a b) (string< (car a) (car b))))
-      (sort newlist (lambda (a b) (> (car (last a)) (car (last b))))))))
-
-(defun orgqda--add-subtaglists (hlist tag split count)
-  (let* ((pref (concat (car split)
-                       (char-to-string orgqda-hierarchy-delimiter)))
-         (exists (cl-position pref hlist :test #'string= :key #'car)))
-    (if exists
-        (progn
-          (cl-incf (car (last (nth exists hlist))) count)
-          (push (list tag count) (cdr (nth exists hlist))))
-      (push (list pref (list tag count) count) hlist)))
-  hlist)
-
-
-(defun orgqda--format-hierarchical-taglist
-    (reclist full origbuffer filename &optional level)
-  "Return formatted list of tags. With FULL non-nil, including all extracts"
-  (let ((level (or level 1)))
-    (cl-loop for x in reclist
-             concat
-             (concat
-              (format "%s [[otag:%s:%s][%s]] (%d)\n"
-                      (if full
-                          (make-string level 42)
-                        (concat (make-string (* 2 (1- level)) 32) "-"))
-                      filename
-                      (if (string=
-                           (char-to-string orgqda-hierarchy-delimiter)
-                           (substring (car x) -1))
-                          (concat "{" (car x) "}") ;make regexp-match for prefix
-                        (car x))
-                      (car x) (car (last x)))
-              ;; Insert list unless we have subtags
-              (if (numberp (cadr x))
-                  ;;second element a number means no subtags
-                  (when full
-                    (concat
-                     (with-current-buffer origbuffer
-                       (cdr (orgqda--coll-tagged (orgqda--make-simple-tags-matcher (car x))
-                                                 (1+ level))))
-                     "\n"))
-                (cl-loop for y in (cdr (butlast x))
-                         concat (when (listp y)
-                                  (orgqda--format-hierarchical-taglist
-                                   (list y) full origbuffer filename
-                                   (1+ level)))))))))
 
 (defun orgqda--make-simple-tags-matcher (tag)
   "Construct a tags matcher only matching a single tag.
@@ -829,7 +869,6 @@ generation takes too long with long tag names."
   (cons tag `(lambda (_todo tags-list _level)
                (setq org-cached-props nil)
                (member ,tag tags-list))))
-
 
 ;;;;; link type for taglist
 (org-link-set-parameters "otag"
@@ -856,11 +895,8 @@ generation takes too long with long tag names."
 		 :link link
 		 :description tag)))))
 
-
 ;;;; Functions for taglist update
-(defvar orgqda--current-taghash (make-hash-table :test 'equal))
 (defvar orgqda--pending-tag-count-replacements nil)
-
 
 (defun orgqda-update-taglist-general ()
   "Updates taglists in any org buffer.
@@ -871,12 +907,11 @@ ones defined by `orgqda-tag-files'.
 
 Generates a list of \"new\" tags, tags not linked to in this
 buffer."
-  (let ((taglist (orgqda--with-current-buffer-if orgqda--originating-buffer
-                   (orgqda--get-tags-list)))
-        newtags
-        orgqda--pending-tag-count-replacements)
-    (clrhash orgqda--current-taghash)
-    (orgqda--flatten-taglist-to-hash taglist) ;; update orgqda--current-taghash
+  (let ((newtags (make-hash-table :test 'equal)))
+    (orgqda--with-current-buffer-if
+        orgqda--originating-buffer
+      (orgqda--create-hierarchical-taglist))
+    (setq orgqda--pending-tag-count-replacements nil)
     (save-match-data
       (org-element-map (org-element-parse-buffer) 'link #'orgqda--update-tag-count-link)
       ;; do the replacements
@@ -885,13 +920,15 @@ buffer."
                (set-match-data (car x))
                (replace-match (cdr x))
                (set-match-data (car x) t)))
-    ;; new tags
+    ;; list new tags
     (maphash
      (lambda (key val)
        (unless (listp val)
-         (push (list key val) newtags)))
-     orgqda--current-taghash)
-    (orgqda-list-tags nil nil nil newtags "*Possible new tags*")))
+         (puthash key val newtags)))
+     (orgqda--htl-counts orgqda--current-htl))
+    (unless (hash-table-empty-p newtags)
+      (orgqda--create-hierarchical-taglist nil newtags)
+      (orgqda-list-tags nil nil nil t "*Possible new tags*"))))
 
 (defun orgqda--update-tag-count-link (link)
   (when (string= "otag" (org-element-property :type link))
@@ -901,33 +938,19 @@ buffer."
            (tag (if (string-match-p "^{[^{}]+}$" tag)
                     (substring tag 1 -1)
                   tag))
-           (found (gethash tag orgqda--current-taghash))
+           (found (gethash tag (orgqda--htl-counts orgqda--current-htl)))
            (count (if (listp found) (car found) found))
            (count (concat "("
                           (if count (number-to-string count) "0?")
                           ")")))
       (when (and found (not (listp found)))
         ;;mark the ones found by making the count a list
-        (puthash tag (list found) orgqda--current-taghash))
+        (puthash tag (list found) (orgqda--htl-counts orgqda--current-htl)))
       (save-excursion
         (goto-char (org-element-property :end link))
         (when (looking-at "([0-9]+)")
           (push (cons (match-data) count)
                 orgqda--pending-tag-count-replacements))))))
-
-(defun orgqda--flatten-taglist-to-hash (reclist)
-  "Take a hierarchical taglist and make a flat hashtable of it.
-Hashtable is stored in `orgqda--current-taghash', assumed to
-already be initialized "
-  ;; Yes, this may seem very stupid...
-  (cl-loop for x in reclist
-           do (puthash (car x) (car (last x)) orgqda--current-taghash)
-           ;;recurse into possible subtags.
-           (unless (numberp (cadr x))
-             (cl-loop for y in (cdr (butlast x))
-                      do (when (listp y)
-                           (orgqda--flatten-taglist-to-hash
-                            (list y)))))))
 
 
 ;;;; Functions for rename commands
@@ -949,36 +972,36 @@ Return number of replacements done."
 
 (defun orgqda--get-tags-for-completion ()
   "Return current list of tags in orgqda (possibly many files)"
-  (let ((btl (orgqda--with-current-buffer-if
-                 orgqda--originating-buffer
-               (orgqda--get-tags-list nil t))))
-    (mapcar #'car btl)))
+  (hash-table-keys
+   (orgqda--with-current-buffer-if
+       orgqda--originating-buffer
+     (orgqda--get-tags-hash))))
 
 (defun orgqda--get-prefixes-for-completion (&optional taglist)
-  "Return the current list of tag prefixes (delimited with _) for
-tags in orgqda (possibly many files)
+  "Return the current list of tag prefixes
+ (delimited with `orgqda-hierarchy-delimiter') for tags in
+orgqda (possibly many files)
 
 TAGLIST can be passed or else will be fetched with
 `orgqda--get-tags-for-completion'"
   (let ((taglist (or taglist (orgqda--get-tags-for-completion)))
-        (delim (char-to-string orgqda-hierarchy-delimiter))
         prefixes)
     (dolist (tag taglist)
-      (let* ((splittag (split-string tag delim t))
+      (let* ((splittag (split-string tag orgqda-hierarchy-delimiter t))
              (cats (butlast splittag)))
         (when cats
           (setq prefixes
-                (append prefixes (orgqda--build-prefixes cats delim))))))
+                (append prefixes (orgqda--build-prefixes cats))))))
     (cl-remove-duplicates prefixes :test 'string=)))
 
-(defun orgqda--build-prefixes (preflist delim &optional pref)
+(defun orgqda--build-prefixes (preflist &optional pref)
   (when preflist
     (let ((curr (if pref
-                    (concat pref delim (car preflist))
+                    (concat pref orgqda-hierarchy-delimiter (car preflist))
                   (car preflist))))
       (cons curr
             (orgqda--build-prefixes
-             (cdr preflist) delim
+             (cdr preflist) orgqda-hierarchy-delimiter
              curr)))))
 
 (defun orgqda--otag-at-point (&optional pos)
