@@ -184,6 +184,22 @@ Usually set by the user as a file or dir local variable.")
     (define-key map (kbd "q") #'kill-this-buffer)
     (setq orgqda-list-mode-map map)))
 
+;;; Macros
+(defmacro orgqda--temp-work (&rest body)
+  "Shortcut for (`save-excursion' (`save-restriction' (`widen') (`goto-char') (`point-min')))"
+  `(save-excursion
+     (save-restriction
+       (widen) (goto-char (point-min))
+       ,@body)))
+
+(defmacro orgqda--with-current-buffer-if (buffer &rest body)
+  "Execute BODY in BUFFER if it exists, otherwise just execute BODY.
+The value returned is the value of the last form in BODY."
+  (declare (indent 1) (debug t))
+  `(if (and ,buffer (bufferp ,buffer))
+       (with-current-buffer ,buffer ,@body)
+     ,@body))
+
 ;;; Minor mode definitions
 ;;;###autoload
 (define-minor-mode orgqda-mode
@@ -396,14 +412,6 @@ per tag) in `orgqda-csv-dir'"
                (y-or-n-p (format "Merge tags %s 🠖 %s" stag etag)))
       (orgqda-rename-tag stag etag))))
 
-(defmacro orgqda--with-current-buffer-if (buffer &rest body)
-  "Execute BODY in BUFFER if it exists, otherwise just execute BODY.
-The value returned is the value of the last form in BODY."
-  (declare (indent 1) (debug t))
-  `(if (and ,buffer (bufferp ,buffer))
-       (with-current-buffer ,buffer ,@body)
-     ,@body))
-
 (defun orgqda-rename-tag (oldname newname)
   "Rename tag OLDNAME to NEWNAME in all current collection of orgqda files"
   (interactive (let ((complist (orgqda--get-tags-for-completion)))
@@ -495,13 +503,11 @@ collection of orgqda files"
   "Returns cons-cell with count in buffer as car and string of taglist as cdr."
   (let ((orgqda--ct-level level)
         (org-use-tag-inheritance nil))
-    (save-excursion
-      (save-restriction
-        (widen) (goto-char (point-min))
-        (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub
-                                 (cdr matcher) nil)))
-          (cons (length tl)
-                (mapconcat 'identity tl "\n")))))))
+    (orgqda--temp-work
+      (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub
+                               (cdr matcher) nil)))
+        (cons (length tl)
+              (mapconcat 'identity tl "\n"))))))
 
 (defun orgqda--get-paragraph-or-sub ()
   (save-excursion
@@ -547,12 +553,10 @@ collection of orgqda files"
 (defun orgqda--coll-tagged-in-buffer-csv (matcher)
   "Returns cons-cell with count in buffer as car and string of taglist as cdr."
   (let ((org-use-tag-inheritance nil))
-    (save-excursion
-      (save-restriction
-        (widen) (goto-char (point-min))
-        (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
-                                 (cdr matcher) nil)))
-          (mapconcat 'identity tl ""))))))
+    (orgqda--temp-work
+      (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
+                               (cdr matcher) nil)))
+        (mapconcat 'identity tl "")))))
 
 (defun orgqda--get-paragraph-or-sub-to-csv ()
   (save-excursion
@@ -851,15 +855,13 @@ not loaded with `orgqda--get-tags-hash'"
 (defun orgqda--get-tags-with-count (tagscount)
   "Counts occurences of org tags in buffer.
 Expects a hash-table TAGSCOUNT and returns it modified"
-  (save-excursion
-    (save-restriction
-      (widen) (goto-char (point-min))
-      (while (re-search-forward
-              "[ \t]:\\([[:alnum:]_@#%:]+\\):[ \t\r\n]" nil t)
-        (when (equal (char-after (point-at-bol 0)) ?*)
-          (dolist (x (split-string (match-string-no-properties 1) ":" t))
-            (let ((ov (gethash x tagscount 0)))
-              (puthash x (1+ ov) tagscount)))))))
+  (orgqda--temp-work
+    (while (re-search-forward
+            "[ \t]:\\([[:alnum:]_@#%:]+\\):[ \t\r\n]" nil t)
+      (when (equal (char-after (point-at-bol 0)) ?*)
+        (dolist (x (split-string (match-string-no-properties 1) ":" t))
+          (let ((ov (gethash x tagscount 0)))
+            (puthash x (1+ ov) tagscount))))))
   tagscount)
 
 (defun orgqda--make-simple-tags-matcher (tag)
@@ -958,16 +960,13 @@ buffer."
   "Rename all ocurrences of OLDNAME as an org tag with NEWNAME.
 Return number of replacements done."
   (let ((numberofreps 0))
-    (save-excursion
-      (save-restriction
-        (widen)
-        (goto-char (point-min))
-        (while (search-forward (concat ":" oldname ":") nil t)
-          (org-set-tags-to
-           (cl-remove-duplicates
-            (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
-            :test 'string=))
-          (setq numberofreps (1+ numberofreps)))))
+    (orgqda--temp-work
+      (while (search-forward (concat ":" oldname ":") nil t)
+        (org-set-tags-to
+         (cl-remove-duplicates
+          (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
+          :test 'string=))
+        (setq numberofreps (1+ numberofreps))))
     numberofreps))
 
 (defun orgqda--get-tags-for-completion ()
