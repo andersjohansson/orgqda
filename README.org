@@ -15,7 +15,9 @@ Additionally, when tags are applied to ordinary headings or inlinetasks with con
 
 Codes can also be renamed with ~orgqda-rename-tag~ (~R~ in ~orgqda-list-mode~), given a prefix ~orgqda-prefix-tag~ (~P~), and merged via drag and drop in the code-listing buffer created by ~orgqda-list-tags~. These operations find and replace tags across all files defined in ~orgqda-tag-files~, so undoing can be messy, make sure to use version control.
 
-Codes can be put in a hierarchy if using a delimiter inside tag names (default ~_~, customizable via ~orgqda-hierarchy-delimiter~). The listing of tags is then done according to this implicit hierarchy. Currently only one level is supported (I have to figure out the logic better).
+When using a file based on a tag list (with otag-links), as a code book, set (dir- or file-locally) ~orgqda-codebook-file~ to the path to this file and tag links there will be updated when the rename-functions are called.
+
+Codes can be put in a hierarchy if using a delimiter inside tag names (default ~_~, customizable via ~orgqda-hierarchy-delimiter~). The listing of tags is then done according to this implicit hierarchy.
 
 ** Minor mode
 It defines a minor mode ~orgqda-mode~ which, when enabled, gathers tags for listing and completion from all files defined via ~orgqda-tag-files~. This is helpful for instance when keeping different field journals and transcripts in different files but still using a common coding scheme for all of them.

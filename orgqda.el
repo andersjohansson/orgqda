@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2017-06-06
+;; Modified: 2017-07-06
 ;; Package-Requires: ((emacs "25.1") (xah-replace-pairs "2.0") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
