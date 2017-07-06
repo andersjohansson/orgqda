@@ -47,7 +47,8 @@
 (defcustom orgqda-csv-dir "~"
   "for saving csv-files"
   :type 'directory
-  :group 'orgqda)
+  :group 'orgqda
+  :safe 'file-directory-p)
 
 (defcustom orgqda-tag-collect-extra-info nil
   "Possibly adds extra info to extracted tagged parts.
@@ -347,14 +348,17 @@ In an interactive call, MATCH is prompted for."
   (interactive)
   (let* ((matcher (orgqda--make-simple-tags-matcher match))
 		 (orgqda--csv-curr-mname (car matcher))
-		 (cont (orgqda--coll-tagged-csv matcher)))
-    (let ((current-orgqda-csv-dir orgqda-csv-dir)) ;to use buffer-local value
-      (with-temp-buffer
-        (insert cont)
-        (when orgqda-convert-csv-to-encoding
-          (orgqda--csv-convert-buffer-to-encoding))
+		 (cont (orgqda--coll-tagged-csv matcher))
+         (current-csv-dir orgqda-csv-dir))
+    (with-temp-buffer
+      (insert cont)
+      (when orgqda-convert-csv-to-encoding
+        (orgqda--csv-convert-buffer-to-encoding))
+      (unless nil
         (write-region (point-min) (point-max)
-                      (concat current-orgqda-csv-dir orgqda--csv-curr-mname ".csv"))))))
+                      (expand-file-name
+                       (concat orgqda--csv-curr-mname ".csv"
+                               current-csv-dir)))))))
 
 ;;;###autoload
 (defun orgqda-collect-tagged-csv-save-all (&optional threshold)
@@ -572,7 +576,8 @@ collection of orgqda files"
                (secondary
                 (format "\"%s\",\"%s:%s\",\"%s:%s\",\"%s\",\"%s\""
                         fl fl ln fl (secure-hash 'md5 contents)
-                        head orgqda--csv-curr-mname)))
+                        head orgqda--csv-curr-mname))) ; TODO, works
+                                        ; with dynamic binding?
 		  ;;sätt ihop det
 		  (concat contents secondary extrainfo1 extrainfo2 "\n"))
       "Inte heading eller inlinetask???")))
@@ -631,7 +636,7 @@ each character in the buffer."
   (skip-chars-backward "\n[:blank:]")
   (if (search-backward-regexp
        "\n[[:blank:]]*\n[[:blank:]]*" nil t 1)
-    (progn (goto-char (match-end 0))
+      (progn (goto-char (match-end 0))
              (when (looking-at org-heading-regexp)
                (forward-line 1)))
     (goto-char (point-min))))
