@@ -5,8 +5,8 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2017-01-10
-;; Package-Requires: ((mplayer-mode "2.0") (emacs "25"))
+;; Modified: 2017-07-06
+;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
 
@@ -35,8 +35,6 @@
 (require 'cl-lib) ; only cl-every
 (require 'cl-seq) ; only cl-member-if-not
 (require 'org)
-(require 'orgqda) ; really only for orgqda--hash-to-list. TODO, remove?
-
 
 ;;; Custom variables
 (defgroup orggqda-transcript nil
@@ -292,7 +290,7 @@ and follow it if one is found."
          (tlist (orgqda-transcript--count-time (car range) (cdr range))))
 	(switch-to-buffer-other-window (generate-new-buffer "*orqda-speaker-time*"))
 	(mapc (lambda (x)
-            (insert (format "- %s :: %s\n" (car x) (mplayer--format-time (cadr x) "%H:%M:%S"))))
+            (insert (format "- %s :: %s\n" (car x) (mplayer--format-time (cdr x) "%H:%M:%S"))))
 		  tlist)
 	(org-mode)))
 
@@ -402,8 +400,11 @@ FN with SPEAKER as single argument."
                 (let ((td (- (string-to-number (match-string 1)) t1))
                       (ov (gethash namn timec 0)))
                   (puthash namn (+ td ov) timec))))))
-        (sort (orgqda--hash-to-list timec)
-              (lambda (a b) (> (cadr a) (cadr b))))))))
+        (cl-loop for k being the hash-keys of timec
+                 using (hash-values v)
+                 collect (cons k v) into timelist
+                 finally return
+                 (cl-sort timelist '> :key 'cdr))))))
 
 (defun orgqda-transcript--go-to-first-link ()
   (beginning-of-line 1)
