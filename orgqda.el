@@ -139,6 +139,16 @@ Usually set by the user as a file or dir local variable.")
 (put 'orgqda-tag-files 'safe-local-variable
 	 #'orgqda--string-or-list-of-strings-p)
 
+(defvar-local orgqda-codebook-file nil
+  "A file that is used as a codebook, including lists of
+tags (otag-links) This file will be updated when tags are
+renamed.
+
+Usually set by the user as a file or dir local variable.")
+;;;###autoload
+(put 'orgqda-codebook-file 'safe-local-variable
+	 #'stringp)
+
 (defun orgqda--string-or-list-of-strings-p (arg)
   "Returns t if ARG is a string or a list of strings"
   (or (stringp arg)
@@ -418,7 +428,10 @@ per tag) in `orgqda-csv-dir'"
                  (list
                   (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
                   (completing-read "New tag name: " (reverse complist) nil nil))))
-  (let (repslist)
+  (let (repslist
+        (cbfile (or orgqda-codebook-file
+                    (orgqda--with-current-buffer-if orgqda--originating-buffer
+                      orgqda-codebook-file))))
     (if-let ((manyfiles
               (orgqda--with-current-buffer-if orgqda--originating-buffer
                 (and orgqda-collect-from-all-files (orgqda-tag-files)))))
@@ -427,8 +440,15 @@ per tag) in `orgqda-csv-dir'"
             (with-current-buffer (find-file-noselect file)
               (push (cons (file-name-base file) (orgqda--rename-tag-in-buffer oldname newname))
                     repslist))))
+      ;; only this buffer
       (push (cons (buffer-name) (orgqda--rename-tag-in-buffer oldname newname))
             repslist))
+    (when cbfile
+      (with-current-buffer (find-file-noselect cbfile)
+        (push (cons
+               (concat (file-name-base cbfile) " (links)")
+               (orgqda--rename-tag-links-in-buffer oldname newname))
+              repslist)))
     (setq repslist (nreverse repslist))
     (cl-loop with total = 0
              for x in repslist
@@ -968,6 +988,13 @@ Return number of replacements done."
           :test 'string=))
         (setq numberofreps (1+ numberofreps))))
     numberofreps))
+
+(defun orgqda--rename-tag-links-in-buffer (old new)
+  (orgqda--temp-work
+    (cl-loop while (search-forward-regexp
+                    (format "\\(\\[\\[otag:[^:]+:\\)%s\\]\\[%s\\]\\]"
+                            old old) nil t)
+             count (progn (replace-match (format "\\1%s][%s]]" new new)) t))))
 
 (defun orgqda--get-tags-for-completion ()
   "Return current list of tags in orgqda (possibly many files)"
