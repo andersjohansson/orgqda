@@ -1025,10 +1025,7 @@ TAGLIST can be passed or else will be fetched with
     (let ((curr (if pref
                     (concat pref orgqda-hierarchy-delimiter (car preflist))
                   (car preflist))))
-      (cons curr
-            (orgqda--build-prefixes
-             (cdr preflist) orgqda-hierarchy-delimiter
-             curr)))))
+      (cons curr (orgqda--build-prefixes (cdr preflist) curr)))))
 
 (defun orgqda--otag-at-point (&optional pos)
   "Get the tag name of the otag-link at point."
