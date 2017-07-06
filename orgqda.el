@@ -954,8 +954,7 @@ buffer."
 
 (defun orgqda--update-tag-count-link (link)
   (when (string= "otag" (org-element-property :type link))
-    (let* ((path (org-element-property :path link))
-           (sp (split-string path ":"))
+    (let* ((sp (split-string (org-element-property :path link) ":"))
            (tag (or (cadr sp) (car sp)))
            (tag (if (string-match-p "^{[^{}]+}$" tag)
                     (substring tag 1 -1)
