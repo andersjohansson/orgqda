@@ -139,6 +139,7 @@ Usually set by the user as a file or dir local variable.")
 (put 'orgqda-tag-files 'safe-local-variable
 	 #'orgqda--string-or-list-of-strings-p)
 
+;;;###autoload
 (defvar-local orgqda-codebook-file nil
   "A file that is used as a codebook, including lists of
 tags (otag-links) This file will be updated when tags are
