@@ -139,7 +139,7 @@ parenthesis and on a new line."
   (interactive "P")
   (let* ((namelist (if (and (called-interactively-p 'any)
                             (or arg (not orgqda-transcript-namelist)
-                                (not (orgqda-transcript--namelist-safe
+                                (not (orgqda--list-of-strings-p
                                       orgqda-transcript-namelist))))
                        (list (read-minibuffer "Name list: " "(\"Me\" )"))
                      (or arg orgqda-transcript-namelist
