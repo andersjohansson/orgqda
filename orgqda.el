@@ -150,11 +150,13 @@ Usually set by the user as a file or dir local variable.")
 (put 'orgqda-codebook-file 'safe-local-variable
 	 #'stringp)
 
+;;;###autoload
 (defun orgqda--string-or-list-of-strings-p (arg)
   "Returns t if ARG is a string or a list of strings"
   (or (stringp arg)
       (orgqda--list-of-strings-p arg)))
 
+;;;###autoload
 (defun orgqda--list-of-strings-p (arg)
   "Returns t if ARG is a list of strings"
   (and (listp arg) (cl-every 'stringp arg)))
@@ -183,6 +185,7 @@ Usually set by the user as a file or dir local variable.")
     (define-key map (kbd "C-c C-x n") #'orgqda-insert-inlinetask-coding)
     (setq orgqda-mode-map map)))
 
+;;;###autoload
 (defvar orgqda-list-mode-map nil
   "Local keymap for orgqda-list-mode")
 ;;;###autoload
@@ -1091,7 +1094,7 @@ active."
  for the single tag at point."
   (when (and orgqda-mode
              (progn
-  (save-excursion (beginning-of-line)
+               (save-excursion (beginning-of-line)
                                (looking-at org-complex-heading-regexp))
                (and (match-beginning 5)
                     (>= (point) (match-beginning 5)))))
