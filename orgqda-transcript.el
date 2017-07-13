@@ -35,6 +35,7 @@
 (require 'cl-lib) ; only cl-every
 (require 'cl-seq) ; only cl-member-if-not
 (require 'org)
+(require 'orgqda) ; only for a few convenience functions
 
 ;;; Custom variables
 (defgroup orggqda-transcript nil
@@ -88,18 +89,12 @@ parenthesis in `orgqda-transcript-mode'"
 Used in `orgqda-transcript-mode' activation if
 `orgqda-transcript-bind-fn-keys' it non-nil")
 
-
 ;;;###autoload
 (defvar-local orgqda-transcript-namelist nil "List of the names
 of speakers in current `orgqda-transcript-mode' session")
 ;;;###autoload
 (put 'orgqda-transcript-namelist 'safe-local-variable
-	 #'orgqda-transcript--namelist-safe)
-;;;###autoload
-(defun orgqda-transcript--namelist-safe (namelist)
-  (and (listp namelist)
-       (cl-every 'stringp namelist)))
-
+	 #'orgqda--list-of-strings-p)
 
 ;;; Minor mode
 ;;;###autoload
@@ -400,11 +395,7 @@ FN with SPEAKER as single argument."
                 (let ((td (- (string-to-number (match-string 1)) t1))
                       (ov (gethash namn timec 0)))
                   (puthash namn (+ td ov) timec))))))
-        (cl-loop for k being the hash-keys of timec
-                 using (hash-values v)
-                 collect (cons k v) into timelist
-                 finally return
-                 (cl-sort timelist '> :key 'cdr))))))
+        (cl-sort (orgqda--hash-to-alist timec) '> :key 'cdr)))))
 
 (defun orgqda-transcript--go-to-first-link ()
   (beginning-of-line 1)
