@@ -320,11 +320,11 @@ Else, move to indentation position of this line."
                          :store #'orgqda-transcript-store-link
                          :face 'oqdats-face)
 
-(defun orgqda-transcript-follow-link (link)
+(defun orgqda-transcript-follow-link (filetime)
   "Follow `oqdats' timestamps with `mplayer-seek-position'."
-  (let* ((ft (split-string link ":"))
-         (pos (cadr ft))
-         (file (nth 2 ft))
+  (let* ((ft (split-string filetime ":"))
+         (pos (car ft))
+         (file (cadr ft))
          (mp (process-live-p mplayer--process)))
     (if file
         (if mp
