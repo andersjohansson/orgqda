@@ -263,7 +263,6 @@ string and exits the parenthesis"
   "Insert inlinetask for coding after current line
 Calls `orqda-insert-inlinetask-coding' with inverted prefix arg."
   (interactive "P")
-  (require 'orgqda)
   (orgqda-insert-inlinetask-coding (not arg)))
 
 (defun orgqda-transcript-seek-timestamp-backwards ()
@@ -309,11 +308,13 @@ Else, move to indentation position of this line."
   (interactive)
   (when-let (ln (orgqda-transcript--get-link)) (insert ln " ")))
 
+;;;###autoload
 (defface oqdats-face
   `((t (:inherit org-link
                  :weight bold)))
   "Face for oqdats links in org-mode.")
 
+;;;###autoload
 (org-link-set-parameters "oqdats"
                          :follow #'orgqda-transcript-follow-link
                          :export #'orgqda-transcript-export-link
@@ -337,12 +338,14 @@ Else, move to indentation position of this line."
         (error "No file in link and no mplayer--process"))) 
     (mplayer-seek-position (string-to-number pos) t)))
 
+;;;###autoload
 (defun orgqda-transcript-export-link (path desc format)
   "Export `oqdats' timestamps."
   (if (eq format 'latex)
       (format "\\ajts[%s]{%s}" path desc)
     (format "[%s]" desc)))
 
+;;;###autoload
 (defun orgqda-transcript-store-link ()
   "Store a link to a mplayer-mode position
 
