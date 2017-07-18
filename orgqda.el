@@ -767,26 +767,20 @@ each character in the buffer."
                                orgqda-bm-link-encode-table))
 
 ;;;; List tags functions
+(defvar orgqda--current-tagscount (make-hash-table :test 'equal)
+  "Internal use, for collecting counts of tags")
 (defun orgqda--get-tags-hash ()
   "Return a hash of all tags with counts.
 In this buffer or in all files in `orgqda-tag-files'."
-  (let ((tagscount (make-hash-table :test 'equal))
-        (manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files))))
-    (if manyfiles ;list only from orgqda-tag-files
-        (dolist (file manyfiles tagscount)
-          (let ((visiting (find-buffer-visiting file)))
-            (if visiting
-                (with-current-buffer visiting
-                  (setq tagscount
-                        (orgqda--get-tags-with-count tagscount)))
-              (with-temp-buffer
-                (insert-file-contents file)
-                (setq tagscount (orgqda--get-tags-with-count tagscount))))))
-      ;;only this buffer
-      (setq tagscount (orgqda--get-tags-with-count tagscount)))
+  (clrhash orgqda--current-tagscount)
+  (let ((manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files))))
+    ;;if manyfiles is nil, only in current buffer
+    (org-map-entries #'orgqda--get-tags-with-count
+                     nil manyfiles 'archive 'comment)
     (dolist (ex orgqda-exclude-tags)
-      (remhash ex tagscount))
-    tagscount))
+      (remhash ex orgqda--current-tagscount))
+    orgqda--current-tagscount))
+
 
 (defun orgqda--get-tags-alist (&optional sort)
   "Return an alist of all tags with counts.
@@ -882,7 +876,6 @@ not loaded with `orgqda--get-tags-hash'"
   (< (gethash x (orgqda--htl-counts orgqda--current-htl) -2)
      (gethash y (orgqda--htl-counts orgqda--current-htl) -1)))
 
-
 (defun orgqda--string-lessp (x y)
   "Case insensitive `string-lessp'"
   (string-lessp (downcase x) (downcase y)))
@@ -890,17 +883,10 @@ not loaded with `orgqda--get-tags-hash'"
   "Case insensitive `string-greaterp'"
   (string-greaterp (downcase x) (downcase y)))
 
-(defun orgqda--get-tags-with-count (tagscount)
-  "Counts occurences of org tags in buffer.
-Expects a hash-table TAGSCOUNT and returns it modified"
-  (orgqda--temp-work
-    (while (re-search-forward
-            "[ \t]:\\([[:alnum:]_@#%:]+\\):[ \t\r\n]" nil t)
-      (when (equal (char-after (point-at-bol 0)) ?*)
-        (dolist (x (split-string (match-string-no-properties 1) ":" t))
-          (let ((ov (gethash x tagscount 0)))
-            (puthash x (1+ ov) tagscount))))))
-  tagscount)
+(defun orgqda--get-tags-with-count ()
+  (dolist (x (org-get-tags-at nil t))
+    (let ((ov (gethash x orgqda--current-tagscount 0)))
+      (puthash x (1+ ov) orgqda--current-tagscount))))
 
 (defun orgqda--make-simple-tags-matcher (tag)
   "Construct a tags matcher only matching a single tag.
