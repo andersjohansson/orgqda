@@ -344,6 +344,22 @@ If not in `orgqda-list-mode', calls
         (goto-char pos))
     (orgqda-update-taglist-general)))
 
+;;;###autoload
+(defun orgqda-sort-taglist (order)
+  "Allows sorting of a taglist buffer using `org-sort-entries'
+
+Sorting is determined via ORDER which can be a/A/c/C for
+alphabetical, alphabetical reversed, count decreasing, count
+increasing, respectively."
+  (interactive "cSort order: a[lpha] c[count], A/C means reversed.")
+  (cl-case order
+    (?a (org-sort-entries nil ?a))
+    (?A (org-sort-entries nil ?A))
+    (?c (org-sort-entries nil ?f #'orgqda--hl-get-count #'>))
+    (?C (org-sort-entries nil ?f #'orgqda--hl-get-count #'<))
+    (t (message "No correct order specified"))))
+
+
 ;;;; Commands for collecting
 ;;;###autoload
 (defun orgqda-collect-tagged (&optional match)
@@ -1081,6 +1097,14 @@ active."
   (cl-loop for k being the hash-keys of hashtable
            using (hash-values v)
            collect (cons k v)))
+
+(defun orgqda--hl-get-count ()
+  "Return count in parantheses at end of headline, or 0"
+  (save-excursion
+    (save-match-data
+      (if (search-forward-regexp "(\\([0-9]+\\))$" (point-at-eol) t)
+          (string-to-number (match-string 1))
+        0))))
 
 ;;; Clicking on tags should open a orgqda tag view
 
