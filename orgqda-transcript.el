@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2017-07-06
+;; Modified: 2017-07-20
 ;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -406,9 +406,9 @@ FN with SPEAKER as single argument."
 
 (defun orgqda-transcript--get-link ()
   (when-let ((linkpl (orgqda-transcript--get-link-plist)))
-    (format "[[oqdats:%s][%s]]"
-            (plist-get linkpl :link)
-            (plist-get linkpl :description))))
+    (org-make-link-string
+     (plist-get linkpl :link)
+     (plist-get linkpl :description))))
 
 (defun orgqda-transcript--get-other-name ()
   "Get the name of the next, or other speaker.
