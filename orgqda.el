@@ -816,7 +816,8 @@ each character in the buffer."
 (defun orgqda-opbm-store-link ()
   "Store a bookmark-link to a position in an org-mode-buffer."
   (when (and (equal major-mode 'org-mode)
-             orgqda-mode)
+             orgqda-mode
+             (not (org-at-heading-p)))
     (org-store-link-props
      :type "opbm"
      :link (format "opbm:%s" (orgqda-get-bm))
