@@ -1010,6 +1010,7 @@ generation takes too long with long tag names."
 
 ;;;; Functions for taglist update
 (defvar orgqda--pending-tag-count-replacements nil)
+(defvar orgqda--removed-tags nil)
 
 (defun orgqda-update-taglist-general ()
   "Updates taglists in any org buffer.
@@ -1024,7 +1025,8 @@ buffer."
     (orgqda--with-current-buffer-if
         orgqda--originating-buffer
       (orgqda--create-hierarchical-taglist))
-    (setq orgqda--pending-tag-count-replacements nil)
+    (setq orgqda--pending-tag-count-replacements nil
+          orgqda--removed-tags nil)
     (save-match-data
       (org-element-map (org-element-parse-buffer) 'link #'orgqda--update-tag-count-link)
       ;; do the replacements
@@ -1033,15 +1035,24 @@ buffer."
                (set-match-data (car x))
                (replace-match (cdr x))
                (set-match-data (car x) t)))
-    ;; list new tags
+    ;; list new and removed tags
     (maphash
      (lambda (key val)
        (unless (listp val)
          (puthash key val newtags)))
      (orgqda--htl-counts orgqda--current-htl))
-    (unless (hash-table-empty-p newtags)
-      (orgqda--create-hierarchical-taglist nil newtags)
-      (orgqda-list-tags nil nil nil t "*Possible new tags*"))))
+    (when (or orgqda--removed-tags
+              (not (hash-table-empty-p newtags)))
+      (let ((buf (generate-new-buffer "*Tag changes*"))
+            (inhibit-read-only t))
+        (orgqda--create-hierarchical-taglist nil newtags)
+        (orgqda-list-tags nil nil buf t "Possibly added tags")
+        (when orgqda--removed-tags
+          (with-current-buffer buf
+            (goto-char (point-max))
+            (insert
+             (concat "* Possibly removed tags\n- "
+                     (mapconcat #'identity orgqda--removed-tags "\n-")))))))))
 
 (defun orgqda--update-tag-count-link (link)
   (when (string= "otag" (org-element-property :type link))
@@ -1052,16 +1063,17 @@ buffer."
                   tag))
            (found (gethash tag (orgqda--htl-counts orgqda--current-htl)))
            (count (if (listp found) (car found) found))
-           (count (concat "("
-                          (if count (number-to-string count) "0?")
-                          ")")))
+           (countprint (concat "("
+                               (if count (number-to-string count) "0?")
+                               ")")))
       (when (and found (not (listp found)))
         ;;mark the ones found by making the count a list
         (puthash tag (list found) (orgqda--htl-counts orgqda--current-htl)))
+      (unless count (push tag orgqda--removed-tags))
       (save-excursion
         (goto-char (org-element-property :end link))
         (when (looking-at "([0-9]+)")
-          (push (cons (match-data) count)
+          (push (cons (match-data) countprint)
                 orgqda--pending-tag-count-replacements))))))
 
 
@@ -1175,7 +1187,9 @@ active."
   "Return count in parantheses at end of headline, or 0"
   (save-excursion
     (save-match-data
-      (if (search-forward-regexp "(\\([0-9]+\\))$" (point-at-eol) t)
+      (if (search-forward-regexp
+           "(\\([0-9]+\\))\\( +[[:alnum:]_@#%:]+\\)?$"
+           (point-at-eol) t)
           (string-to-number (match-string 1))
         0))))
 
