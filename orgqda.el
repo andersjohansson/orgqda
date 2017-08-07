@@ -224,6 +224,16 @@ The value returned is the value of the last form in BODY."
        (with-current-buffer ,buffer ,@body)
      ,@body))
 
+(defmacro orgqda--inhibit-org-startups (&rest body)
+  "Execute BODY while inhibiting mode hooks and org-startup.
+Inhibits hooks for `text-mode', `outline-mode' and `org-mode'"
+  `(let ((text-mode-hook nil)
+         (outline-mode-hook nil)
+         (org-mode-hook nil)
+         (org-agenda-inhibit-startup t)
+         (org-inhibit-startup t))
+     ,@body))
+
 ;;; Minor mode definitions
 ;;;###autoload
 (define-minor-mode orgqda-mode
@@ -590,21 +600,18 @@ collection of orgqda files"
           ;; iterate over files assume this file is included in
           ;; orgqda-tag-files (or shouldn't be)
           (if manyfiles
-              (let ;avoid running unneccesary hooks on extra selected
-                  ;;files (e.g. flyspell causes noticeable delays)
-                  ((org-mode-hook nil)
-                   (text-mode-hook nil))
-                (dolist (file manyfiles tags)
-                  (with-current-buffer (find-file-noselect file)
-                    (let ((ct (orgqda--coll-tagged-in-buffer matcher (1+ level))))
-                      (unless (and orgqda-exclude-empty-file-trees
-                                   (= 0 (car ct)))
-                        (setq totalcount (+ totalcount (car ct)))
-                        (setq tags (concat tags
-                                           (orgqda--taglist-file-heading
-                                            (car ct) level)
-                                           (cdr ct)
-                                           "\n\n")))))))
+              (orgqda--inhibit-org-startups
+               (dolist (file manyfiles tags)
+                 (with-current-buffer (find-file-noselect file)
+                   (let ((ct (orgqda--coll-tagged-in-buffer matcher (1+ level))))
+                     (unless (and orgqda-exclude-empty-file-trees
+                                  (= 0 (car ct)))
+                       (setq totalcount (+ totalcount (car ct)))
+                       (setq tags (concat tags
+                                          (orgqda--taglist-file-heading
+                                           (car ct) level)
+                                          (cdr ct)
+                                          "\n\n")))))))
             ;;only this buffer
             (let ((ct (orgqda--coll-tagged-in-buffer matcher level)))
               (setq totalcount (+ totalcount (car ct)))
@@ -661,14 +668,12 @@ collection of orgqda files"
 	 "citat,fil,fil:rad,file:hash,head,matchad,extra,extra2\n" ;;TODO, give reasonable names here
      ;; iterate orgqda-tag-files
      (if manyfiles
-         (let ;avoid running unneccesary hooks on extra selected files
-             ((org-mode-hook nil)
-              (text-mode-hook nil))
-           (dolist (file manyfiles tags)
-             (with-current-buffer (find-file-noselect file)
-               (setq tags
-                     (concat tags
-                             (orgqda--coll-tagged-in-buffer-csv matcher))))))
+         (orgqda--inhibit-org-startups
+          (dolist (file manyfiles tags)
+            (with-current-buffer (find-file-noselect file)
+              (setq tags
+                    (concat tags
+                            (orgqda--coll-tagged-in-buffer-csv matcher))))))
        ;;only this buffer
        (orgqda--coll-tagged-in-buffer-csv matcher)))))
 
@@ -857,9 +862,9 @@ each character in the buffer."
 In this buffer or in all files in `orgqda-tag-files'."
   (clrhash orgqda--current-tagscount)
   (let ((manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files))))
-    ;;if manyfiles is nil, only in current buffer
-    (org-map-entries #'orgqda--get-tags-with-count
-                     nil manyfiles 'archive 'comment)
+    (orgqda--inhibit-org-startups
+     (org-map-entries #'orgqda--get-tags-with-count
+                      nil (or manyfiles 'file) 'archive 'comment))
     (dolist (ex orgqda-exclude-tags)
       (remhash ex orgqda--current-tagscount))
     orgqda--current-tagscount))
@@ -1243,13 +1248,11 @@ active."
 (advice-add 'org-global-tags-completion-table :around #'orgqda-tags-completion-table-wrap)
 ;;;###autoload
 (defun orgqda-tags-completion-table-wrap (oldfun &rest args)
-  "Lets `org-mode-hook' and `text-mode-hook' be nil for the
-execution to speed up loading of tags from related files when
-`orgqda-mode' is non-nil."
+  "Inhibits org hooks to speed up loading of tags from related
+files when `orgqda-mode' is non-nil."
   (if orgqda-mode
-      (let ((org-mode-hook nil)
-            (text-mode-hook nil))
-        (apply oldfun args))
+      (orgqda--inhibit-org-startups
+       (apply oldfun args))
     (apply oldfun args)))
 
 ;; ;;;###autoload
