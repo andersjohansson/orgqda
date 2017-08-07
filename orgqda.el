@@ -1,11 +1,11 @@
 ;;; orgqda.el --- Qualitative data analysis using org-mode  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2017 Anders Johansson
+;; Copyright (C) 2014-2017 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2017-07-06
+;; Modified: 2017-08-07
 ;; Package-Requires: ((emacs "25.1") (xah-replace-pairs "2.0") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -633,10 +633,10 @@ collection of orgqda files"
   (let ((orgqda--ct-level level)
         (org-use-tag-inheritance nil))
     (orgqda--temp-work
-      (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub
-                               (cdr matcher) nil)))
-        (cons (length tl)
-              (mapconcat 'identity tl "\n"))))))
+     (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub
+                              (cdr matcher) nil)))
+       (cons (length tl)
+             (mapconcat 'identity tl "\n"))))))
 
 (defun orgqda--get-paragraph-or-sub ()
   (save-excursion
@@ -681,9 +681,9 @@ collection of orgqda files"
   "Returns cons-cell with count in buffer as car and string of taglist as cdr."
   (let ((org-use-tag-inheritance nil))
     (orgqda--temp-work
-      (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
-                               (cdr matcher) nil)))
-        (mapconcat 'identity tl "")))))
+     (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
+                              (cdr matcher) nil)))
+       (mapconcat 'identity tl "")))))
 
 (defun orgqda--get-paragraph-or-sub-to-csv ()
   (save-excursion
@@ -857,6 +857,7 @@ each character in the buffer."
 ;;;; List tags functions
 (defvar orgqda--current-tagscount (make-hash-table :test 'equal)
   "Internal use, for collecting counts of tags")
+
 (defun orgqda--get-tags-hash ()
   "Return a hash of all tags with counts.
 In this buffer or in all files in `orgqda-tag-files'."
@@ -868,7 +869,6 @@ In this buffer or in all files in `orgqda-tag-files'."
     (dolist (ex orgqda-exclude-tags)
       (remhash ex orgqda--current-tagscount))
     orgqda--current-tagscount))
-
 
 (defun orgqda--get-tags-alist (&optional sort)
   "Return an alist of all tags with counts.
@@ -1089,20 +1089,20 @@ buffer."
 Return number of replacements done."
   (let ((numberofreps 0))
     (orgqda--temp-work
-      (while (search-forward (concat ":" oldname ":") nil t)
-        (org-set-tags-to
-         (cl-remove-duplicates
-          (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
-          :test 'string=))
-        (setq numberofreps (1+ numberofreps))))
+     (while (search-forward (concat ":" oldname ":") nil t)
+       (org-set-tags-to
+        (cl-remove-duplicates
+         (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
+         :test 'string=))
+       (setq numberofreps (1+ numberofreps))))
     numberofreps))
 
 (defun orgqda--rename-tag-links-in-buffer (old new)
   (orgqda--temp-work
-    (cl-loop while (search-forward-regexp
-                    (format "\\(\\[\\[otag:[^:]+:\\)%s\\]\\[%s\\]\\]"
-                            old old) nil t)
-             count (progn (replace-match (format "\\1%s][%s]]" new new)) t))))
+   (cl-loop while (search-forward-regexp
+                   (format "\\(\\[\\[otag:[^:]+:\\)%s\\]\\[%s\\]\\]"
+                           old old) nil t)
+            count (progn (replace-match (format "\\1%s][%s]]" new new)) t))))
 
 (defun orgqda--get-tags-for-completion ()
   "Return current list of tags in orgqda (possibly many files)"
