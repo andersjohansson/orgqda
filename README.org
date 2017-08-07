@@ -11,16 +11,18 @@ Some text that should be given some codes. We make this text reasonably long so 
 
 Additionally, when tags are applied to ordinary headings or inlinetasks with content, the subtree or inlinetask is extracted instead of the preceding paragraph.
 
+** Minor mode
+A minor mode, ~orgqda-mode,~ is defined which, when enabled, gathers tags for listing and completion from all files defined via ~orgqda-tag-files~. This is helpful for instance when keeping different field journals and transcripts in different files but still using a common coding scheme for all of them.
+
+** Listing codes
 "Codes" can be listed with ~orgqda-list-tags~ and all regions for a specific code extracted with ~orgqda-collect-tagged~ (or by clicking on a tag or =C-c C-o= on it). Both these functions creates a custom org-mode buffer (with the minor mode ~orgqda-list-mode~) with links to the original regions . The command ~orgqda-revert-taglist~ updates a tag list buffer (key: ~g~), and alternatively updates counts for tag lists in any file with ~otag~-links (this can be useful for writing and updating a codebook, an index with descriptions of used tags).
 
 Codes can also be renamed with ~orgqda-rename-tag~ (~R~ in ~orgqda-list-mode~), given a prefix ~orgqda-prefix-tag~ (~P~), and merged via drag and drop in the code-listing buffer created by ~orgqda-list-tags~. These operations find and replace tags across all files defined in ~orgqda-tag-files~, so undoing can be messy, make sure to use version control.
 
-When using a file based on a tag list (with otag-links), as a code book, set (dir- or file-locally) ~orgqda-codebook-file~ to the path to this file and tag links there will be updated when the rename-functions are called.
+When using a file based on a tag list (with otag-links), as a code book, set (dir- or file-locally) ~orgqda-codebook-file~ to the path to this file and tag links there will be updated when the rename-functions are called. Such a file can also benefit from the bindings defined in ~orgqda-codebook-mode~ which binds the keys of ~orgqda-list-mode~ to the prefix ~C-c (~.
 
-Codes can be put in a hierarchy if using a delimiter inside tag names (default ~_~, customizable via ~orgqda-hierarchy-delimiter~). The listing of tags is then done according to this implicit hierarchy.
-
-** Minor mode
-It defines a minor mode ~orgqda-mode~ which, when enabled, gathers tags for listing and completion from all files defined via ~orgqda-tag-files~. This is helpful for instance when keeping different field journals and transcripts in different files but still using a common coding scheme for all of them.
+** Hierarchy
+Codes can be put in a hierarchy if using a delimiter inside tag names (default ~_~, customizable via ~orgqda-hierarchy-delimiter~). The listing of tags is then done according to this implicit hierarchy (unless ~orgqda-use-tag-hierarchy~ is set to ~nil~).
 
 ** csv-export of coded regions
 I have been using the concept mapping software [[http://vue.tufts.edu/][VUE]] for sorting through coded regions graphically. The csv-export functions is a way of importing regions into VUE, or other programs.
@@ -34,6 +36,8 @@ orgqda-insert-inlinetask-coding
 orgqda-list-tags
 orgqda-list-tags-full
 orgqda-revert-taglist
+orgqda-sort-taglist
+orgqda-sort-taglist-buffer
 orgqda-collect-tagged
 orgqda-rename-tag
 orgqda-prefix-tag
@@ -57,15 +61,16 @@ orgqda-exclude-empty-file-trees t
 #+END_EXAMPLE
 
 ** orgqda-helm-tags
-Included in the repository is a library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~.
+Included in the repository is a library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~. Tags can also be removed with a secondary action or tagged extracts viewed with a persistent action.
 
 ** orgqda-transcript
-Included in the repository is a library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with ordain). It uses ~mplayer-mode~, currently and unfortunately kind of depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things:  https://github.com/andersjohansson/mplayer-mode/tree/org-sessions.
+Included in the repository is a library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with ordain). It uses ~mplayer-mode~, although it currently and unfortunately of depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things:  https://github.com/andersjohansson/mplayer-mode/tree/org-sessions.
 (see discussion about the future of ~mplayer-mode~ here: https://github.com/markhepburn/mplayer-mode/issues/10).
 
 ~orgqda-transcript-mode~ defines a few functions and variables for defining a list of speakers, inserting timestamps, speaker names, switching speakers (if something was misattributed), measuring speaking time, etc. Take a look at the commands and custom variables if you are interested. As everything here, it is of course kind of idiosyncratic and aligned with my current workflow, and also more or less a work in progress.
+
 ** Notes on configuration
-I often load ~orgqda-mode~ through file or dir local variables, and as activation of the mode can depend on other variables being defined locally (most importantly ~orgqda-tag-files~) loading order is important (i.e. that ~orgqda-mode~ gets activated after local variables are set). A solution is to activate it in a locally defined ~hack-local-variables-hook~. So adding this to a ~.dir-locals.el~ file for example works:
+I often load ~orgqda-mode~ through file or dir local variables, and as activation of the mode can depend on other variables being defined locally (most importantly ~orgqda-tag-files~) loading order is important (i.e. that ~orgqda-mode~ gets activated after local variables are set). A solution is to activate it in a locally defined ~hack-local-variables-hook~. So adding this to a ~.dir-locals.el~ file is one way of making it work:
 
 #+BEGIN_EXAMPLE
 ((org-mode
