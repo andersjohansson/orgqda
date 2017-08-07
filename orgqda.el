@@ -165,8 +165,8 @@ Usually set by the user as a file or dir local variable.")
 (defvar-local orgqda--originating-buffer nil
   "Buffer where the call for the current orgqda tag listing or
   collected regions listing were made")
-(defvar-local orgqda--taglist-sort-alpha nil
-  "Whether current taglist buffer is alphabetically sorted")
+(defvar-local orgqda--taglist-sort nil
+  "Sorting of current taglist buffer")
 (defvar-local orgqda--taglist-full nil
   "Whether current taglist buffer includes extracts")
 
@@ -187,13 +187,15 @@ Usually set by the user as a file or dir local variable.")
 
 ;;;###autoload
 (defvar orgqda-list-mode-map nil
-  "Local keymap for orgqda-list-mode")
+  "Local keymap for `orgqda-list-mode'")
 ;;;###autoload
 (unless orgqda-list-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "<drag-mouse-1>") #'orgqda-drag-merge-tags)
     (define-key map (kbd "R") #'orgqda-rename-tag)
     (define-key map (kbd "P") #'orgqda-prefix-tag)
+    (define-key map (kbd "s") #'orgqda-sort-taglist)
+    (define-key map (kbd "S") #'orgqda-sort-taglist-buffer)
     (define-key map (kbd "g") #'orgqda-revert-taglist)
     (define-key map (kbd "q") #'kill-this-buffer)
     (setq orgqda-list-mode-map map)))
@@ -260,6 +262,13 @@ and `orgqda-collect-tagged-csv-save-all'. Be sure to customize
   :keymap orgqda-list-mode-map
   :lighter " QDAl")
 
+(define-minor-mode orgqda-codebook-mode
+  "Mode for updating and sorting lists of tags in a codebook file
+
+\\{orgqda-codebook-mode-map}"
+  :keymap orgqda-codebook-mode-map
+  :lighter "QDAc")
+
 ;;; Interactive commands
 ;;;; Commands for inserting
 (autoload 'org-inlinetask-in-task-p "org-inlinetask")
@@ -293,40 +302,53 @@ Prefix arg is passed through."
 ;;;; Commands for listing tags
 
 ;;;###autoload
-(defun orgqda-list-tags (&optional alpha full buf noupdate newbufname)
+(defun orgqda-list-tags (&optional sort full buf noupdate roottext)
   "List all tags with counts, in this buffer and possibly all
 files in `orgqda-tag-files'. Sorted by count or alphabetically if
-optional (prefix) argument is non-nil. If buffer is provided as
-second arg BUF overwrite this buffer with the list instead of
-creating a new. The taglist is normally updated via `orgqda--create-hierarchical-taglist', but this can be prevented by giving a non-nil NOUPDATE.
-Then a special list can be used by setting `orgqda--current-htl' suitably.
-NEWBUFNAME gives name of new buffer"
+optional (prefix) argument is non-nil.
+
+For non-interactice calls:
+
+SORT can be given as a sort symbol. If a buffer is provided in
+BUF overwrite this buffer with the list instead of creating a
+new. The taglist is normally updated via
+`orgqda--create-hierarchical-taglist', but this can be prevented
+by giving a non-nil NOUPDATE. Then a special list can be used by
+setting `orgqda--current-htl' suitably. ROOTTEXT specifies the
+text for the root node."
   (interactive "P")
   (let ((origbuffer (current-buffer))
         (origfile (buffer-file-name)))
     (unless noupdate
-      (orgqda--create-hierarchical-taglist (when alpha 'a-z)))
-                                        ; TODO, expose more sort possibilities?
+      (orgqda--create-hierarchical-taglist
+       (if (symbolp sort) sort 'a-z)))
     (if buf
-        (progn (switch-to-buffer buf)
-               (widen)
-               (delete-region (point-min) (point-max)))
+        (progn (switch-to-buffer-other-window buf)
+               (setq buffer-read-only nil)
+               (erase-buffer))
       (switch-to-buffer-other-window
-       (generate-new-buffer (or newbufname "*orgqda-taglist*"))))
-
-    (orgqda--insert-hierarchical-taglist full origbuffer origfile)
+       (generate-new-buffer "*orgqda-taglist*")))
+    (if roottext
+        (insert (format "* %s\n" roottext))
+      (org-insert-time-stamp (current-time) t t
+                             (concat "* Orgqda taglist generated from "
+                                     (org-make-link-string
+                                      (concat "file:" origfile)
+                                      (buffer-name origbuffer)) " at ")
+                             "\n"))
+    (orgqda--insert-hierarchical-taglist full origbuffer origfile 1)
     (goto-char (point-min))
     (org-mode) (orgqda-list-mode) (flyspell-mode -1)
     (setq buffer-read-only t
           orgqda--originating-buffer origbuffer
-          orgqda--taglist-sort-alpha alpha
+          orgqda--taglist-sort sort
           orgqda--taglist-full full)))
 
 ;;;###autoload
 (defun orgqda-list-tags-full (&optional alpha buf)
   "List all tags with counts, in this buffer and possibly all files
 in `orgqda-tag-files'. Insert extracted paragraphs as a subtree for all tags.
-Sorted by count or alphabetically if optional (prefix) argument is t."
+Sorted by count or alphabetically if optional (prefix) argument is non-nil."
   (interactive "P")
   (orgqda-list-tags alpha t buf))
 
@@ -337,12 +359,17 @@ If not in `orgqda-list-mode', calls
   (interactive)
   (if (and orgqda-list-mode orgqda--originating-buffer)
       (let ((cb (current-buffer))
+            (cts orgqda--taglist-sort)
+            (ctf orgqda--taglist-full)
             (pos (point)))
         (setq buffer-read-only nil)
         (with-current-buffer orgqda--originating-buffer
-          (orgqda-list-tags orgqda--taglist-sort-alpha orgqda--taglist-full cb))
+          (orgqda-list-tags cts ctf cb))
         (goto-char pos))
     (orgqda-update-taglist-general)))
+
+
+(defvar orgqda--current-sorting-args nil)
 
 ;;;###autoload
 (defun orgqda-sort-taglist (order)
@@ -350,37 +377,84 @@ If not in `orgqda-list-mode', calls
 
 Sorting is determined via ORDER which can be a/A/c/C for
 alphabetical, alphabetical reversed, count decreasing, count
-increasing, respectively."
+increasing, respectively.
+
+Sorts current subtree and children, active region, or children of
+first headline if before that."
   (interactive "cSort order: a[lpha] c[count], A/C means reversed.")
-  (cl-case order
-    (?a (org-sort-entries nil ?a))
-    (?A (org-sort-entries nil ?A))
-    (?c (org-sort-entries nil ?f #'orgqda--hl-get-count #'>))
-    (?C (org-sort-entries nil ?f #'orgqda--hl-get-count #'<))
-    (t (message "No correct order specified"))))
+  (let ((inhibit-read-only t)
+        (inhibit-message t)
+        (sortlist
+         (list
+          (cl-case order
+            ((?a ?A) '(nil ?f orgqda--hl-get-count >))
+            ((?c ?C) '(nil ?a))
+            (t (user-error "No correct order specified")))
+          (cl-case order
+            (?a '(nil ?a))
+            (?A '(nil ?A))
+            (?c '(nil ?f orgqda--hl-get-count >))
+            (?C '(nil ?f orgqda--hl-get-count <))
+            (t (user-error "No correct order specified"))))))
+    (if (region-active-p)
+        ;; don’t do double sort here, too difficult keeping region
+        (apply #'org-sort-entries (cadr sortlist))
+      (when (org-before-first-heading-p)
+        (outline-next-heading))
+      (unless (org-at-heading-p)
+        (org-back-to-heading t))
+      (dolist (so sortlist)
+        (let ((orgqda--current-sorting-args so))
+          (org-map-entries #'orgqda--sort-subtree t 'tree)))))
+  (when orgqda-list-mode
+    (setq orgqda--taglist-sort
+          (cl-case order
+            (?a 'a-z) (?A 'z-a) (?c 'count-decreasing) (?C 'count-increasing)))))
+
+;;;###autoload
+(defun orgqda-sort-taglist-buffer ()
+  "Sort the current taglist buffer,
+calls `orgqda-sort-taglist' for whole buffer"
+  (interactive)
+  (save-mark-and-excursion
+   (while (org-up-heading-safe))
+   (when (or (org-goto-sibling)
+             (org-goto-sibling t))
+     (goto-char (point-min))
+     (set-mark (point-max)))
+   (call-interactively #'orgqda-sort-taglist)))
 
 
 ;;;; Commands for collecting
 ;;;###autoload
-(defun orgqda-collect-tagged (&optional match)
+(defun orgqda-collect-tagged (&optional match deeper-view buffer)
   "Collect all segments marked with tags matching MATCH,
-In an interactive call, MATCH is prompted for."
+In an interactive call, MATCH is prompted for.
+
+For non-interactive use: DEEPER-VIEW (integer) adds visible
+levels to folding with `org-content'. BUFFER specifies a buffer
+to insert the collected tags in."
   (interactive)
-  (let* ((matcher (org-make-tags-matcher match))
+  (let* ((match (or match
+                    (completing-read "Match: " (orgqda--get-tags-for-completion) nil nil (orgqda-tag-at-point))))
+         (matcher
+          (if (string-match-p "^[[:alnum:]_@#%:]+$" match)
+              (orgqda--make-simple-tags-matcher match)
+            (org-make-tags-matcher match)))
          (mname (car matcher))
-         (cont (orgqda--coll-tagged matcher 2)))
-    (switch-to-buffer-other-window (generate-new-buffer
-                                    (format "*tags:%s*" mname)))
-    ;;(insert (format "* Taggat: %s " mname))
+         (cont (orgqda--coll-tagged matcher 2))
+         (oclevel
+          (+ (if (and orgqda-collect-from-all-files orgqda-tag-files) 2 1)
+             (or deeper-view 0))))
+    (switch-to-buffer-other-window
+     (or buffer (generate-new-buffer
+                 (format "*tags:%s*" mname))))
     (org-insert-time-stamp (current-time) t t
-                           (format "* Taggat: %s, (%d) " mname (car cont)) "\n")
+                           (format "* Tagged: %s, (%d) " mname (car cont)) "\n")
     (insert (cdr cont))
     (goto-char (point-min))
     (org-mode) (flyspell-mode -1) (setq buffer-read-only t)
-    (org-content 2)))
-;; TODO, maybe make level of org-content here customizable and in that case depend on
-;; if we have manyfiles: level can be let along the lines of:
-;; (level (if (and orgqda-collect-from-all-files orgqda-tag-files) 2 1))
+    (org-content oclevel)))
 
 (defvar orgqda--csv-curr-mname nil)
 
@@ -811,13 +885,17 @@ Optional SORT can be symbols: count-decreasing (default),
 count-increasing, a-z, or z-a. TAGHASH specifies a custom taghash
 not loaded with `orgqda--get-tags-hash'"
   (let ((taghash (or taghash (orgqda--get-tags-hash)))
-        (sortfn
-         (cl-case sort
-           (count-decreasing #'orgqda--hierarchy-count-sort-decr)
-           (count-increasing #'orgqda--hierarchy-count-sort-incr)
-           (a-z #'orgqda--string-lessp)
-           (z-a #'orgqda--string-greaterp)
-           (t #'orgqda--hierarchy-count-sort-decr))))
+        (sortlist
+         (list
+          (cl-case sort
+            ((a-z z-a) #'orgqda--hierarchy-count-sort-decr)
+            (t #'orgqda--string-lessp))
+          (cl-case sort
+            (count-decreasing #'orgqda--hierarchy-count-sort-decr)
+            (count-increasing #'orgqda--hierarchy-count-sort-incr)
+            (a-z #'orgqda--string-lessp)
+            (z-a #'orgqda--string-greaterp)
+            (t #'orgqda--hierarchy-count-sort-decr)))))
     (setq orgqda--current-htl
           (orgqda--make-htl
            :counts taghash))
@@ -826,7 +904,8 @@ not loaded with `orgqda--get-tags-hash'"
                          (if orgqda-use-tag-hierarchy
                              #'orgqda--hierarchy-parentfn
                            (lambda (_) nil)))
-    (hierarchy-sort (orgqda--htl-hierarchy orgqda--current-htl) sortfn)))
+    (dolist (sfn sortlist)
+      (hierarchy-sort (orgqda--htl-hierarchy orgqda--current-htl) sfn))))
 
 (defun orgqda--insert-hierarchical-taglist (full origbuffer filename &optional startlevel)
   (hierarchy-map
@@ -877,11 +956,11 @@ not loaded with `orgqda--get-tags-hash'"
      (gethash y (orgqda--htl-counts orgqda--current-htl) -1)))
 
 (defun orgqda--string-lessp (x y)
-  "Case insensitive `string-lessp'"
-  (string-lessp (downcase x) (downcase y)))
+  "Case insensitive `string-lessp' and locale dependent"
+  (string-collate-lessp x y nil t))
 (defun orgqda--string-greaterp (x y)
   "Case insensitive `string-greaterp'"
-  (string-greaterp (downcase x) (downcase y)))
+  (string-collate-lessp y x nil t))
 
 (defun orgqda--get-tags-with-count ()
   (dolist (x (org-get-tags-at nil t))
@@ -1091,6 +1170,12 @@ active."
       (if (search-forward-regexp "(\\([0-9]+\\))$" (point-at-eol) t)
           (string-to-number (match-string 1))
         0))))
+
+(defun orgqda--sort-subtree ()
+  "Sort current tree if it has children"
+  (when (save-excursion (org-goto-first-child))
+    (apply #'org-sort-entries orgqda--current-sorting-args)))
+
 
 ;;; Clicking on tags should open a orgqda tag view
 
