@@ -1210,19 +1210,23 @@ active."
 
  In `orgqda-mode' this function calls `orgqda-collect-tagged'
  for the single tag at point."
-  (when (and orgqda-mode
-             (progn
-               (save-excursion (beginning-of-line)
-                               (looking-at org-complex-heading-regexp))
-               (and (match-beginning 5)
-                    (>= (point) (match-beginning 5)))))
+  (when orgqda-mode
+    (when-let ((tag (orgqda-tag-at-point)))
+      (orgqda-collect-tagged tag)
+      t)))
+
+(defun orgqda-tag-at-point ()
+  "Return tag at point or nil"
+  (when (and
+         (save-excursion (beginning-of-line)
+                         (looking-at org-complex-heading-regexp))
+         (match-beginning 5) ; we are in tags
+         (>= (point) (match-beginning 5)))
     (let ((min (match-beginning 5))
           (max (point-at-eol)))
       (when-let ((end (save-excursion (search-forward ":" max t)))
                  (beg (save-excursion (search-backward ":" min t))))
-        (orgqda-collect-tagged
-         (buffer-substring-no-properties (1+ beg) (1- end)))
-        t))))
+        (buffer-substring-no-properties (1+ beg) (1- end))))))
 
 ;;; Advice
 
