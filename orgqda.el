@@ -200,6 +200,14 @@ Usually set by the user as a file or dir local variable.")
     (define-key map (kbd "q") #'kill-this-buffer)
     (setq orgqda-list-mode-map map)))
 
+(defvar orgqda-codebook-mode-map nil
+  "Local keymap for `orgqda-codebook-mode'")
+
+(unless orgqda-codebook-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c (") orgqda-list-mode-map)
+    (setq orgqda-codebook-mode-map map)))
+
 ;;; Macros
 (defmacro orgqda--temp-work (&rest body)
   "Shortcut for (`save-excursion' (`save-restriction' (`widen') (`goto-char') (`point-min')))"
