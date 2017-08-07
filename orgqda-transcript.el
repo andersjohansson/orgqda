@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2017-07-20
+;; Modified: 2017-08-07
 ;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -183,12 +183,9 @@ parenthesis and on a new line."
 (defun orgqda-transcript-insert-newline-ts-other-speaker ()
   "Inserts newline, timestamp and other speaker name.
 
-Gets other speaker through `orgqda-transcript--get-other-name'.
-Runs only if there are just two names in
-`orgqda-transcript-namelist'"
+Gets other speaker through `orgqda-transcript--get-other-name'."
   (interactive)
-  (when-let ((name (orgqda-transcript--get-other-name)))
-    (orgqda-transcript-insert-newline-ts-speaker name)))
+  (orgqda-transcript-insert-newline-ts-speaker (or (orgqda-transcript--get-other-name) "WHO")))
 
 (defun orgqda-transcript-insert-parenthesis-other-speaker (&optional statement)
   "Inserts the other speaker in parenthesis.
@@ -210,7 +207,7 @@ Runs only if there are just two names in
   "insert new line and timestamp plus speaker NAME."
   (interactive "MName:")
   (when-let ((link (orgqda-transcript--get-link)))
-    (end-of-line) (newline)
+    (newline)
     (insert link " ")
     (orgqda-transcript-insert-speaker name)))
 
@@ -224,39 +221,28 @@ string and exits the parenthesis"
     (insert "{*" name "*: }")
     (backward-char)))
 
-(defun orgqda-transcript-switch-speaker-at-point (newname)
-  "Replace speaker name at point (expression between *) with NEWNAME."
-  (interactive "MNew name:")
-  (let ((p (point)) beg end)
-	(setq beg (search-backward "*" (- p 15) t))
-	(forward-char)
-	(setq end (search-forward "*" (+ p 15) t))
-	(delete-region (+ 1 beg) (- end 1))
-	(goto-char (+ beg 1))
-	(insert newname)
-	(forward-char)))
+(defun orgqda-transcript-switch-speaker (&optional newname)
+  "Replace speaker name at or close to point.
 
-(defun orgqda-transcript-switch-speaker (newname)
-  "Replace speaker name close to point (within 200 chars) with NEWNAME."
-  (interactive "MNew name:")
+Search is done in order here, backward, forward.
+NEWNAME is prompted for if a name to replace is found."
+  (interactive)
   (save-excursion
-    (let ((p (point))
-          (reg "\\*[[:alpha:]]\\{2,15\\}\\*")
-          ;;beg end
-          swp)
-      (save-excursion
-        (search-backward-regexp reg (- p 200) t)
-        (when (looking-at reg)
-          (setq swp (+ (point) 1))))
-      (unless swp
-        (save-excursion
-          (search-forward-regexp reg (+ p 200) t)
-          (when (looking-back reg (- p 20))
-            (setq swp (- (point) 1)))))
-      (if swp
+    (let* ((p (point))
+           (reg "\\*[[:word:]]\\{1,20\\}\\*")
+           (found (or
+                   (org-in-regexp reg)
+                   (search-backward-regexp reg (- p 200) t)
+                   (search-forward-regexp reg (+ p 200) t))))
+      (if found
           (progn
-            (goto-char swp)
-            (orgqda-transcript-switch-speaker-at-point newname))
+            (if (consp found)
+                (delete-region (car found) (cdr found))
+              (delete-region (match-beginning 0) (match-end 0)))
+            (insert "*"
+                    (or newname
+                        (completing-read "New name: " orgqda-transcript-namelist))
+                    "*"))
         (message "Found no name to switch")))))
 
 (defun orgqda-transcript-insert-inlinetask-coding (arg)
@@ -288,17 +274,34 @@ and follow it if one is found."
 		  tlist)
 	(org-mode)))
 
-;; New beginning-of-line function.
+;;; New beginning-of-line function, not bound by default
+(defvar orgqda-transcript-boi-forward nil
+  "non-nil for forward, nil for backward.")
+
 (defun orgqda-transcript-beginning-or-indentation ()
   "Move cursor to beginning of this line or after first org-link.
 If after first link, move to beginning of line.
 If at beginning of line, move to beginning of previous line.
 Else, move to indentation position of this line."
   (interactive)
-  (cond ((bolp) (orgqda-transcript--go-to-first-link))
+  (cond ((bolp)
+         (orgqda-transcript--go-to-first-link) (setq orgqda-transcript-boi-forward t))
         ((looking-back (concat "^" org-any-link-re) (point-at-bol))
-         (beginning-of-line))
-        (t (orgqda-transcript--go-to-first-link))))
+         (if (and (eq last-command this-command)
+                  orgqda-transcript-boi-forward)
+             (orgqda-transcript--goto-after-speaker)
+           (beginning-of-line)))
+        ((looking-back (orgqda-transcript--speaker-name-re) (point-at-bol))
+         (orgqda-transcript--go-to-first-link) (setq orgqda-transcript-boi-forward nil))
+        (t
+         (push-mark nil t) (orgqda-transcript--goto-after-speaker) (setq orgqda-transcript-boi-forward nil))))
+
+(defun orgqda-transcript--goto-after-speaker ()
+  (let ((p (point)))
+    (beginning-of-line)
+    (unless
+        (search-forward-regexp (orgqda-transcript--speaker-name-re) (point-at-eol) t)
+      (goto-char p))))
 
 
 ;;; Timestamp link, definitions.
@@ -416,19 +419,20 @@ Checks the speaker name at beginning of line and returns the
 other name if `orgqda-transcript-namelist' contains only two
 names, otherwise returns nil"
   (when (eq 2 (safe-length orgqda-transcript-namelist))
-    (let* ((prev-name
-            (save-excursion
-              (when (search-backward-regexp
-                     (concat "^" org-bracket-link-regexp
-                             " +\\*\\(?9:[[:word:]]+\\)\\*")
-                     (save-excursion
-                       (forward-line -3)
-                       (forward-line 0)
-                       (point)) t)
-                (match-string 9)))))
-      (when prev-name
-        (car (cl-member-if-not (lambda (x) (string= x prev-name))
-                               orgqda-transcript-namelist))))))
+    (let ((prev-name
+           (save-excursion
+             (when (search-backward-regexp (orgqda-transcript--speaker-name-re)
+                                           (point-at-bol -3) t)
+               (match-string 9)))))
+      (when-let ((prevpos (cl-position prev-name orgqda-transcript-namelist :test #'equal)))
+        (nth (mod (1+ prevpos) 2) orgqda-transcript-namelist)))))
+
+(defun orgqda-transcript--speaker-name-re ()
+  "Return regexp for speaker name at beginning of line.
+
+ Name is placed in match group 9."
+  (concat "^" org-bracket-link-regexp
+          " +\\*\\(?9:[[:word:]]+\\)\\*:"))
 
 (provide 'orgqda-transcript)
 
