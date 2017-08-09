@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2017-08-07
+;; Modified: 2017-08-09
 ;; Package-Requires: ((emacs "25.1") (xah-replace-pairs "2.0") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -540,28 +540,33 @@ per tag) in `orgqda-csv-dir'"
                  (list
                   (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
                   (completing-read "New tag name: " (reverse complist) nil nil))))
-  (let (repslist
-        (cbfile (or orgqda-codebook-file
-                    (orgqda--with-current-buffer-if orgqda--originating-buffer
-                      orgqda-codebook-file))))
+  (let (repslist)
     (if-let ((manyfiles
               (orgqda--with-current-buffer-if orgqda--originating-buffer
                 (and orgqda-collect-from-all-files (orgqda-tag-files)))))
         (orgqda--with-current-buffer-if orgqda--originating-buffer
           (dolist (file manyfiles)
             (with-current-buffer (find-file-noselect file)
-              (push (cons (file-name-base file) (orgqda--rename-tag-in-buffer oldname newname))
+              (push (cons (file-name-base file)
+                          (orgqda--rename-tag-in-buffer oldname newname))
                     repslist))))
-      ;; only this buffer
-      (push (cons (buffer-name) (orgqda--rename-tag-in-buffer oldname newname))
-            repslist))
-    (when cbfile
+      ;; Only originating or this buffer.
+      (orgqda--with-current-buffer-if orgqda--originating-buffer
+        (push (cons (buffer-name)
+                    (orgqda--rename-tag-in-buffer oldname newname))
+              repslist)))
+    ;; Maybe rename in codebook-file.
+    (when-let
+        ((cbfile (or orgqda-codebook-file
+                     (orgqda--with-current-buffer-if orgqda--originating-buffer
+                       orgqda-codebook-file))))
       (with-current-buffer (find-file-noselect cbfile)
         (push (cons
                (concat (file-name-base cbfile) " (links)")
                (orgqda--rename-tag-links-in-buffer oldname newname))
               repslist)))
     (setq repslist (nreverse repslist))
+    ;; Report message:
     (cl-loop with total = 0
              for x in repslist
              unless (= 0 (cdr x))
