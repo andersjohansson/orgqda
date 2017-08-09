@@ -867,13 +867,20 @@ each character in the buffer."
   "Return a hash of all tags with counts.
 In this buffer or in all files in `orgqda-tag-files'."
   (clrhash orgqda--current-tagscount)
-  (let ((manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files))))
-    (orgqda--inhibit-org-startups
-     (org-map-entries #'orgqda--get-tags-with-count
-                      nil (or manyfiles 'file) 'archive 'comment))
-    (dolist (ex orgqda-exclude-tags)
-      (remhash ex orgqda--current-tagscount))
-    orgqda--current-tagscount))
+  (orgqda--inhibit-org-startups
+   (org-map-entries
+    #'orgqda--get-tags-with-count nil
+    (or
+     (and orgqda-collect-from-all-files (orgqda-tag-files))
+     (when-let ((bfn
+                 (or (buffer-file-name)
+                     (buffer-file-name
+                      (buffer-base-buffer)))))
+       (list bfn)))
+    'archive 'comment))
+  (dolist (ex orgqda-exclude-tags)
+    (remhash ex orgqda--current-tagscount))
+  orgqda--current-tagscount)
 
 (defun orgqda--get-tags-alist (&optional sort)
   "Return an alist of all tags with counts.
