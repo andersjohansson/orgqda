@@ -220,13 +220,14 @@ Usually set by the user as a file or dir local variable.")
   "Execute BODY in BUFFER if it exists, otherwise just execute BODY.
 The value returned is the value of the last form in BODY."
   (declare (indent 1) (debug t))
-  `(if (and ,buffer (bufferp ,buffer))
+  `(if (and ,buffer (buffer-live-p ,buffer))
        (with-current-buffer ,buffer ,@body)
      ,@body))
 
 (defmacro orgqda--inhibit-org-startups (&rest body)
   "Execute BODY while inhibiting mode hooks and org-startup.
 Inhibits hooks for `text-mode', `outline-mode' and `org-mode'"
+  (declare (debug t))
   `(let ((text-mode-hook nil)
          (outline-mode-hook nil)
          (org-mode-hook nil)
