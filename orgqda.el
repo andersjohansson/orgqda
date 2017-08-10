@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2017-08-09
+;; Modified: 2017-08-10
 ;; Package-Requires: ((emacs "25.1") (xah-replace-pairs "2.0") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1248,33 +1248,20 @@ active."
 
 ;;; Advice
 
-;;;###autoload
-(advice-add 'org-agenda-files :around #'orgqda-agenda-files-override)
-;;;###autoload
-(defun orgqda-agenda-files-override (oldfun &rest args)
-  "Overrides with `orgqda-tag-files' when `orgqda-mode' is non-nil."
-  (if orgqda-mode
-      (orgqda-tag-files)
-    (apply oldfun args)))
+;; This advice is irrelevant if orgqda-helm-tags.el (which overrides
+;; `org-set-tags') is used
 
 ;;;###autoload
 (advice-add 'org-global-tags-completion-table :around #'orgqda-tags-completion-table-wrap)
 ;;;###autoload
 (defun orgqda-tags-completion-table-wrap (oldfun &rest args)
-  "Inhibits org hooks to speed up loading of tags from related
-files when `orgqda-mode' is non-nil."
+  "Loads tags from `orgqda-tag-files' and inhibits org hooks to
+ speed up loading of files when `orgqda-mode' is non-nil."
   (if orgqda-mode
       (orgqda--inhibit-org-startups
-       (apply oldfun args))
+       (funcall oldfun (orgqda-tag-files)))
     (apply oldfun args)))
 
-;; ;;;###autoload
-;; (advice-add 'org-set-tags :around #'orgqda-set-tags-override)
-;; ;;;###autoload
-;; (defun orgqda-set-tags-override (oldfun &rest args)
-;;   (let ((org-current-tag-alist
-;;          (if orgqda-mode nil org-current-tag-alist)))
-;;     (apply oldfun args)))
 
 ;;; We really need to avoid org-persistent-tags-alist.
 ;;; org-current-tag-alist is set when loading an org buffer and if
