@@ -60,10 +60,10 @@ orgqda-use-tag-hierarchy t
 orgqda-exclude-empty-file-trees t
 #+END_EXAMPLE
 
-** orgqda-helm-tags
+** orgqda-helm-tags.el
 Included in the repository is a library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~. Tags can also be removed with a secondary action or tagged extracts viewed with a persistent action.
 
-** orgqda-transcript
+** orgqda-transcript.el
 Included in the repository is a library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with ordain). It uses ~mplayer-mode~, although it currently and unfortunately of depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things:  https://github.com/andersjohansson/mplayer-mode/tree/org-sessions.
 (see discussion about the future of ~mplayer-mode~ here: https://github.com/markhepburn/mplayer-mode/issues/10).
 
@@ -76,3 +76,12 @@ I often load ~orgqda-mode~ through file or dir local variables, and as activatio
 ((org-mode
    (eval add-hook 'hack-local-variables-hook 'orgqda-mode nil t)))
 #+END_EXAMPLE
+
+** A technical note on tag-completion
+When adding tags and giving completion, ~org-mode~ has several mechanisms that determines which tags this should be. Tags that should be available for completion in all buffers can be added to ~org-persistent-tags-alist~, and tags that should be available for a single buffer can be added with the ~#+TAGS:~ keyword, but all this interferes with ~orgqda-mode~.
+If any of these mechanisms (which are activated when ~org-mode~ loads) sets ~org-current-tag-alist~, the dynamic fetching of tags that we most certainly want for ~orgqda-mode~ is prevented.
+
+One solution for avoiding this is never using the ~#+TAGS:~ keyword and setting ~#+STARTUP: noptags~ for all files used in ~orgqda~.
+One measure to prevent problems is taken by ~orgqda-mode~ as well, in that it sets ~org-current-tags-alist~ to nil when ~orgqda-mode~ is activated.
+So if ~orgqda-mode~ gets activated automatically (for instance like detailed above) in all relevant files (even in files defined in ~orgqda-tag-files~ from which tags should be fetched) you’re all set.
+Also, using ~orgqda-helm-tags~, which overrides ~org-set-tags,~ avoids all these problems.

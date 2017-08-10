@@ -1263,17 +1263,6 @@ active."
     (apply oldfun args)))
 
 
-;;; We really need to avoid org-persistent-tags-alist.
-;;; org-current-tag-alist is set when loading an org buffer and if
-;;; org-persistent-tags-alist is nil prevents getting all buffer tags
-;;; for completion both for current buffer in org-set-tags and for
-;;; "agenda"-buffers in org-global-tags-completion-table (where files
-;;; are loaded with find-file-noselect). We can't make sure all files
-;;; get orgqda-mode enabled so the easiest thing is to use #+STARTUP:
-;;; noptags in all files. But orgqda-mode will set
-;;; org-current-tag-alist to nil as well.
-
-
 (provide 'orgqda)
 
 ;;; orgqda.el ends here
