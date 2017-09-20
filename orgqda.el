@@ -453,12 +453,7 @@ For non-interactive use: DEEPER-VIEW (integer) adds visible
 levels to folding with `org-content'. BUFFER specifies a buffer
 to insert the collected tags in."
   (interactive)
-  (let* ((match (or match
-                    (completing-read "Match: " (orgqda--get-tags-for-completion) nil nil (orgqda-tag-at-point))))
-         (matcher
-          (if (string-match-p "^[[:alnum:]_@#%:]+$" match)
-              (orgqda--make-simple-tags-matcher match)
-            (org-make-tags-matcher match)))
+  (let* ((matcher (orgqda--make-tags-matcher match))
          (mname (car matcher))
          (cont (orgqda--coll-tagged matcher 2))
          (oclevel
@@ -479,7 +474,7 @@ to insert the collected tags in."
 ;;;###autoload
 (defun orgqda-collect-tagged-csv (&optional match)
   (interactive)
-  (let* ((matcher (org-make-tags-matcher match))
+  (let* ((matcher (orgqda--make-tags-matcher match))
 		 (orgqda--csv-curr-mname (car matcher))
 		 (cont (orgqda--coll-tagged-csv matcher)))
 	(switch-to-buffer-other-window
@@ -493,7 +488,7 @@ to insert the collected tags in."
 (defun orgqda-collect-tagged-csv-save (&optional match)
   "Collect  and save a file in `orgqda-csv-dir'"
   (interactive)
-  (let* ((matcher (orgqda--make-simple-tags-matcher match))
+  (let* ((matcher (orgqda--make-tags-matcher match))
 		 (orgqda--csv-curr-mname (car matcher))
 		 (cont (orgqda--coll-tagged-csv matcher))
          (current-csv-dir orgqda-csv-dir))
@@ -948,7 +943,7 @@ not loaded with `orgqda--get-tags-hash'"
                        (substring item -1))))
         (insert
          (with-current-buffer origbuffer
-           (cdr (orgqda--coll-tagged (orgqda--make-simple-tags-matcher item)
+           (cdr (orgqda--coll-tagged (orgqda--make-tags-matcher item t)
                                      (+ 2 indent))))
          "\n")))
     "*")
@@ -996,13 +991,29 @@ not loaded with `orgqda--get-tags-hash'"
     (let ((ov (gethash x orgqda--current-tagscount 0)))
       (puthash x (1+ ov) orgqda--current-tagscount))))
 
-(defun orgqda--make-simple-tags-matcher (tag)
-  "Construct a tags matcher only matching a single tag.
-Use for performance reasons since `org-make-tags-matcher'
-generation takes too long with long tag names."
-  (cons tag `(lambda (_todo tags-list _level)
-               (setq org-cached-props nil)
-               (member ,tag tags-list))))
+(defun orgqda--make-tags-matcher (&optional match force-simple)
+  "Construct a tags matcher, always excluding commented and archived trees.
+
+Match string is passed in MATCH or prompted for.
+
+The matcher is constructed bypassing `org-make-tags-matcher' if
+the match is for a single tag, since generation otherwise takes too long
+with long tag names. This behaviour can be forced with
+FORCE-SIMPLE."
+  (let* ((match (or match
+                    (completing-read
+                     "Match: "
+                     (orgqda--get-tags-for-completion)
+                     nil nil (orgqda-tag-at-point))))
+         (mf (if (or force-simple
+                     (string-match-p "^[[:alnum:]_@#%:]+$" match))
+                 `(member ,match tags-list)
+               (nth 2 (cdr (org-make-tags-matcher match))))))
+    (cons match `(lambda (todo tags-list level)
+                   (setq org-cached-props nil)
+                   (and (not (org-in-commented-heading-p))
+                        (not (member "ARCHIVE" tags-list))
+                        ,mf)))))
 
 ;;;;; link type for taglist
 (org-link-set-parameters "otag"
