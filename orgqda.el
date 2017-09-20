@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2017-08-10
+;; Modified: 2017-09-20
 ;; Package-Requires: ((emacs "25.1") (xah-replace-pairs "2.0") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -32,7 +32,6 @@
 ;; org-mode tags added to degenerate inlinetasks as applying to the
 ;; preceding paragraph.
 
-(require 'xah-replace-pairs)
 (require 'bookmark)
 (require 'org-inlinetask)
 (require 'cl-lib)
@@ -648,9 +647,10 @@ collection of orgqda files"
   (save-excursion
 	(if (or (org-at-heading-p) (org-inlinetask-in-task-p))
 		(let* ((ln (line-number-at-pos))
-			   (bm (orgqda-get-bm))
+			   (bm (orgqda--get-encoded-bm))
 			   (link (format "opbm:%s" bm))
-			   (head (substring-no-properties (org-get-heading)))
+			   (head (orgqda--replace-links-in-string
+                      (substring-no-properties (org-get-heading))))
 			   (ei1
 				(and orgqda-tag-collect-extra-info
 					 (assoc-default
@@ -663,6 +663,13 @@ collection of orgqda files"
 			   (contents (orgqda--get-paragraph-or-sub-contents)))
 		  (concat hl contents))
 	  "Inte heading eller inlinetask???")))
+
+(defun orgqda--replace-links-in-string (string)
+  "Replace `org-mode' links in STRING with their descriptions."
+  (replace-regexp-in-string org-bracket-link-regexp
+                            (lambda (text) (or (match-string-no-properties 3 text)
+                                          (match-string-no-properties 1 text)))
+                            string t t))
 
 ;;;; CSV-collection-functions
 ;;TODO, perhaps more duplication could be avoided
@@ -697,8 +704,6 @@ collection of orgqda files"
 		(let* ((ln (line-number-at-pos))
 			   (fl (file-name-base
 					(buffer-file-name (buffer-base-buffer))))
-                                        ;(bm (orgqda-get-bm))
-                                        ;(link (format "opbm:%s" bm))
 			   (head (substring-no-properties (org-get-heading)))
 			   ;;(tags (org-get-tags));TODO Fixa listan på något smart sätt
 			   (ei1
@@ -813,11 +818,7 @@ each character in the buffer."
 			 (not (org-looking-at-p task-end-re)))))))
 
 
-;;;; link types
-(defvar orgqda-bm-link-encode-table
-  '(["\n" "\\\\n"] ["[" "᚛"] ["]" "᚜"]))
-(defvar orgqda-bm-link-decode-table
-  '(["᚛" "["] ["᚜" "]"]))
+;;;; link type for linking to parts of buffer
 
 (org-link-set-parameters "opbm"
                          :follow #'orgqda-opbm-open
@@ -831,14 +832,13 @@ each character in the buffer."
              (not (org-at-heading-p)))
     (org-store-link-props
      :type "opbm"
-     :link (format "opbm:%s" (orgqda-get-bm))
+     :link (format "opbm:%s" (orgqda--get-encoded-bm))
      :description (format "bm at: %s:%s"
                           (buffer-file-name) (line-number-at-pos)))))
 
 (defun orgqda-opbm-open (opbm)
   (save-current-buffer
-	(let ((bm (cons "n" (read (xah-replace-pairs-in-string
-							   opbm orgqda-bm-link-decode-table)))))
+	(let ((bm (cons "n" (read (org-link-unescape opbm)))))
       (find-file-other-window (bookmark-get-filename bm))
       (bookmark-default-handler bm)
       (recenter)))
@@ -853,12 +853,14 @@ each character in the buffer."
      (t "%s"))
    (substring-no-properties desc)))
 
-(defun orgqda-get-bm ()
+(defun orgqda--get-encoded-bm ()
+  "Encode a bookmark reference as a string."
   (require 'bookmark)
-  ;;(require 'xfrp_find_replace_pairs)
-  (xah-replace-pairs-in-string (prin1-to-string
-                                (bookmark-make-record-default))
-                               orgqda-bm-link-encode-table))
+  (org-link-escape
+   (prin1-to-string
+    (bookmark-make-record-default))
+   '(10) ; add \n to escape table
+   t))
 
 ;;;; List tags functions
 (defvar orgqda--current-tagscount (make-hash-table :test 'equal)
