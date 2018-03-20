@@ -658,7 +658,7 @@ collection of orgqda files"
 		(let* ((ln (line-number-at-pos))
 			   (bm (orgqda--get-encoded-bm))
 			   (link (format "opbm:%s" bm))
-			   (head (orgqda--replace-links-in-string
+			   (head (org-link-display-format
                       (substring-no-properties (org-get-heading))))
 			   (ei1
 				(and orgqda-tag-collect-extra-info
@@ -672,13 +672,6 @@ collection of orgqda files"
 			   (contents (orgqda--get-paragraph-or-sub-contents)))
 		  (concat hl contents))
 	  "Inte heading eller inlinetask???")))
-
-(defun orgqda--replace-links-in-string (string)
-  "Replace `org-mode' links in STRING with their descriptions."
-  (replace-regexp-in-string org-bracket-link-regexp
-                            (lambda (text) (or (match-string-no-properties 3 text)
-                                          (match-string-no-properties 1 text)))
-                            string t t))
 
 ;;;; CSV-collection-functions
 ;;TODO, perhaps more duplication could be avoided
