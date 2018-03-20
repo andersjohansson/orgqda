@@ -1059,6 +1059,7 @@ buffer."
       (orgqda--create-hierarchical-taglist))
     (setq orgqda--pending-tag-count-replacements nil
           orgqda--removed-tags nil)
+    ;; update counts
     (save-match-data
       (org-element-map (org-element-parse-buffer) 'link #'orgqda--update-tag-count-link)
       ;; do the replacements
@@ -1079,8 +1080,10 @@ buffer."
             (inhibit-read-only t))
         (orgqda--create-hierarchical-taglist nil newtags)
         (orgqda-list-tags nil nil buf t "Possibly added tags")
-        (when orgqda--removed-tags
-          (with-current-buffer buf
+        (with-current-buffer buf
+          (goto-char (point-min))
+          (org-map-tree (lambda () (end-of-line) (newline) (org-time-stamp '(16) 'inactive)))
+          (when orgqda--removed-tags
             (goto-char (point-max))
             (insert
              (concat "* Possibly removed tags\n- "
