@@ -470,15 +470,17 @@ to insert the collected tags in."
          (oclevel
           (+ (if (and orgqda-collect-from-all-files orgqda-tag-files) 2 1)
              (or deeper-view 0))))
-    (switch-to-buffer-other-window
-     (or buffer (generate-new-buffer
-                 (format "*tags:%s*" mname))))
-    (org-insert-time-stamp (current-time) t t
-                           (format "* Tagged: %s, (%d) " mname (car cont)) "\n")
-    (insert (cdr cont))
-    (goto-char (point-min))
-    (org-mode) (flyspell-mode -1) (setq buffer-read-only t)
-    (org-content oclevel)))
+    (if (equal cont '(0))
+        (user-error "No matches for \"%s\"" mname)
+      (switch-to-buffer-other-window
+       (or buffer (generate-new-buffer
+                   (format "*tags:%s*" mname))))
+      (org-insert-time-stamp (current-time) t t
+                             (format "* Tagged: %s, (%d) " mname (car cont)) "\n")
+      (insert (cdr cont))
+      (goto-char (point-min))
+      (org-mode) (flyspell-mode -1) (setq buffer-read-only t)
+      (org-content oclevel))))
 
 (defvar orgqda--csv-curr-mname nil)
 
@@ -587,7 +589,8 @@ per tag) in `orgqda-csv-dir'"
                       (propertize newname 'face 'italic)
                       (propertize (number-to-string total) 'face 'bold)
                       filesums))
-    (orgqda-revert-taglist)))
+    (when (or orgqda-list-mode orgqda-codebook-mode)
+      (orgqda-revert-taglist))))
 
 (defun orgqda-prefix-tag (oldname prefix)
   "Add a prefix PREFIX to existing tag OLDNAME in current
