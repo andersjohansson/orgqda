@@ -204,6 +204,7 @@ Usually set by the user as a file or dir local variable.")
 
 (unless orgqda-codebook-mode-map
   (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "<drag-mouse-1>") #'orgqda-drag-merge-tags)
     (define-key map (kbd "C-c (") orgqda-list-mode-map)
     (setq orgqda-codebook-mode-map map)))
 
