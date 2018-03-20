@@ -321,7 +321,7 @@ Prefix arg is passed through."
 ;;;; Commands for listing tags
 
 ;;;###autoload
-(defun orgqda-list-tags (&optional sort full buf noupdate roottext)
+(defun orgqda-list-tags (&optional sort full buf noupdate roottext startprefix)
   "List all tags with counts, in this buffer and possibly all
 files in `orgqda-tag-files'. Sorted by count or alphabetically if
 optional (prefix) argument is non-nil.
@@ -352,12 +352,15 @@ text for the root node."
     (if roottext
         (insert (format "* %s\n" roottext))
       (org-insert-time-stamp (current-time) t t
-                             (concat "* Orgqda taglist generated from "
+                             (concat "* Orgqda taglist "
+                                     (when startprefix
+                                       (format "(under prefix %s) " startprefix))
+                                     "generated from "
                                      (org-make-link-string
                                       (concat "file:" origfile)
                                       (buffer-name origbuffer)) " at ")
                              "\n"))
-    (orgqda--insert-hierarchical-taglist full origbuffer origfile 1)
+    (orgqda--insert-hierarchical-taglist full origbuffer origfile 1 startprefix)
     (goto-char (point-min))
     (org-mode) (orgqda-list-mode) (flyspell-mode -1)
     (setq buffer-read-only t
@@ -938,24 +941,29 @@ not loaded with `orgqda--get-tags-hash'"
     (dolist (sfn sortlist)
       (hierarchy-sort (orgqda--htl-hierarchy orgqda--current-htl) sfn))))
 
-(defun orgqda--insert-hierarchical-taglist (full origbuffer filename &optional startlevel)
-  (hierarchy-map
-   (hierarchy-labelfn-indent
-    (lambda (item indent)
-      (orgqda--insert-taglist-item
-       item filename)
-      (when (and full
-                 (not (string=
-                       orgqda-hierarchy-delimiter
-                       (substring item -1))))
-        (insert
-         (with-current-buffer origbuffer
-           (cdr (orgqda--coll-tagged (orgqda--make-tags-matcher item t)
-                                     (+ 2 indent))))
-         "\n")))
-    "*")
-   (orgqda--htl-hierarchy orgqda--current-htl)
-   (or startlevel 0)))
+(defun orgqda--insert-hierarchical-taglist (full origbuffer filename &optional startlevel starttag)
+  (apply
+   (if starttag #'hierarchy-map-item #'hierarchy-map)
+   (cl-remove-if
+    #'null
+    (list
+     (hierarchy-labelfn-indent
+      (lambda (item indent)
+        (orgqda--insert-taglist-item
+         item filename)
+        (when (and full
+                   (not (string=
+                         orgqda-hierarchy-delimiter
+                         (substring item -1))))
+          (insert
+           (with-current-buffer origbuffer
+             (cdr (orgqda--coll-tagged (orgqda--make-tags-matcher item t)
+                                       (+ 2 indent))))
+           "\n")))
+      "*")
+     starttag
+     (orgqda--htl-hierarchy orgqda--current-htl)
+     (or startlevel 0)))))
 
 (defun orgqda--insert-taglist-item (item filename)
   (insert
