@@ -325,10 +325,10 @@ Prefix arg is passed through."
 files in `orgqda-tag-files'. Sorted by count or alphabetically if
 optional (prefix) argument is non-nil.
 
-For non-interactice calls:
-
-SORT can be given as a sort symbol. If a buffer is provided in
-BUF overwrite this buffer with the list instead of creating a
+For non-interactive calls:
+SORT can be given as a sort symbol (see
+`orgqda--create-hierarchical-taglist'). If a buffer is provided
+in BUF overwrite this buffer with the list instead of creating a
 new. The taglist is normally updated via
 `orgqda--create-hierarchical-taglist', but this can be prevented
 by giving a non-nil NOUPDATE. Then a special list can be used by
@@ -339,7 +339,9 @@ text for the root node."
         (origfile (buffer-file-name)))
     (unless noupdate
       (orgqda--create-hierarchical-taglist
-       (if (symbolp sort) sort 'a-z)))
+       (cond
+        ((symbolp sort) sort)
+        (sort 'a-z))))
     (if buf
         (progn (switch-to-buffer-other-window buf)
                (setq buffer-read-only nil)
@@ -363,12 +365,20 @@ text for the root node."
           orgqda--taglist-full full)))
 
 ;;;###autoload
-(defun orgqda-list-tags-full (&optional alpha buf)
+(defun orgqda-list-tags-full (&optional sort buf)
   "List all tags with counts, in this buffer and possibly all files
 in `orgqda-tag-files'. Insert extracted paragraphs as a subtree for all tags.
-Sorted by count or alphabetically if optional (prefix) argument is non-nil."
+Sorted by count or alphabetically if optional (prefix) argument is non-nil.
+Two prefix arguments prompts for a tag prefix to start from"
   (interactive "P")
-  (orgqda-list-tags alpha t buf))
+  (orgqda-list-tags
+   (equal '(4) sort)
+   t buf nil nil
+   (when (equal '(16) sort)
+     (concat (completing-read
+              "Prefix to start from: "
+              (orgqda--get-prefixes-for-completion) nil nil)
+             "_"))))
 
 (defun orgqda-revert-taglist ()
   "Reverts current `orgqda-list-mode' buffer.
