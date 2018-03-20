@@ -61,7 +61,9 @@ orgqda-exclude-empty-file-trees t
 #+END_EXAMPLE
 
 ** orgqda-helm-tags.el
-Included in the repository is a library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~. Tags can also be removed with a secondary action or tagged extracts viewed with a persistent action.
+Included in the repository is a library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~. Tags can also be removed with a secondary action or tagged extracts viewed with a persistent action. If a codebook file is defined, the display fetches the first line (which should be a short description/definition of the code/tag) from this for each tag, to ease correct tagging.
+
+Additionally, a minor mode ~orgqda-helm-tags-mode~ is defined for using this tagging mechanism without activating ~orgqda-mode~.
 
 ** orgqda-transcript.el
 Included in the repository is a library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with ordain). It uses ~mplayer-mode~, although it currently and unfortunately of depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things:  https://github.com/andersjohansson/mplayer-mode/tree/org-sessions.

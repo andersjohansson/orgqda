@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2017-08-07
+;; Modified: 2018-03-20
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -35,9 +35,24 @@
 
 (defcustom orgqda-helm-tags-completion t
   "Whether to use the custom `orgqda-helm-tags-set-tags' for
-  inserting tags in `orgqda-mode'"
+  inserting tags in `orgqda-mode'
+
+If not set through customize, set it through calling
+`orgqda-helm-tags-activate-completion' as:
+\(orgqda-helm-tags-activate-completion 'orgqda-helm-tags-completion VAL\)"
   :group 'orgqda
-  :type 'boolean)
+  :type 'boolean
+  :set #'orgqda-helm-tags-activate-completion
+  :initialize #'custom-initialize-reset)
+
+(defun orgqda-helm-tags-activate-completion (name val)
+  (set-default name val)
+  (if val
+      (progn
+        (define-key orgqda-mode-map "\C-c\C-q" #'orgqda-helm-tags-set-tags)
+        ;; (setcdr (assoc ":" org-speed-commands-default) 'orgqda-helm-tags-set-tags)
+        )
+    (define-key orgqda-mode-map "\C-c\C-q" nil)))
 
 (defcustom orgqda-helm-tags-sort 'count-decreasing
   "Sorting scheme used in `orgqda-helm-set-tags'."
@@ -53,11 +68,19 @@
   (helm-build-sync-source "Orgqda select tags (C-RET finishes):"
     :history  'orgqda-helm-tags-history
     :fuzzy-match t
+    ;; :match '(orgqda-helm-tags--fuzzy-match-name helm-fuzzy-match)
+    ;; TODO, can this be made to work so it primarily matches on tag
+    ;; name? (or real)
     :keymap helm-comp-read-map
     :action  '(("Set tags to" . (lambda (_c) (helm-marked-candidates)))
                ("Delete marked tags" . orgqda-helm-tags-delete-tag))
     :persistent-action #'orgqda-helm-tags-display-tagged
     :candidates 'orgqda-helm-tags-comp-list))
+
+;; (defun orgqda-helm-tags--fuzzy-match-name (cand)
+;;   (helm-fuzzy-match
+;;    (substring cand 0 (next-property-change 0 cand))))
+
 
 (defvar orgqda-helm-tags--coll-buffer nil)
 (defun orgqda-helm-tags-display-tagged (tag)
@@ -107,15 +130,6 @@ Calls `orgqda-collect-tagged'"
   ())
 
 
-;;;###autoload
-(advice-add 'org-set-tags-command :around #'orgqda-helm-tags-override)
-;;;###autoload
-(defun orgqda-helm-tags-override (oldfun &rest args)
-  "Call `orgqda-helm-set-tags' when `orgqda-mode' is active."
-  (if (and (not (car args)) orgqda-mode orgqda-helm-tags-completion)
-      (orgqda-helm-tags-set-tags)
-    (apply oldfun args)))
-
 (defmacro orgqda-helm-tags-propertize-if (condition string &rest properties)
   "Returns STRING propertized with PROPERTIES if condition
 evaluates to non-nil, otherwise returns STRING"
@@ -125,39 +139,42 @@ evaluates to non-nil, otherwise returns STRING"
      ,string))
 
 ;;;###autoload
-(defun orgqda-helm-tags-set-tags ()
+(defun orgqda-helm-tags-set-tags (&optional arg just-align)
   "Use helm-completion to select multiple tags to add to heading
 Continues completing until exited with C-RET,M-RET or C-g" 
-  (interactive)
-  (if (org-at-heading-p)
-      (let* ((helm-exit-status 0)
-             (orgqda-helm-tags-current-tags (nreverse (org-get-local-tags)))
-             (cl1 (orgqda--get-tags-alist orgqda-helm-tags-sort))
-             cllast
-             (clfirst (cl-loop for tag in cl1
-                               if (cl-member tag orgqda-helm-tags-current-tags
-                                             :test
-                                             (lambda (a b) (string= (car a) b)))
-                               do (push (orgqda-helm-tags--format-list-item tag t) cllast)
-                               else collect (orgqda-helm-tags--format-list-item tag)))
-             (orgqda-helm-tags-comp-list (nconc clfirst (nreverse cllast))))
-        (org-set-tags-to
-         (cl-remove-duplicates
-          (cl-loop with newtags
-                   until (or (eq helm-exit-status 1) (equal "" newtags))
-                   do (setq newtags
-                            (helm :sources
-                                  (list (orgqda-helm-tags--source)
-                                        (orgqda-helm-tags--fallback-source))
-                                  :candidate-number-limit 99999
-                                  :buffer "*helm orgqda tags*"))
-                   if (listp newtags)
-                   do (dolist (tag newtags)
-                        (push tag orgqda-helm-tags-current-tags)
-                        (orgqda-helm-tags--update-tag-in-complist tag))
-                   finally return (nreverse orgqda-helm-tags-current-tags))
-          :test 'string=)))
-    (user-error "Not at org heading")))
+  (interactive "P")
+  (if (or arg just-align)
+      (funcall #'org-set-tags-command arg just-align)
+    (if (org-at-heading-p)
+        (let* ((helm-exit-status 0)
+               (helm-truncate-lines t)
+               (orgqda-helm-tags-current-tags (nreverse (org-get-local-tags)))
+               (cl1 (orgqda-helm-tags--get-tags-list))
+               cllast
+               (clfirst (cl-loop for tag in cl1
+                                 if (cl-member tag orgqda-helm-tags-current-tags
+                                               :test
+                                               (lambda (a b) (string= (car a) b)))
+                                 do (push (orgqda-helm-tags--format-list-item tag t) cllast)
+                                 else collect (orgqda-helm-tags--format-list-item tag)))
+               (orgqda-helm-tags-comp-list (nconc clfirst (nreverse cllast))))
+          (org-set-tags-to
+           (cl-remove-duplicates
+            (cl-loop with newtags
+                     until (or (eq helm-exit-status 1) (equal "" newtags))
+                     do (setq newtags
+                              (helm :sources
+                                    (list (orgqda-helm-tags--source)
+                                          (orgqda-helm-tags--fallback-source))
+                                    :candidate-number-limit 99999
+                                    :buffer "*helm orgqda tags*"))
+                     if (listp newtags)
+                     do (dolist (tag newtags)
+                          (push tag orgqda-helm-tags-current-tags)
+                          (orgqda-helm-tags--update-tag-in-complist tag))
+                     finally return (nreverse orgqda-helm-tags-current-tags))
+            :test 'string=)))
+      (user-error "Not at org heading"))))
 
 (defun orgqda-helm-tags--update-tag-in-complist (tag)
   (setq orgqda-helm-tags-comp-list
@@ -172,22 +189,70 @@ Continues completing until exited with C-RET,M-RET or C-g"
                  (orgqda-helm-tags--reformat-added-list-item (cons tag tag))))))
 
 (defun orgqda-helm-tags--reformat-added-list-item (li)
-  (list (cons (propertize (concat (car li) " +1") 'face 'bold) (cdr li))))
+  (list (cons (propertize (concat  "+ " (car li)) 'face 'bold) (cdr li))))
 
 (defun orgqda-helm-tags--reformat-deleted-list-item (li)
-  (list (cons (propertize (replace-regexp-in-string " \\+1$" "" (car li))
+  (list (cons (propertize (replace-regexp-in-string "^\\+" "" (car li))
                           'face nil)
               (cdr li))))
 
 (defun orgqda-helm-tags--format-list-item (x &optional incurrent?)
   (cons
    (orgqda-helm-tags-propertize-if incurrent?
-     (concat
-      (car x) " "
-      (propertize (format "(%d)" (cdr x))
-                  'face 'font-lock-function-name-face))
+     (format
+      "%-40s %5s %s"
+      (car x)
+      (propertize (format "%d" (cadr x))
+                  'face 'font-lock-function-name-face)
+      (if-let ((info (nth 2 x)))
+          (propertize info 'face 'shadow)
+        ""))
      'face '(font-lock-comment-face (:strike-through t)))
    (car x)))
+
+;;; Info from codebook file
+(defun orgqda-helm-tags--get-tags-list ()
+  "Gets list of tags with count and (possible) coding info."
+  (let ((info (orgqda-helm-tags--get-codebook-info)))
+    (cl-loop for x in (orgqda--get-tags-alist orgqda-helm-tags-sort)
+             collect (list (car x)
+                           (cdr x)
+                           (assoc-default (car x)
+                                          info)))))
+
+(defun orgqda-helm-tags--get-codebook-info ()
+  "Returns an alist of tag names and coding info
+
+Coding info is the first line of the matching line for the tag in
+`orgqda-codebook-file'"
+  (when orgqda-codebook-file
+    (org-map-entries
+     #'orgqda-helm-tags--get-tag-info
+     t
+     (list orgqda-codebook-file))))
+
+(defun orgqda-helm-tags--get-tag-info ()
+  (when (and (search-forward-regexp
+              org-bracket-link-analytic-regexp (point-at-eol) t)
+             (equal "otag" (match-string 2)))
+    (let ((tag (cadr (split-string (match-string-no-properties 3) ":")))
+          (text (substring-no-properties
+                 (org-agenda-get-some-entry-text (point-marker) 1))))
+      (when (and tag (not (string-blank-p text)))
+        (cons tag text)))))
+
+;;; Simple mode to be used if only this completion and not orgqda is desired
+(defvar orgqda-helm-tags-mode-map nil)
+(unless orgqda-helm-tags-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-q") #'orgqda-helm-tags-set-tags)
+    (setq orgqda-helm-tags-mode-map map)))
+
+(define-minor-mode orgqda-helm-tags-mode "Minor mode for using ‘orqda-helm-tags-completion’
+
+\\{orgqda-helm-tags-mode-map}"
+  :keymap orgqda-helm-tags-mode-map)
+
 
 (provide 'orgqda-helm-tags)
 
