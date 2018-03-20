@@ -5,8 +5,8 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2017-09-20
-;; Package-Requires: ((emacs "25.1") (xah-replace-pairs "2.0") (org "9.0") (hierarchy "0.6.0"))
+;; Modified: 2018-03-20
+;; Package-Requires: ((emacs "25.1") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
 
@@ -136,7 +136,7 @@ For directories, all .org-files (matched by
 Usually set by the user as a file or dir local variable.")
 ;;;###autoload
 (put 'orgqda-tag-files 'safe-local-variable
-	 #'orgqda--string-or-list-of-strings-p)
+     #'orgqda--string-or-list-of-strings-p)
 
 ;;;###autoload
 (defvar-local orgqda-codebook-file nil
@@ -147,7 +147,7 @@ renamed.
 Usually set by the user as a file or dir local variable.")
 ;;;###autoload
 (put 'orgqda-codebook-file 'safe-local-variable
-	 #'stringp)
+     #'stringp)
 
 ;;;###autoload
 (defun orgqda--string-or-list-of-strings-p (arg)
@@ -491,22 +491,22 @@ to insert the collected tags in."
 (defun orgqda-collect-tagged-csv (&optional match)
   (interactive)
   (let* ((matcher (orgqda--make-tags-matcher match))
-		 (orgqda--csv-curr-mname (car matcher))
-		 (cont (orgqda--coll-tagged-csv matcher)))
-	(switch-to-buffer-other-window
+         (orgqda--csv-curr-mname (car matcher))
+         (cont (orgqda--coll-tagged-csv matcher)))
+    (switch-to-buffer-other-window
      (generate-new-buffer (format "*csvtags:%s*" orgqda--csv-curr-mname)))
-	(when orgqda-convert-csv-to-encoding
+    (when orgqda-convert-csv-to-encoding
       (orgqda--csv-convert-buffer-to-encoding))
-	(insert cont)
-	(goto-char (point-min))))
+    (insert cont)
+    (goto-char (point-min))))
 
 ;;;###autoload
 (defun orgqda-collect-tagged-csv-save (&optional match)
   "Collect  and save a file in `orgqda-csv-dir'"
   (interactive)
   (let* ((matcher (orgqda--make-tags-matcher match))
-		 (orgqda--csv-curr-mname (car matcher))
-		 (cont (orgqda--coll-tagged-csv matcher))
+         (orgqda--csv-curr-mname (car matcher))
+         (cont (orgqda--coll-tagged-csv matcher))
          (current-csv-dir orgqda-csv-dir))
     (with-temp-buffer
       (insert cont)
@@ -524,7 +524,7 @@ to insert the collected tags in."
 per tag) in `orgqda-csv-dir'"
   (interactive "P")
   (let ((tags (orgqda--get-tags-hash))
-		(tn (prefix-numeric-value threshold)))
+        (tn (prefix-numeric-value threshold)))
     (maphash (lambda (tag count)
                (when (or (not threshold)
                          (<= tn count))
@@ -657,24 +657,24 @@ collection of orgqda files"
 
 (defun orgqda--get-paragraph-or-sub ()
   (save-excursion
-	(if (or (org-at-heading-p) (org-inlinetask-in-task-p))
-		(let* ((ln (line-number-at-pos))
-			   (bm (orgqda--get-encoded-bm))
-			   (link (format "opbm:%s" bm))
-			   (head (org-link-display-format
+    (if (or (org-at-heading-p) (org-inlinetask-in-task-p))
+        (let* ((ln (line-number-at-pos))
+               (bm (orgqda--get-encoded-bm))
+               (link (format "opbm:%s" bm))
+               (head (org-link-display-format
                       (substring-no-properties (org-get-heading))))
-			   (ei1
-				(and orgqda-tag-collect-extra-info
-					 (assoc-default
-					  (buffer-name)
+               (ei1
+                (and orgqda-tag-collect-extra-info
+                     (assoc-default
+                      (buffer-name)
                       orgqda-tag-collect-extra-info 'string-match-p)))
-			   (extrainfo (when ei1 (eval ei1)))
-			   (hl (format "%s %d: [[%s][%s]]%s\n"
+               (extrainfo (when ei1 (eval ei1)))
+               (hl (format "%s %d: [[%s][%s]]%s\n"
                            (make-string orgqda--ct-level 42)
-						   ln link head extrainfo))
-			   (contents (orgqda--get-paragraph-or-sub-contents)))
-		  (concat hl contents))
-	  "Inte heading eller inlinetask???")))
+                           ln link head extrainfo))
+               (contents (orgqda--get-paragraph-or-sub-contents)))
+          (concat hl contents))
+      "Inte heading eller inlinetask???")))
 
 ;;;; CSV-collection-functions
 ;;TODO, perhaps more duplication could be avoided
@@ -682,8 +682,8 @@ collection of orgqda files"
   "Return body of csv"
   (let ((manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files)))
         tags)
-	(concat
-	 "citat,fil,fil:rad,file:hash,head,matchad,extra,extra2\n" ;;TODO, give reasonable names here
+    (concat
+     "citat,fil,fil:rad,file:hash,head,matchad,extra,extra2\n" ;;TODO, give reasonable names here
      ;; iterate orgqda-tag-files
      (if manyfiles
          (orgqda--inhibit-org-startups
@@ -705,26 +705,25 @@ collection of orgqda files"
 
 (defun orgqda--get-paragraph-or-sub-to-csv ()
   (save-excursion
-	(if (or (org-at-heading-p) (org-inlinetask-in-task-p))
-		(let* ((ln (line-number-at-pos))
-			   (fl (file-name-base
-					(buffer-file-name (buffer-base-buffer))))
-			   (head (substring-no-properties (org-get-heading)))
-			   ;;(tags (org-get-tags));TODO Fixa listan på något smart sätt
-			   (ei1
-				(and orgqda-tag-collect-extra-info-csv
-					 (assoc-default
-					  (buffer-name)
+    (if (or (org-at-heading-p) (org-inlinetask-in-task-p))
+        (let* ((ln (line-number-at-pos))
+               (fl (file-name-base
+                    (buffer-file-name (buffer-base-buffer))))
+               (head (substring-no-properties (org-get-heading)))
+               ;;(tags (org-get-tags));TODO Fix the list in some smart way
+               (ei1
+                (and orgqda-tag-collect-extra-info-csv
+                     (assoc-default
+                      (buffer-name)
                       orgqda-tag-collect-extra-info-csv 'string-match-p)))
-			   (extrainfo1 (when ei1 (eval ei1)))
-			   (ei2
-				(and orgqda-tag-collect-extra-info2-csv
-					 (assoc-default
-					  (buffer-name)
+               (extrainfo1 (when ei1 (eval ei1)))
+               (ei2
+                (and orgqda-tag-collect-extra-info2-csv
+                     (assoc-default
+                      (buffer-name)
                       orgqda-tag-collect-extra-info2-csv 'string-match-p)))
-			   (extrainfo2 (when ei2 (eval ei2)));TODO, det här går
-										;typ sönder om extrainfo inte
-										;är definierat
+               (extrainfo2 (when ei2 (eval ei2)));TODO, This doesn’t
+                                        ;work if extrainfo is undefined
                (contents
                 (format
                  "\"%s\","
@@ -737,9 +736,9 @@ collection of orgqda files"
                         fl fl ln fl (secure-hash 'md5 contents)
                         head orgqda--csv-curr-mname))) ; TODO, works
                                         ; with dynamic binding?
-		  ;;sätt ihop det
-		  (concat contents secondary extrainfo1 extrainfo2 "\n"))
-      "Inte heading eller inlinetask???")))
+          ;;put everything together
+          (concat contents secondary extrainfo1 extrainfo2 "\n"))
+      "Not a heading or inlinetask???")))
 
 (defun orgqda--csv-convert-buffer-to-encoding ()
   "Makes sure the current csv-buffer only contains characters
@@ -803,24 +802,24 @@ each character in the buffer."
 ;;;; General helper-functions
 (defun orgqda-get-parent-hl (level)
   (save-excursion
-	(when (re-search-backward (format "^\\*\\{%d,%d\\} " level level) nil t)
+    (when (re-search-backward (format "^\\*\\{%d,%d\\} " level level) nil t)
       (substring-no-properties (org-get-heading t t)))))
 
 (defun orgqda-inlinetask-in-degenerate-task-p ()
   (save-excursion
-	(let* ((case-fold-search t)
-		   (stars-re (org-inlinetask-outline-regexp))
-		   (task-beg-re (concat stars-re "\\(?:.*\\)"))
-		   (task-end-re (concat stars-re "END[ \t]*$")))
-	  (beginning-of-line)
-	  (and (and
-			(org-looking-at-p task-beg-re)
-			(not (org-looking-at-p task-end-re)))
-		   (progn
-			 (end-of-line)
-			 (re-search-forward "^\\*+[ \t]+" nil t)
-			 (beginning-of-line)
-			 (not (org-looking-at-p task-end-re)))))))
+    (let* ((case-fold-search t)
+           (stars-re (org-inlinetask-outline-regexp))
+           (task-beg-re (concat stars-re "\\(?:.*\\)"))
+           (task-end-re (concat stars-re "END[ \t]*$")))
+      (beginning-of-line)
+      (and (and
+            (org-looking-at-p task-beg-re)
+            (not (org-looking-at-p task-end-re)))
+           (progn
+             (end-of-line)
+             (re-search-forward "^\\*+[ \t]+" nil t)
+             (beginning-of-line)
+             (not (org-looking-at-p task-end-re)))))))
 
 
 ;;;; link type for linking to parts of buffer
@@ -843,7 +842,7 @@ each character in the buffer."
 
 (defun orgqda-opbm-open (opbm)
   (save-current-buffer
-	(let ((bm (cons "n" (read (org-link-unescape opbm)))))
+    (let ((bm (cons "n" (read (org-link-unescape opbm)))))
       (find-file-other-window (bookmark-get-filename bm))
       (bookmark-default-handler bm)
       (recenter)))
@@ -1040,20 +1039,20 @@ FORCE-SIMPLE."
   "Visit line number in file"
   (let ((fln (split-string otag ":")))
     (with-current-buffer (find-file-noselect (car fln))
-	  (orgqda-collect-tagged (cadr fln)))))
+      (orgqda-collect-tagged (cadr fln)))))
 
 (defun orgqda-otag-store-link ()
   "Store a link to a org-mode file and tag."
   (let* ((oir (org-in-regexp "\\(:[[:alnum:]_@#%:]+\\):[ \t]*$")))
-	(when (and (equal major-mode 'org-mode) oir)
-	  (let* ((fn (buffer-file-name))
-			 (tagpos (org-between-regexps-p ":" ":" (car oir) (cdr oir)))
-			 (tag (buffer-substring-no-properties (1+ (car tagpos)) (1- (cdr tagpos))))
-			 (link (format "otag:%s:%s" fn tag)))
-		(org-store-link-props
-		 :type "otag"
-		 :link link
-		 :description tag)))))
+    (when (and (equal major-mode 'org-mode) oir)
+      (let* ((fn (buffer-file-name))
+             (tagpos (org-between-regexps-p ":" ":" (car oir) (cdr oir)))
+             (tag (buffer-substring-no-properties (1+ (car tagpos)) (1- (cdr tagpos))))
+             (link (format "otag:%s:%s" fn tag)))
+        (org-store-link-props
+         :type "otag"
+         :link link
+         :description tag)))))
 
 ;;;; Functions for taglist update
 (defvar orgqda--pending-tag-count-replacements nil)
