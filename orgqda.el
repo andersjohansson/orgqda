@@ -311,7 +311,9 @@ if non-nil additionally calls `org-set-tags-command`."
         (insert (concat (make-string
                          (1+ org-inlinetask-min-level) 42) " " title))))
     (when (and coding (org-inlinetask-in-task-p))
-      (org-set-tags-command))
+      (if (bound-and-true-p orgqda-helm-tags-mode)
+          (orgqda-helm-tags-set-tags)
+        (org-set-tags-command)))
     ;; possibly cancel coding command
     (if (and coding
              (save-excursion

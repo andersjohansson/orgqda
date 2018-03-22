@@ -39,7 +39,7 @@
 
 If not set through customize, set it through calling
 `orgqda-helm-tags-activate-completion' as:
-\(orgqda-helm-tags-activate-completion 'orgqda-helm-tags-completion VAL\)"
+\(orgqda-helm-tags-activate-completion 'orgqda-helm-tags-completion VALUE\)"
   :group 'orgqda
   :type 'boolean
   :set #'orgqda-helm-tags-activate-completion
@@ -48,11 +48,8 @@ If not set through customize, set it through calling
 (defun orgqda-helm-tags-activate-completion (name val)
   (set-default name val)
   (if val
-      (progn
-        (define-key orgqda-mode-map "\C-c\C-q" #'orgqda-helm-tags-set-tags)
-        ;; (setcdr (assoc ":" org-speed-commands-default) 'orgqda-helm-tags-set-tags)
-        )
-    (define-key orgqda-mode-map "\C-c\C-q" nil)))
+      (add-hook 'orgqda-mode-hook #'orgqda-helm-tags-mode-activate-in-hook)
+    (remove-hook 'orggda-mode-hook #'orgqda-helm-tags-mode-activate-in-hook)))
 
 (defcustom orgqda-helm-tags-sort 'count-decreasing
   "Sorting scheme used in `orgqda-helm-set-tags'."
@@ -241,7 +238,7 @@ Coding info is the first line of the matching line for the tag in
       (when (and tag (not (string-blank-p text)))
         (cons tag text)))))
 
-;;; Simple mode to be used if only this completion and not orgqda is desired
+;;; Mode for overriding tag completion commands
 (defvar orgqda-helm-tags-mode-map nil)
 (unless orgqda-helm-tags-mode-map
   (let ((map (make-sparse-keymap)))
@@ -254,6 +251,10 @@ Coding info is the first line of the matching line for the tag in
 \\{orgqda-helm-tags-mode-map}"
   :keymap orgqda-helm-tags-mode-map)
 
+(defun orgqda-helm-tags-mode-activate-in-hook ()
+  (if orgqda-mode
+      (orgqda-helm-tags-mode)
+    (orgqda-helm-tags-mode -1)))
 
 (provide 'orgqda-helm-tags)
 
