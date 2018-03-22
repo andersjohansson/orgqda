@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2018-03-20
+;; Modified: 2018-03-22
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -248,6 +248,7 @@ Coding info is the first line of the matching line for the tag in
     (define-key map (kbd "C-c C-q") #'orgqda-helm-tags-set-tags)
     (setq orgqda-helm-tags-mode-map map)))
 
+;;;###autoload
 (define-minor-mode orgqda-helm-tags-mode "Minor mode for using ‘orqda-helm-tags-completion’
 
 \\{orgqda-helm-tags-mode-map}"
