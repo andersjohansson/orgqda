@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2018-03-20
+;; Modified: 2018-03-22
 ;; Package-Requires: ((emacs "25.1") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -299,24 +299,38 @@ with non-nil prefix arg, after current line.
 TITLE is a string defining a title for the inlinetask and CODING
 if non-nil additionally calls `org-set-tags-command`."
   (interactive "P")
-  (unless (org-inlinetask-in-task-p) ; add nothing if already in task
-    (unless (and (bolp) (eolp)) ; only move if inside a line of text
-      (if arg (forward-line) (forward-paragraph)))
-    (unless (org-inlinetask-in-task-p) ; create inlinetask if not present
-      (unless (and (bolp) (eolp)) (newline)) ;newline at e.g. eof
-      (unless (and arg (bolp) (eolp)) (open-line 1)) ; open-line if at newline
-      (insert (concat (make-string
-                       (1+ org-inlinetask-min-level) 42) " " title))))
-  (when (and coding (org-inlinetask-in-task-p))
-    (org-set-tags-command)))
+  (let ((cg (prepare-change-group))
+        (oldpoint (point)))
+    (activate-change-group cg)
+    (unless (org-inlinetask-in-task-p) ; add nothing if already in task
+      (unless (and (bolp) (eolp)) ; only move if inside a line of text
+        (if arg (forward-line) (forward-paragraph)))
+      (unless (org-inlinetask-in-task-p) ; create inlinetask if not present
+        (unless (and (bolp) (eolp)) (newline)) ;newline at e.g. eof
+        (unless (and arg (bolp) (eolp)) (open-line 1)) ; open-line if at newline
+        (insert (concat (make-string
+                         (1+ org-inlinetask-min-level) 42) " " title))))
+    (when (and coding (org-inlinetask-in-task-p))
+      (org-set-tags-command))
+    ;; possibly cancel coding command
+    (if (and coding
+             (save-excursion
+               (beginning-of-line)
+               (and
+                (looking-at org-complex-heading-regexp)
+                (not (match-string 5)))))
+        (progn
+          (cancel-change-group cg)
+          (goto-char oldpoint))
+      (accept-change-group cg)
+      (move-end-of-line nil))))
 
 ;;;###autoload
 (defun orgqda-insert-inlinetask-coding (arg)
   "Call `orqda-insert-inlinetask' with coding option and title \"∈\".
 Prefix arg is passed through."
   (interactive "P")
-  (orgqda-insert-inlinetask arg "∈" t)
-  (move-end-of-line nil))
+  (orgqda-insert-inlinetask arg "∈" t))
 
 ;;;; Commands for listing tags
 
