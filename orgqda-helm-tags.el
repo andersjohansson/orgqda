@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2018-03-22
+;; Modified: 2018-03-23
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -30,6 +30,7 @@
 ;; helm under orgqda-mode
 
 (require 'orgqda)
+(require 'org-agenda)
 (require 'helm)
 (require 'helm-mode)
 
@@ -61,6 +62,12 @@ If not set through customize, set it through calling
 
 (defvar orgqda-helm-tags-history)
 
+(defvar orgqda-helm-tags-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map helm-comp-read-map)
+    (define-key map (kbd "C-c C-s") #'orgqda-helm-tags-resort-comp-list)
+    map))
+
 (defun orgqda-helm-tags--source ()
   (helm-build-sync-source "Orgqda select tags (C-RET finishes):"
     :history  'orgqda-helm-tags-history
@@ -68,22 +75,31 @@ If not set through customize, set it through calling
     ;; :match '(orgqda-helm-tags--fuzzy-match-name helm-fuzzy-match)
     ;; TODO, can this be made to work so it primarily matches on tag
     ;; name? (or real)
-    :keymap helm-comp-read-map
+    :keymap orgqda-helm-tags-map
     :action  '(("Set tags to" . (lambda (_c) (helm-marked-candidates)))
                ("Delete marked tags" . orgqda-helm-tags-delete-tag))
     :persistent-action #'orgqda-helm-tags-display-tagged
+    :update #'orgqda-helm-tags--set-comp-list
+    :mode-line #'orgqda-helm-tags--modeline
     :candidates 'orgqda-helm-tags-comp-list))
+
+(defun orgqda-helm-tags--modeline ()
+  (list "Tags"
+        (concat
+         "sort:"
+         (symbol-name orgqda-helm-tags-sort)
+         " \\<orgqda-helm-tags-map>\\[helm-cr-empty-string],\\<global-map>\\[keyboard-quit]:Finish "
+         "\\<helm-map> \\[helm-help]:Help \\[helm-select-action]:Act \\[helm-maybe-exit-minibuffer]/ f1/f2/f-n:NthAct")))
 
 ;; (defun orgqda-helm-tags--fuzzy-match-name (cand)
 ;;   (helm-fuzzy-match
 ;;    (substring cand 0 (next-property-change 0 cand))))
 
-
 (defvar orgqda-helm-tags--coll-buffer nil)
 (defun orgqda-helm-tags-display-tagged (tag)
   "Show occurences of currently selected tag.
 Calls `orgqda-collect-tagged'"
-  (with-current-buffer helm-current-buffer
+  (with-helm-current-buffer
     ;; should ideally be killed after switching but how?
     (if (buffer-live-p orgqda-helm-tags--coll-buffer)
         (with-current-buffer orgqda-helm-tags--coll-buffer
@@ -97,14 +113,14 @@ Calls `orgqda-collect-tagged'"
 
 (defun orgqda-helm-tags--fallback-source ()
   (helm-build-dummy-source "Add new tag"
-    :keymap helm-comp-read-map
+    :keymap orgqda-helm-tags-map
     :action '(("Insert new" . (lambda (c) (list c))))))
 
 (defvar orgqda-helm-tags-comp-list nil)
 (defvar orgqda-helm-tags-current-tags nil)
 
 (defun orgqda-helm-tags-delete-tag (_c)
-  "Deletes current or marked tags"
+  "Deletes selected or marked tags at entry"
   (let ((delete-tags
          (cl-intersection orgqda-helm-tags-current-tags
                           (helm-marked-candidates)
@@ -126,6 +142,13 @@ Calls `orgqda-collect-tagged'"
   ;; return empty list to continue loop
   ())
 
+(defun orgqda-helm-tags-resort-comp-list ()
+  (interactive)
+  (setq orgqda-helm-tags-sort
+        (nth (mod (1+ (cl-position orgqda-helm-tags-sort orgqda-sort-args))
+                  (length orgqda-sort-args))
+             orgqda-sort-args))
+  (helm-force-update))
 
 (defmacro orgqda-helm-tags-propertize-if (condition string &rest properties)
   "Returns STRING propertized with PROPERTIES if condition
@@ -146,15 +169,9 @@ Continues completing until exited with C-RET,M-RET or C-g"
         (let* ((helm-exit-status 0)
                (helm-truncate-lines t)
                (orgqda-helm-tags-current-tags (nreverse (org-get-local-tags)))
-               (cl1 (orgqda-helm-tags--get-tags-list))
-               cllast
-               (clfirst (cl-loop for tag in cl1
-                                 if (cl-member tag orgqda-helm-tags-current-tags
-                                               :test
-                                               (lambda (a b) (string= (car a) b)))
-                                 do (push (orgqda-helm-tags--format-list-item tag t) cllast)
-                                 else collect (orgqda-helm-tags--format-list-item tag)))
-               (orgqda-helm-tags-comp-list (nconc clfirst (nreverse cllast))))
+               ;; sort can be changed in helm session, keep that local
+               (orgqda-helm-tags-sort orgqda-helm-tags-sort))
+          (orgqda-helm-tags--set-comp-list)
           (org-set-tags-to
            (cl-remove-duplicates
             (cl-loop with newtags
@@ -172,6 +189,23 @@ Continues completing until exited with C-RET,M-RET or C-g"
                      finally return (nreverse orgqda-helm-tags-current-tags))
             :test 'string=)))
       (user-error "Not at org heading"))))
+
+(defun orgqda-helm-tags--set-comp-list ()
+  "Loads tags and sets ‘orgqda-helm-tags-comp-list’"
+  (let* (cllast
+         (taglist
+          (if helm-alive-p
+              (with-helm-current-buffer (orgqda-helm-tags--get-tags-list))
+            (orgqda-helm-tags--get-tags-list)))
+         (width (cl-loop for tag in taglist
+                         maximize (length (car tag))))
+         (clfirst (cl-loop for tag in taglist
+                           if (cl-member tag orgqda-helm-tags-current-tags
+                                         :test
+                                         (lambda (a b) (string= (car a) b)))
+                           do (push (orgqda-helm-tags--format-list-item tag width t) cllast)
+                           else collect (orgqda-helm-tags--format-list-item tag width))))
+    (setq orgqda-helm-tags-comp-list (nconc clfirst (nreverse cllast)))))
 
 (defun orgqda-helm-tags--update-tag-in-complist (tag)
   (setq orgqda-helm-tags-comp-list
@@ -193,11 +227,11 @@ Continues completing until exited with C-RET,M-RET or C-g"
                           'face nil)
               (cdr li))))
 
-(defun orgqda-helm-tags--format-list-item (x &optional incurrent?)
+(defun orgqda-helm-tags--format-list-item (x width &optional incurrent?)
   (cons
    (orgqda-helm-tags-propertize-if incurrent?
      (format
-      "%-40s %5s %s"
+      (format "%%-%ds %%5s %%s" width)
       (car x)
       (propertize (format "%d" (cadr x))
                   'face 'font-lock-function-name-face)

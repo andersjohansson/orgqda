@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2018-03-22
+;; Modified: 2018-03-23
 ;; Package-Requires: ((emacs "25.1") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -170,6 +170,10 @@ Usually set by the user as a file or dir local variable.")
   "Whether current taglist buffer includes extracts")
 
 ;;;###autoload
+(defconst orgqda-sort-args '(count-decreasing a-z count-increasing z-a)
+  "Symbol arguments for sorting")
+
+
 (defvar-local orgqda--old-org-current-tag-alist nil
   "Saves state of `org-current-tag-alist' between enabling and disabling `orgqda-mode'.")
 

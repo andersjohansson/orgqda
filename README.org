@@ -61,7 +61,7 @@ orgqda-exclude-empty-file-trees t
 #+END_EXAMPLE
 
 ** orgqda-helm-tags.el
-Included in the repository is a library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~. Tags can also be removed with a secondary action or tagged extracts viewed with a persistent action. If a codebook file is defined, the display fetches the first line (which should be a short description/definition of the code/tag) from this for each tag, to ease correct tagging.
+Included in the repository is a library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~. Tags can also be removed with a secondary action or tagged extracts viewed with a persistent action. If a codebook file is defined, the display fetches the first line (which should be a short description/definition of the code/tag) from this for each tag, to ease correct tagging. Sorting of the completion list can be defined in ~orgqda-helm-tags-sort~, and cycled in the helm session with ~C-c C-s~.
 
 The library defines a minor mode, ~orgqda-helm-tags-mode~, that overrides the ~C-c C-q~ binding and that is enabled with ~orgqda-mode~ if ~orgqda-helm-tags-completion~ is non-nil. This minor mode can be used outside ~orgqda~ as well (although it depends on some functionality from ~orgqda.el~).
 
