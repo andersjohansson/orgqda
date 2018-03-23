@@ -160,7 +160,6 @@ Usually set by the user as a file or dir local variable.")
   "Returns t if ARG is a list of strings"
   (and (listp arg) (cl-every 'stringp arg)))
 
-;;;###autoload
 (defvar-local orgqda--originating-buffer nil
   "Buffer where the call for the current orgqda tag listing or
   collected regions listing were made")
@@ -169,7 +168,6 @@ Usually set by the user as a file or dir local variable.")
 (defvar-local orgqda--taglist-full nil
   "Whether current taglist buffer includes extracts")
 
-;;;###autoload
 (defconst orgqda-sort-args '(count-decreasing a-z count-increasing z-a)
   "Symbol arguments for sorting")
 
