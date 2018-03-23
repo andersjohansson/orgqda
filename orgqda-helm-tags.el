@@ -35,6 +35,12 @@
 (require 'helm-mode)
 
 ;;; Custom variables
+(defun orgqda-helm-tags-activate-completion (name val)
+  (set-default name val)
+  (if val
+      (add-hook 'orgqda-mode-hook #'orgqda-helm-tags-mode-activate-in-hook)
+    (remove-hook 'orggda-mode-hook #'orgqda-helm-tags-mode-activate-in-hook)))
+
 (defcustom orgqda-helm-tags-completion t
   "Whether to use the custom `orgqda-helm-tags-set-tags' for
   inserting tags in `orgqda-mode'
@@ -46,12 +52,6 @@ If not set through customize, set it through calling
   :type 'boolean
   :set #'orgqda-helm-tags-activate-completion
   :initialize #'custom-initialize-reset)
-
-(defun orgqda-helm-tags-activate-completion (name val)
-  (set-default name val)
-  (if val
-      (add-hook 'orgqda-mode-hook #'orgqda-helm-tags-mode-activate-in-hook)
-    (remove-hook 'orggda-mode-hook #'orgqda-helm-tags-mode-activate-in-hook)))
 
 (defcustom orgqda-helm-tags-sort 'count-decreasing
   "Sorting scheme used in `orgqda-helm-set-tags'."
