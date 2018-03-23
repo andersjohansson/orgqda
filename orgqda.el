@@ -477,31 +477,36 @@ calls `orgqda-sort-taglist' for whole buffer"
 
 ;;;; Commands for collecting
 ;;;###autoload
-(defun orgqda-collect-tagged (&optional match deeper-view buffer)
-  "Collect all segments marked with tags matching MATCH,
+(defun orgqda-collect-tagged (&optional match deeper-view buffer noswitch)
+  "Collect all segments marked with tags matching MATCH.
+Display them in custom buffer in other window.
 In an interactive call, MATCH is prompted for.
 
 For non-interactive use: DEEPER-VIEW (integer) adds visible
 levels to folding with `org-content'. BUFFER specifies a buffer
-to insert the collected tags in."
+to insert the collected tags in. NOSWITCH non-nil means no buffer
+switching is done and view buffer just returned."
   (interactive)
   (let* ((matcher (orgqda--make-tags-matcher match))
          (mname (car matcher))
          (cont (orgqda--coll-tagged matcher 2))
          (oclevel
           (+ (if (and orgqda-collect-from-all-files orgqda-tag-files) 2 1)
-             (or deeper-view 0))))
+             (or deeper-view 0)))
+         (buffer (or buffer (generate-new-buffer
+                             (format "*tags:%s*" mname)))))
     (if (equal cont '(0))
         (user-error "No matches for \"%s\"" mname)
-      (switch-to-buffer-other-window
-       (or buffer (generate-new-buffer
-                   (format "*tags:%s*" mname))))
-      (org-insert-time-stamp (current-time) t t
-                             (format "* Tagged: %s, (%d) " mname (car cont)) "\n")
-      (insert (cdr cont))
-      (goto-char (point-min))
-      (org-mode) (flyspell-mode -1) (setq buffer-read-only t)
-      (org-content oclevel))))
+      (with-current-buffer buffer
+        (org-insert-time-stamp (current-time) t t
+                               (format "* Tagged: %s, (%d) " mname (car cont)) "\n")
+        (insert (cdr cont))
+        (goto-char (point-min))
+        (org-mode) (flyspell-mode -1) (setq buffer-read-only t)
+        (org-content oclevel))
+      (if noswitch
+          buffer
+        (switch-to-buffer-other-window buffer)))))
 
 (defvar orgqda--csv-curr-mname nil)
 

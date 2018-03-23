@@ -164,7 +164,7 @@ Calls `orgqda-collect-tagged'"
           (erase-buffer))
       (setq orgqda-helm-tags--coll-buffer
             (generate-new-buffer "orgqda-helm-tags-view")))
-    (orgqda-collect-tagged tag 1 orgqda-helm-tags--coll-buffer)
+    (switch-to-buffer (orgqda-collect-tagged tag 1 orgqda-helm-tags--coll-buffer t))
     (bury-buffer orgqda-helm-tags--coll-buffer)))
 
 (defun orgqda-helm-tags-delete-tag (_c)
