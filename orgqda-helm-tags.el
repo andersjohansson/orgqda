@@ -172,10 +172,10 @@ Calls `orgqda-collect-tagged'"
   (let ((delete-tags
          (cl-intersection orgqda-helm-tags--current-tags
                           (helm-marked-candidates)
-                          :test 'equal)))
+                          :test 'string=)))
     (setq orgqda-helm-tags--current-tags
           (cl-nset-difference orgqda-helm-tags--current-tags delete-tags
-                              :test 'equal))
+                              :test 'string=))
     (dolist (y delete-tags)
       (when-let ((n (cl-position ; otherwise just fail
                      y orgqda-helm-tags--comp-list
