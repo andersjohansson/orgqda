@@ -64,18 +64,18 @@ buffers with names containing 'fieldnotes':
 
 (defcustom orgqda-collect-from-all-files t
   "Whether the tag listing and collection commands in orgqda should
-collect tags and tagged parts from all files defined in `orgqda-tag-files'"
+collect tags and tagged parts from all files defined in ‘orgqda-tag-files’"
   :type 'boolean
   :group 'orgqda)
 
 (defcustom orgqda-tag-collect-extra-info-csv nil
-  "Like `orgqda-tag-collect-extra-info' for the first extra-field
+  "Like ‘orgqda-tag-collect-extra-info’ for the first extra-field
 in csv-export."
   :type '(alist :key-type regexp :value-type sexp)
   :group 'orgqda)
 
 (defcustom orgqda-tag-collect-extra-info2-csv nil
-  "Like `orgqda-tag-collect-extra-info' for the second extra-field
+  "Like ‘orgqda-tag-collect-extra-info’ for the second extra-field
 in csv-export."
   :type '(alist :key-type regexp :value-type sexp)
   :group 'orgqda)
@@ -96,8 +96,8 @@ characters are of this encoding and replace those that are not by
   :group 'orgqda)
 
 (defcustom orgqda-exclude-tags nil
-  "Tags to exclude when listing coding tags in `orgqda-list-tags'
-  and `orgqda-list-tags-full'"
+  "Tags to exclude when listing coding tags in ‘orgqda-list-tags’
+  and ‘orgqda-list-tags-full’"
   :type '(choice
           (const :tag "None" nil)
           (repeat :tag "List of tags" string))
@@ -112,7 +112,7 @@ One of: _@#%"
                  (const :tag "%" "%")))
 
 (defcustom orgqda-use-tag-hierarchy t
-  "If tags delimited with `orgqda-hierarchy-delimiter' should be considered grouped.
+  "If tags delimited with ‘orgqda-hierarchy-delimiter’ should be considered grouped.
 Currently only works for one level."
   :type 'boolean
   :group 'orgqda)
@@ -130,7 +130,7 @@ containing such a list. Relative paths in such a file are read as
 relative to the file itself.
 
 For directories, all .org-files (matched by
-`org-agenda-file-regexp') are added.
+‘org-agenda-file-regexp’) are added.
 
 Usually set by the user as a file or dir local variable.")
 ;;;###autoload
@@ -172,7 +172,7 @@ Usually set by the user as a file or dir local variable.")
 
 
 (defvar-local orgqda--old-org-current-tag-alist nil
-  "Saves state of `org-current-tag-alist' between enabling and disabling `orgqda-mode'.")
+  "Saves state of ‘org-current-tag-alist’ between enabling and disabling ‘orgqda-mode’.")
 
 ;;; KEYBINDINGS
 ;;;###autoload
@@ -187,7 +187,7 @@ Usually set by the user as a file or dir local variable.")
 
 ;;;###autoload
 (defvar orgqda-list-mode-map nil
-  "Local keymap for `orgqda-list-mode'")
+  "Local keymap for ‘orgqda-list-mode’")
 ;;;###autoload
 (unless orgqda-list-mode-map
   (let ((map (make-sparse-keymap)))
@@ -201,7 +201,7 @@ Usually set by the user as a file or dir local variable.")
     (setq orgqda-list-mode-map map)))
 
 (defvar orgqda-codebook-mode-map nil
-  "Local keymap for `orgqda-codebook-mode'")
+  "Local keymap for ‘orgqda-codebook-mode’")
 
 (unless orgqda-codebook-mode-map
   (let ((map (make-sparse-keymap)))
@@ -211,7 +211,7 @@ Usually set by the user as a file or dir local variable.")
 
 ;;; Macros
 (defmacro orgqda--temp-work (&rest body)
-  "Shortcut for (`save-excursion' (`save-restriction' (`widen') (`goto-char') (`point-min')))"
+  "Shortcut for (‘save-excursion’ (‘save-restriction’ (‘widen’) (‘goto-char’) (‘point-min’)))"
   `(save-excursion
      (save-restriction
        (widen) (goto-char (point-min))
@@ -227,7 +227,7 @@ The value returned is the value of the last form in BODY."
 
 (defmacro orgqda--inhibit-org-startups (&rest body)
   "Execute BODY while inhibiting mode hooks and org-startup.
-Inhibits hooks for `text-mode', `outline-mode' and `org-mode'"
+Inhibits hooks for ‘text-mode’, ‘outline-mode’ and ‘org-mode’"
   (declare (debug t))
   `(let ((text-mode-hook nil)
          (outline-mode-hook nil)
@@ -243,20 +243,20 @@ Inhibits hooks for `text-mode', `outline-mode' and `org-mode'"
 Interactively with no argument, this command toggles the mode. A
 positive prefix argument enables the mode, any other prefix
 argument disables it. From Lisp, argument omitted or nil enables
-the mode, `toggle' toggles the state.
+the mode, ‘toggle’ toggles the state.
 
 Minor mode for qualitative coding of text material and extraction
 of codes.
 
-Enables tag completion with tags from all files defined in `orgqda-tag-files'
+Enables tag completion with tags from all files defined in ‘orgqda-tag-files’
 
 Relevant commands not bound to any keys are:
-`orgqda-list-tags', `orgqda-list-tags-full' and `orgqda-collect-tagged'.
+‘orgqda-list-tags’, ‘orgqda-list-tags-full’ and ‘orgqda-collect-tagged’.
 
 CSV files can be exported as well with
-`orgqda-collect-tagged-csv', `orgqda-collect-tagged-csv-save',
-and `orgqda-collect-tagged-csv-save-all'. Be sure to customize
-`orgqda-csv-dir' first.
+‘orgqda-collect-tagged-csv’, ‘orgqda-collect-tagged-csv-save’,
+and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
+‘orgqda-csv-dir’ first.
 
 \\{orgqda-mode-map}"
   ;;TODO Dok ^
@@ -330,7 +330,7 @@ if non-nil additionally calls `org-set-tags-command`."
 
 ;;;###autoload
 (defun orgqda-insert-inlinetask-coding (arg)
-  "Call `orqda-insert-inlinetask' with coding option and title \"∈\".
+  "Call ‘orqda-insert-inlinetask’ with coding option and title \"∈\".
 Prefix arg is passed through."
   (interactive "P")
   (orgqda-insert-inlinetask arg "∈" t))
@@ -340,17 +340,17 @@ Prefix arg is passed through."
 ;;;###autoload
 (defun orgqda-list-tags (&optional sort full buf noupdate roottext startprefix)
   "List all tags with counts, in this buffer and possibly all
-files in `orgqda-tag-files'. Sorted by count or alphabetically if
+files in ‘orgqda-tag-files’. Sorted by count or alphabetically if
 optional (prefix) argument is non-nil.
 
 For non-interactive calls:
 SORT can be given as a sort symbol (see
-`orgqda--create-hierarchical-taglist'). If a buffer is provided
+‘orgqda--create-hierarchical-taglist’). If a buffer is provided
 in BUF overwrite this buffer with the list instead of creating a
 new. The taglist is normally updated via
-`orgqda--create-hierarchical-taglist', but this can be prevented
+‘orgqda--create-hierarchical-taglist’, but this can be prevented
 by giving a non-nil NOUPDATE. Then a special list can be used by
-setting `orgqda--current-htl' suitably. ROOTTEXT specifies the
+setting ‘orgqda--current-htl’ suitably. ROOTTEXT specifies the
 text for the root node."
   (interactive "P")
   (let ((origbuffer (current-buffer))
@@ -388,7 +388,7 @@ text for the root node."
 ;;;###autoload
 (defun orgqda-list-tags-full (&optional sort buf)
   "List all tags with counts, in this buffer and possibly all files
-in `orgqda-tag-files'. Insert extracted paragraphs as a subtree for all tags.
+in ‘orgqda-tag-files’. Insert extracted paragraphs as a subtree for all tags.
 Sorted by count or alphabetically if optional (prefix) argument is non-nil.
 Two prefix arguments prompts for a tag prefix to start from"
   (interactive "P")
@@ -402,9 +402,9 @@ Two prefix arguments prompts for a tag prefix to start from"
              "_"))))
 
 (defun orgqda-revert-taglist ()
-  "Reverts current `orgqda-list-mode' buffer.
-If not in `orgqda-list-mode', calls
-`orgqda-update-taglist-general'."
+  "Reverts current ‘orgqda-list-mode’ buffer.
+If not in ‘orgqda-list-mode’, calls
+‘orgqda-update-taglist-general’."
   (interactive)
   (if (and orgqda-list-mode orgqda--originating-buffer)
       (let ((cb (current-buffer))
@@ -422,7 +422,7 @@ If not in `orgqda-list-mode', calls
 
 ;;;###autoload
 (defun orgqda-sort-taglist (order)
-  "Allows sorting of a taglist buffer using `org-sort-entries'
+  "Allows sorting of a taglist buffer using ‘org-sort-entries’
 
 Sorting is determined via ORDER which can be a/A/c/C for
 alphabetical, alphabetical reversed, count decreasing, count
@@ -463,7 +463,7 @@ first headline if before that."
 ;;;###autoload
 (defun orgqda-sort-taglist-buffer ()
   "Sort the current taglist buffer,
-calls `orgqda-sort-taglist' for whole buffer"
+calls ‘orgqda-sort-taglist’ for whole buffer"
   (interactive)
   (save-mark-and-excursion
    (while (org-up-heading-safe))
@@ -482,7 +482,7 @@ Display them in custom buffer in other window.
 In an interactive call, MATCH is prompted for.
 
 For non-interactive use: DEEPER-VIEW (integer) adds visible
-levels to folding with `org-content'. BUFFER specifies a buffer
+levels to folding with ‘org-content’. BUFFER specifies a buffer
 to insert the collected tags in. NOSWITCH non-nil means no buffer
 switching is done and view buffer just returned."
   (interactive)
@@ -524,7 +524,7 @@ switching is done and view buffer just returned."
 
 ;;;###autoload
 (defun orgqda-collect-tagged-csv-save (&optional match)
-  "Collect  and save a file in `orgqda-csv-dir'"
+  "Collect  and save a file in ‘orgqda-csv-dir’"
   (interactive)
   (let* ((matcher (orgqda--make-tags-matcher match))
          (orgqda--csv-curr-mname (car matcher))
@@ -543,7 +543,7 @@ switching is done and view buffer just returned."
 ;;;###autoload
 (defun orgqda-collect-tagged-csv-save-all (&optional threshold)
   "Save all tags used THRESHOLD or more times in csv-files (one
-per tag) in `orgqda-csv-dir'"
+per tag) in ‘orgqda-csv-dir’"
   (interactive "P")
   (let ((tags (orgqda--get-tags-hash))
         (tn (prefix-numeric-value threshold)))
@@ -665,7 +665,7 @@ collection of orgqda files"
             fl (file-name-nondirectory fl) number)))
 
 (defvar orgqda--ct-level 2
-  "Level of headlines for tagcollection, (can't be passed to `orgqda--get-paragraph-or-sub')")
+  "Level of headlines for tagcollection, (can't be passed to ‘orgqda--get-paragraph-or-sub’)")
 
 (defun orgqda--coll-tagged-in-buffer (matcher level)
   "Returns cons-cell with count in buffer as car and string of taglist as cdr."
@@ -765,7 +765,7 @@ collection of orgqda files"
 (defun orgqda--csv-convert-buffer-to-encoding ()
   "Makes sure the current csv-buffer only contains characters
 belonging to the encoding specified in
-`orgqda-convert-csv-to-encoding' and sets the buffer's coding
+‘orgqda-convert-csv-to-encoding’ and sets the buffer's coding
 system to that encoding. Probably quite inefficient as it checks
 each character in the buffer."
   (when orgqda-convert-csv-to-encoding
@@ -894,7 +894,7 @@ each character in the buffer."
 
 (defun orgqda--get-tags-hash ()
   "Return a hash of all tags with counts.
-In this buffer or in all files in `orgqda-tag-files'."
+In this buffer or in all files in ‘orgqda-tag-files’."
   (clrhash orgqda--current-tagscount)
   (orgqda--inhibit-org-startups
    (org-map-entries
@@ -913,7 +913,7 @@ In this buffer or in all files in `orgqda-tag-files'."
 
 (defun orgqda--get-tags-alist (&optional sort)
   "Return an alist of all tags with counts.
-In this buffer or in all files in `orgqda-tag-files'.
+In this buffer or in all files in ‘orgqda-tag-files’.
 Optional SORT can be symbols: count-decreasing, count-increasing,
 a-z, or z-a."
   (let ((tl (orgqda--hash-to-alist (orgqda--get-tags-hash))))
@@ -935,10 +935,10 @@ a-z, or z-a."
   counts")
 
 (defun orgqda--create-hierarchical-taglist (&optional sort taghash)
-  "Store a hierarchical taglist in `orgqda--current-htl'.
+  "Store a hierarchical taglist in ‘orgqda--current-htl’.
 Optional SORT can be symbols: count-decreasing (default),
 count-increasing, a-z, or z-a. TAGHASH specifies a custom taghash
-not loaded with `orgqda--get-tags-hash'"
+not loaded with ‘orgqda--get-tags-hash’"
   (let ((taghash (or taghash (orgqda--get-tags-hash)))
         (sortlist
          (list
@@ -1016,10 +1016,10 @@ not loaded with `orgqda--get-tags-hash'"
      (gethash y (orgqda--htl-counts orgqda--current-htl) -1)))
 
 (defun orgqda--string-lessp (x y)
-  "Case insensitive `string-lessp' and locale dependent"
+  "Case insensitive ‘string-lessp’ and locale dependent"
   (string-collate-lessp x y nil t))
 (defun orgqda--string-greaterp (x y)
-  "Case insensitive `string-greaterp'"
+  "Case insensitive ‘string-greaterp’"
   (string-collate-lessp y x nil t))
 
 (defun orgqda--get-tags-with-count ()
@@ -1032,7 +1032,7 @@ not loaded with `orgqda--get-tags-hash'"
 
 Match string is passed in MATCH or prompted for.
 
-The matcher is constructed bypassing `org-make-tags-matcher' if
+The matcher is constructed bypassing ‘org-make-tags-matcher’ if
 the match is for a single tag, since generation otherwise takes too long
 with long tag names. This behaviour can be forced with
 FORCE-SIMPLE."
@@ -1083,9 +1083,9 @@ FORCE-SIMPLE."
 (defun orgqda-update-taglist-general ()
   "Updates taglists in any org buffer.
 Expects to find otag-links and updates any count number
-following them. If `orgqda--originating-buffer' is set, uses
+following them. If ‘orgqda--originating-buffer’ is set, uses
 that, otherwise assumes tags can be found in this buffer or the
-ones defined by `orgqda-tag-files'.
+ones defined by ‘orgqda-tag-files’.
 
 Generates a list of \"new\" tags, tags not linked to in this
 buffer."
@@ -1178,11 +1178,11 @@ Return number of replacements done."
 
 (defun orgqda--get-prefixes-for-completion (&optional taglist)
   "Return the current list of tag prefixes
- (delimited with `orgqda-hierarchy-delimiter') for tags in
+ (delimited with ‘orgqda-hierarchy-delimiter’) for tags in
 orgqda (possibly many files)
 
 TAGLIST can be passed or else will be fetched with
-`orgqda--get-tags-for-completion'"
+‘orgqda--get-tags-for-completion’"
   (let ((taglist (or taglist (orgqda--get-tags-for-completion)))
         prefixes)
     (dolist (tag taglist)
@@ -1212,10 +1212,10 @@ TAGLIST can be passed or else will be fetched with
 ;;;; Various functions
 (defun orgqda-tag-files ()
   "Returns list of files which should be searched for tags.
-Based on value of variable `orgqda-tag-files' which could be a
+Based on value of variable ‘orgqda-tag-files’ which could be a
 list of files and directories, or a file containing such a list.
-Calls function `org-agenda-files' with variable `org-agenda-files'
-set to `orgqda-tag-files'"
+Calls function ‘org-agenda-files’ with variable ‘org-agenda-files’
+set to ‘orgqda-tag-files’"
   (require 'org-agenda)
   (let ((org-agenda-files orgqda-tag-files)
         (org-directory
@@ -1252,9 +1252,9 @@ set to `orgqda-tag-files'"
 ;; org-open-at-point-functions, as it checks for orgqda-mode.
 
 (defun orgqda-collect-tags-at-point ()
-  "Supposed to be run as one of the hooks in `org-open-at-point-functions'
+  "Supposed to be run as one of the hooks in ‘org-open-at-point-functions’
 
- In `orgqda-mode' this function calls `orgqda-collect-tagged'
+ In ‘orgqda-mode’ this function calls ‘orgqda-collect-tagged’
  for the single tag at point."
   (when orgqda-mode
     (when-let ((tag (orgqda-tag-at-point)))
@@ -1277,14 +1277,14 @@ set to `orgqda-tag-files'"
 ;;; Advice
 
 ;; This advice is irrelevant if orgqda-helm-tags.el (which overrides
-;; `org-set-tags') is used
+;; ‘org-set-tags’) is used
 
 ;;;###autoload
 (advice-add 'org-global-tags-completion-table :around #'orgqda-tags-completion-table-wrap)
 ;;;###autoload
 (defun orgqda-tags-completion-table-wrap (oldfun &rest args)
-  "Loads tags from `orgqda-tag-files' and inhibits org hooks to
- speed up loading of files when `orgqda-mode' is non-nil."
+  "Loads tags from ‘orgqda-tag-files’ and inhibits org hooks to
+ speed up loading of files when ‘orgqda-mode’ is non-nil."
   (if orgqda-mode
       (orgqda--inhibit-org-startups
        (funcall oldfun (orgqda-tag-files)))

@@ -39,30 +39,30 @@
 
 ;;; Custom variables
 (defgroup orggqda-transcript nil
-  "Settings for `orgqda-transcript-mode'"
+  "Settings for ‘orgqda-transcript-mode’"
   :group 'text)
 (defcustom orgqda-transcript-bind-fn-keys nil
   "Whether to bind the F1,F2,... keys to useful commands in
-`orgqda-transcript-mode'"
+‘orgqda-transcript-mode’"
   :type 'boolean
   :safe #'booleanp
   :group 'orgqda-transcript)
 (defcustom orgqda-transcript-set-up-speaker-keys nil
   "Whether to bind F5 up to maximally F12 to special functions
   for inserting speakers and timestamps in
-  `orgqda-transcript-mode'"
+  ‘orgqda-transcript-mode’"
   :type 'booleanp
   :safe #'booleanp
   :group 'orgqda-transcript)
 (defcustom orgqda-transcript-rebind-c-s-ret nil
   "Whether to rebind C-S-<RET> to insert timestamp and speaker
-name in `orgqda-transcript-mode'"
+name in ‘orgqda-transcript-mode’"
   :type 'boolean
   :safe #'booleanp
   :group 'orgqda-transcript)
 (defcustom orgqda-transcript-rebind-s-ret nil
   "Whether to rebind S-<RET> to insert speaker name in
-parenthesis in `orgqda-transcript-mode'"
+parenthesis in ‘orgqda-transcript-mode’"
   :type 'boolean
   :safe #'booleanp
   :group 'orgqda-transcript)
@@ -86,12 +86,12 @@ parenthesis in `orgqda-transcript-mode'"
     ([f4] . orgqda-transcript-insert-link)
     (,(kbd "C-<f4>") . orgqda-transcript-seek-timestamp-backwards))
   "Bindings for first four Fn-keys.
-Used in `orgqda-transcript-mode' activation if
-`orgqda-transcript-bind-fn-keys' it non-nil")
+Used in ‘orgqda-transcript-mode’ activation if
+‘orgqda-transcript-bind-fn-keys’ it non-nil")
 
 ;;;###autoload
 (defvar-local orgqda-transcript-namelist nil "List of the names
-of speakers in current `orgqda-transcript-mode' session")
+of speakers in current ‘orgqda-transcript-mode’ session")
 ;;;###autoload
 (put 'orgqda-transcript-namelist 'safe-local-variable
 	 #'orgqda--list-of-strings-p)
@@ -100,7 +100,7 @@ of speakers in current `orgqda-transcript-mode' session")
 ;;;###autoload
 (define-minor-mode orgqda-transcript-mode
   "Minor mode for transcribing audio or video into structured
-org-mode files with the help of `mplayer-mode'
+org-mode files with the help of ‘mplayer-mode’
 
 \\{orgqda-transcript-mode-map}"
   :lighter " OQT"
@@ -111,29 +111,29 @@ org-mode files with the help of `mplayer-mode'
 
 ;;;###autoload
 (defun orgqda-transcript-set-up-commands-and-bindings (&optional arg)
-  "Define speaker-insertion commands and keys for `orgqda-transcript'.
+  "Define speaker-insertion commands and keys for ‘orgqda-transcript’.
 
 Typically run when the mode is activated.
 
-If `orgqda-transcript-bind-fn-keys' is non-nil, binds F1-F4 to navigation commands etc.
+If ‘orgqda-transcript-bind-fn-keys’ is non-nil, binds F1-F4 to navigation commands etc.
 
-If `orgqda-transcript-set-up-speaker-keys' is non-nil, defines
+If ‘orgqda-transcript-set-up-speaker-keys’ is non-nil, defines
 <f[5-8]>, C-<f[5-8]>, S-<f[5-8], and C-S-<f[5-8]> as keys for
-`orgqda-transcript-insert-linebreak-speaker'
-`orgqda-transcript-insert-parenthesis-speaker',
-`orgqda-transcript-insert-speaker', and
-`orgqda-transcript-switch-speaker' respectively, with names taken
-in order from `orgqda-transcript-namelist' or read from
-minibuffer if `orgqda-transcript-namelist' is empty or a
+‘orgqda-transcript-insert-linebreak-speaker’
+‘orgqda-transcript-insert-parenthesis-speaker’,
+‘orgqda-transcript-insert-speaker’, and
+‘orgqda-transcript-switch-speaker’ respectively, with names taken
+in order from ‘orgqda-transcript-namelist’ or read from
+minibuffer if ‘orgqda-transcript-namelist’ is empty or a
 prefix-argument is given.
 
 For example: S-<f6> will insert the name of the second
 speaker (surrounded by **) <f5> will insert a newline, timestamp,
 name of the first speaker and a colon.
 
-If `orgqda-transcript-rebind-s-ret' and
-`orgqda-transcript-rebind-c-s-ret' are non-nil and
-`orgqda-transcript-namelist' only contains two names,redefines
+If ‘orgqda-transcript-rebind-s-ret’ and
+‘orgqda-transcript-rebind-c-s-ret’ are non-nil and
+‘orgqda-transcript-namelist’ only contains two names,redefines
 S-<RET> and C-S-<RET> to insert the next guessed name in
 parenthesis and on a new line."
   (interactive "P")
@@ -183,17 +183,17 @@ parenthesis and on a new line."
 (defun orgqda-transcript-insert-newline-ts-other-speaker ()
   "Inserts newline, timestamp and other speaker name.
 
-Gets other speaker through `orgqda-transcript--get-other-name'."
+Gets other speaker through ‘orgqda-transcript--get-other-name’."
   (interactive)
   (orgqda-transcript-insert-newline-ts-speaker (or (orgqda-transcript--get-other-name) "WHO")))
 
 (defun orgqda-transcript-insert-parenthesis-other-speaker (&optional statement)
   "Inserts the other speaker in parenthesis.
 
-Gets other speaker through `orgqda-transcript--get-other-name'.
+Gets other speaker through ‘orgqda-transcript--get-other-name’.
 Runs only if there are just two names in
-`orgqda-transcript-namelist'. Optional STATEMENT is passed to
-`orgqda-transcript-insert-parenthesis-speaker'"
+‘orgqda-transcript-namelist’. Optional STATEMENT is passed to
+‘orgqda-transcript-insert-parenthesis-speaker’"
   (interactive)
   (when-let ((name (orgqda-transcript--get-other-name)))
     (orgqda-transcript-insert-parenthesis-speaker name statement)))
@@ -247,12 +247,12 @@ NEWNAME is prompted for if a name to replace is found."
 
 (defun orgqda-transcript-insert-inlinetask-coding (arg)
   "Insert inlinetask for coding after current line
-Calls `orqda-insert-inlinetask-coding' with inverted prefix arg."
+Calls ‘orqda-insert-inlinetask-coding’ with inverted prefix arg."
   (interactive "P")
   (orgqda-insert-inlinetask-coding (not arg)))
 
 (defun orgqda-transcript-seek-timestamp-backwards ()
-  "Look for a `oqdats' timestamp backwards in current paragraph
+  "Look for a ‘oqdats’ timestamp backwards in current paragraph
 and follow it if one is found."
   (interactive)
   (let ((limit (save-excursion (backward-paragraph) (point))))
@@ -307,7 +307,7 @@ Else, move to indentation position of this line."
 ;;; Timestamp link, definitions.
 ;;;###autoload
 (defun orgqda-transcript-insert-link ()
-  "Insert a timestamp link which can be followed in `mplayer-mode'."
+  "Insert a timestamp link which can be followed in ‘mplayer-mode’."
   (interactive)
   (when-let (ln (orgqda-transcript--get-link)) (insert ln " ")))
 
@@ -324,7 +324,7 @@ Else, move to indentation position of this line."
                          :face 'oqdats-face)
 
 (defun orgqda-transcript-follow-link (filetime)
-  "Follow `oqdats' timestamps with `mplayer-seek-position'."
+  "Follow ‘oqdats’ timestamps with ‘mplayer-seek-position’."
   (let* ((ft (split-string filetime ":"))
          (pos (car ft))
          (file (cadr ft))
@@ -342,7 +342,7 @@ Else, move to indentation position of this line."
 
 ;;;###autoload
 (defun orgqda-transcript-export-link (path desc format)
-  "Export `oqdats' timestamps."
+  "Export ‘oqdats’ timestamps."
   (if (eq format 'latex)
       (format "\\ajts[%s]{%s}" path desc)
     (format "[%s]" desc)))
@@ -351,13 +351,13 @@ Else, move to indentation position of this line."
 (defun orgqda-transcript-store-link ()
   "Store a link to a mplayer-mode position
 
-Activates when `mplayer-mode' and `orgqda-transcript-mode' are
+Activates when ‘mplayer-mode’ and ‘orgqda-transcript-mode’ are
 active"
   (when-let (lpl (orgqda-transcript--get-link-plist))
     (apply #'org-store-link-props lpl)))
 
 (defun orgqda-transcript--get-link-plist ()
-  "Returns the plist for an `oqdats' link"
+  "Returns the plist for an ‘oqdats’ link"
   (when (and mplayer-mode orgqda-transcript-mode)
     (when-let ((time (mplayer--get-time))
                (file (mplayer--get-filename)))
@@ -415,7 +415,7 @@ FN with SPEAKER as single argument."
 (defun orgqda-transcript--get-other-name ()
   "Get the name of the next, or other speaker.
 Checks the speaker name at beginning of line and returns the
-other name if `orgqda-transcript-namelist' contains only two
+other name if ‘orgqda-transcript-namelist’ contains only two
 names, otherwise returns nil"
   (when (eq 2 (safe-length orgqda-transcript-namelist))
     (let ((prev-name

@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2018-03-23
+;; Modified: 2018-04-06
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -42,11 +42,11 @@
     (remove-hook 'orggda-mode-hook #'orgqda-helm-tags-mode-activate-in-hook)))
 
 (defcustom orgqda-helm-tags-completion t
-  "Whether to use the custom `orgqda-helm-tags-set-tags' for
-  inserting tags in `orgqda-mode'
+  "Whether to use the custom ‘orgqda-helm-tags-set-tags’ for
+  inserting tags in ‘orgqda-mode’
 
 If not set through customize, set it through calling
-`orgqda-helm-tags-activate-completion' as:
+‘orgqda-helm-tags-activate-completion’ as:
 \(orgqda-helm-tags-activate-completion 'orgqda-helm-tags-completion VALUE\)"
   :group 'orgqda
   :type 'boolean
@@ -54,7 +54,7 @@ If not set through customize, set it through calling
   :initialize #'custom-initialize-reset)
 
 (defcustom orgqda-helm-tags-sort 'count-decreasing
-  "Sorting scheme used in `orgqda-helm-set-tags'."
+  "Sorting scheme used in ‘orgqda-helm-set-tags’."
   :group 'orgqda
   :type '(choice (const :tag "By count, decreasing" count-decreasing)
                  (const :tag "By count, increasing" count-increasing)
@@ -155,7 +155,7 @@ Continues completing until exited with C-RET,M-RET or C-g"
 ;;; Actions in helm
 (defun orgqda-helm-tags-display-tagged (tag)
   "Show occurences of currently selected tag.
-Calls `orgqda-collect-tagged'"
+Calls ‘orgqda-collect-tagged’"
   (with-helm-current-buffer
     ;; should ideally be killed after switching but how?
     (if (buffer-live-p orgqda-helm-tags--coll-buffer)
@@ -244,7 +244,7 @@ Calls `orgqda-collect-tagged'"
   "Returns an alist of tag names and coding info
 
 Coding info is the first line of the matching line for the tag in
-`orgqda-codebook-file'"
+‘orgqda-codebook-file’"
   (when orgqda-codebook-file
     (org-map-entries
      #'orgqda-helm-tags--get-tag-info
