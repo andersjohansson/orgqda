@@ -88,12 +88,11 @@ characters are of this encoding and replace those that are not by
 ? in saved csv files. t is a shortcut for
 \"iso-8859-1\""
   :type (append
-         '(choice)
-         '((const nil :tag "don't convert") )
-         '((const t :tag "iso-8859-1"))
-         (mapcar
-          (lambda (cs) (list 'const cs))
-          coding-system-list))
+         '(choice
+           (const nil :tag "don’t convert")
+           (const t :tag "iso-8859-1"))
+         (cl-loop for cs in coding-system-list
+                  collect (list 'const cs)))
   :group 'orgqda)
 
 (defcustom orgqda-exclude-tags nil
