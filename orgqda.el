@@ -106,19 +106,19 @@ characters are of this encoding and replace those that are not by
 (defcustom orgqda-hierarchy-delimiter "_"
   "The character to use for delimiting a hierarchy within tags.
 One of: _@#%"
-  :type '(choice (const :tag "_" "_")
-                 (const :tag "@" "@")
-                 (const :tag "#" "#")
-                 (const :tag "%" "%")))
+  :type '(choice (const "_")
+                 (const "@")
+                 (const "#")
+                 (const "%")))
 
 (defcustom orgqda-use-tag-hierarchy t
-  "If tags delimited with ‘orgqda-hierarchy-delimiter’ should be considered grouped.
-Currently only works for one level."
+  "If tags delimited with ‘orgqda-hierarchy-delimiter’ should be considered grouped."
   :type 'boolean
   :group 'orgqda)
 
 (defcustom orgqda-exclude-empty-file-trees t
-  "When non-nil, excludes listing files where the current tag was not found when collecting occurences of tags"
+  "When non-nil, excludes listing files where the current tag was
+not found when collecting occurences of tags"
   :type 'boolean
   :group 'orgqda)
 
