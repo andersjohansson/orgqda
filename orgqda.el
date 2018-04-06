@@ -963,28 +963,23 @@ not loaded with ‘orgqda--get-tags-hash’"
       (hierarchy-sort (orgqda--htl-hierarchy orgqda--current-htl) sfn))))
 
 (defun orgqda--insert-hierarchical-taglist (full origbuffer filename &optional startlevel starttag)
-  (apply
-   (if starttag #'hierarchy-map-item #'hierarchy-map)
-   (cl-remove-if
-    #'null
-    (list
-     (hierarchy-labelfn-indent
-      (lambda (item indent)
-        (orgqda--insert-taglist-item
-         item filename)
-        (when (and full
-                   (not (string=
-                         orgqda-hierarchy-delimiter
-                         (substring item -1))))
-          (insert
-           (with-current-buffer origbuffer
-             (cdr (orgqda--coll-tagged (orgqda--make-tags-matcher item t)
-                                       (+ 2 indent))))
-           "\n")))
-      "*")
-     starttag
-     (orgqda--htl-hierarchy orgqda--current-htl)
-     (or startlevel 0)))))
+  (let ((labelfn
+         (hierarchy-labelfn-indent
+          (lambda (item indent)
+            (orgqda--insert-taglist-item
+             item filename)
+            (when (and full (not (string=
+                                  orgqda-hierarchy-delimiter
+                                  (substring item -1))))
+              (insert
+               (with-current-buffer origbuffer
+                 (cdr (orgqda--coll-tagged (orgqda--make-tags-matcher item t)
+                                           (+ 2 indent))))
+               "\n")))
+          "*")))
+    (if starttag
+        (hierarchy-map-item labelfn starttag (orgqda--htl-hierarchy orgqda--current-htl) (or startlevel 0))
+      (hierarchy-map labelfn (orgqda--htl-hierarchy orgqda--current-htl) (or startlevel 0)))))
 
 (defun orgqda--insert-taglist-item (item filename)
   (insert
