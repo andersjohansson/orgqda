@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2017-08-07
+;; Modified: 2018-04-06
 ;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -317,7 +317,6 @@ Else, move to indentation position of this line."
                  :weight bold)))
   "Face for oqdats links in org-mode.")
 
-;;;###autoload
 (org-link-set-parameters "oqdats"
                          :follow #'orgqda-transcript-follow-link
                          :export #'orgqda-transcript-export-link
