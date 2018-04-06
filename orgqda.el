@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2018-03-23
+;; Modified: 2018-04-06
 ;; Package-Requires: ((emacs "25.1") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1212,42 +1212,18 @@ TAGLIST can be passed or else will be fetched with
 
 ;;;; Various functions
 (defun orgqda-tag-files ()
-  "Returns list of files which should be searched for tags. Based
-on value of variable `orgqda-tag-files' which could be a list of
-files and directories, or a file containing such a list.
-
-Used for overriding `org-agenda-files' when `orgqda-mode' is
-active."
-  ;; Based on org-agenda-files
+  "Returns list of files which should be searched for tags.
+Based on value of variable `orgqda-tag-files' which could be a
+list of files and directories, or a file containing such a list.
+Calls function `org-agenda-files' with variable `org-agenda-files'
+set to `orgqda-tag-files'"
   (require 'org-agenda)
-  (let ((files
-         (cond
-          ((stringp orgqda-tag-files)
-           (let ((org-agenda-files orgqda-tag-files)
-                 (org-directory
-                  (file-name-directory (expand-file-name
-                                        orgqda-tag-files))))
-             ;; read it as an agenda file list
-             (org-read-agenda-file-list)))
-          ((listp orgqda-tag-files) orgqda-tag-files)
-          (t (error "Invalid value of `orgqda-tag-files'")))))
-    ;; expand directories
-    (setq files
-          (apply 'append
-                 (mapcar ;;TODO, replace with loop?
-                  (lambda (f)
-                    (if (file-directory-p f)
-                        (directory-files f t org-agenda-file-regexp)
-                      (list f))) files)))
-    ;; delete unreadable files
-    (setq files (delq nil
-                      (mapcar ;;TODO, replace with loop
-                       (function
-                        (lambda (file)
-                          (and (file-readable-p file)
-                               file)))
-                       files)))
-    files))
+  (let ((org-agenda-files orgqda-tag-files)
+        (org-directory
+         (if (stringp orgqda-tag-files)
+             (file-name-directory (expand-file-name orgqda-tag-files))
+           org-directory)))
+    (org-agenda-files t)))
 
 (defun orgqda--hash-to-alist (hashtable)
   "Converts HASHTABLE to alist"
