@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2018-04-06
+;; Modified: 2018-04-23
 ;; Package-Requires: ((emacs "25.1") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -197,7 +197,7 @@ Usually set by the user as a file or dir local variable.")
     (define-key map (kbd "s") #'orgqda-sort-taglist)
     (define-key map (kbd "S") #'orgqda-sort-taglist-buffer)
     (define-key map (kbd "g") #'orgqda-revert-taglist)
-    (define-key map (kbd "q") #'kill-this-buffer)
+    (define-key map (kbd "q") #'kill-buffer)
     (setq orgqda-list-mode-map map)))
 
 (defvar orgqda-codebook-mode-map nil
