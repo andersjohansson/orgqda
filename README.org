@@ -12,7 +12,7 @@ Some text that should be given some codes. We make this text reasonably long so 
 Additionally, when tags are applied to ordinary headings or inlinetasks with content, the subtree or inlinetask is extracted instead of the preceding paragraph.
 
 ** Minor mode
-A minor mode, ~orgqda-mode,~ is defined which, when enabled, gathers tags for listing and completion from all files defined via ~orgqda-tag-files~. This is helpful for instance when keeping different field journals and transcripts in different files but still using a common coding scheme for all of them.
+A minor mode, ~orgqda-mode~, is defined which, when enabled, gathers tags for listing and completion from all files defined via ~orgqda-tag-files~. This is helpful for instance when keeping different field journals and transcripts in different files but still using a common coding scheme for all of them.
 
 ** Listing codes
 "Codes" can be listed with ~orgqda-list-tags~ and all regions for a specific code extracted with ~orgqda-collect-tagged~ (or by clicking on a tag or =C-c C-o= on it). Both these functions creates a custom org-mode buffer (with the minor mode ~orgqda-list-mode~) with links to the original regions . The command ~orgqda-revert-taglist~ updates a tag list buffer (key: ~g~), and alternatively updates counts for tag lists in any file with ~otag~-links (this can be useful for writing and updating a codebook, an index with descriptions of used tags).
@@ -66,8 +66,7 @@ Included in the repository is a library which overrides ~org-set-tags~ with a cu
 The library defines a minor mode, ~orgqda-helm-tags-mode~, that overrides the ~C-c C-q~ binding and that is enabled with ~orgqda-mode~ if ~orgqda-helm-tags-completion~ is non-nil. This minor mode can be used outside ~orgqda~ as well (although it depends on some functionality from ~orgqda.el~).
 
 ** orgqda-transcript.el
-Included in the repository is a library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with ordain). It uses ~mplayer-mode~, although it currently and unfortunately of depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things:  https://github.com/andersjohansson/mplayer-mode/tree/org-sessions.
-(see discussion about the future of ~mplayer-mode~ here: https://github.com/markhepburn/mplayer-mode/issues/10).
+Included in the repository is a library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with ordain). It uses ~mplayer-mode~, although it currently and unfortunately depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things: [[https://github.com/andersjohansson/mplayer-mode/tree/org-sessions][org-sessions branch of mplayer-mode]] (see also [[https://github.com/markhepburn/mplayer-mode/issues/10][a discussion about the future of mplayer-mode]]).
 
 ~orgqda-transcript-mode~ defines a few functions and variables for defining a list of speakers, inserting timestamps, speaker names, switching speakers (if something was misattributed), measuring speaking time, etc. Take a look at the commands and custom variables if you are interested. As everything here, it is of course kind of idiosyncratic and aligned with my current workflow, and also more or less a work in progress.
 
@@ -86,4 +85,4 @@ If any of these mechanisms (which are activated when ~org-mode~ loads) sets ~org
 One solution for avoiding this is never using the ~#+TAGS:~ keyword and setting ~#+STARTUP: noptags~ for all files used in ~orgqda~.
 One measure to prevent problems is taken by ~orgqda-mode~ as well, in that it sets ~org-current-tags-alist~ to nil when ~orgqda-mode~ is activated.
 So if ~orgqda-mode~ gets activated automatically (for instance like detailed above) in all relevant files (even in files defined in ~orgqda-tag-files~ from which tags should be fetched) you’re all set.
-Also, using ~orgqda-helm-tags~, which overrides ~org-set-tags,~ avoids all these problems.
+Also, using ~orgqda-helm-tags~, which overrides ~org-set-tags~, avoids all these problems.
