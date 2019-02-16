@@ -139,6 +139,15 @@ Continues completing until exited with C-RET,M-RET or C-g"
               finally return (nreverse orgqda-helm-tags--current-tags))
      :test 'string=)))
 
+;; could be requested by capture templates
+;;;###autoload
+(defun orgqda-helm-tags-get-tagstring-for-capture ()
+  "Returns a string of tags with completion for the current file captured to"
+  (let ((orgqda-collect-from-all-files t)
+        (orgqda-tag-files (list (buffer-file-name
+                                 (org-capture-get :buffer)))))
+    (concat ":" (mapconcat #'identity (orgqda-helm-tags--get-tags) ":") ":")))
+
 ;;; Minor mode definition
 ;;;###autoload
 (define-minor-mode orgqda-helm-tags-mode "Minor mode for using ‘orqda-helm-tags-completion’
