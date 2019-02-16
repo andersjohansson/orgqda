@@ -61,6 +61,11 @@ If not set through customize, set it through calling
                  (const :tag "A-Z" a-z)
                  (const :tag "Z-A" z-a)))
 
+(defcustom orgqda-helm-tags-include-excluded nil
+  "If non-nil, include tags listed in ‘orgqda-exclude-tags’ in the completion list"
+  :group 'orgqda
+  :type 'boolean)
+
 ;;; Variables
 (defvar orgqda-helm-tags-history)
 
@@ -242,7 +247,11 @@ Calls ‘orgqda-collect-tagged’"
 (defun orgqda-helm-tags--get-tags-list ()
   "Gets list of tags with count and (possible) coding info."
   (let ((info (orgqda-helm-tags--get-codebook-info)))
-    (cl-loop for x in (orgqda--get-tags-alist orgqda-helm-tags-sort)
+    (cl-loop for x in (orgqda--get-tags-alist
+                       orgqda-helm-tags-sort
+                       (if orgqda-helm-tags-include-excluded
+                           '("")
+                         orgqda-exclude-tags))
              collect (list (car x)
                            (cdr x)
                            (assoc-default (car x)
@@ -282,7 +291,9 @@ evaluates to non-nil, otherwise returns STRING"
    (orgqda-helm-tags-propertize-if incurrent?
      (format
       (format "%%-%ds %%5s %%s" width)
-      (car x)
+      (if (and orgqda-helm-tags-include-excluded (member (car x) orgqda-exclude-tags))
+          (propertize (car x) 'face 'font-lock-comment-face)
+        (car x))
       (propertize (format "%d" (cadr x))
                   'face 'font-lock-function-name-face)
       (if-let ((info (nth 2 x)))

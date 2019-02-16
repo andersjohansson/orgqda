@@ -892,9 +892,11 @@ each character in the buffer."
 (defvar orgqda--current-tagscount (make-hash-table :test 'equal)
   "Internal use, for collecting counts of tags")
 
-(defun orgqda--get-tags-hash ()
+(defun orgqda--get-tags-hash (&optional exclude-tags)
   "Return a hash of all tags with counts.
-In this buffer or in all files in ‘orgqda-tag-files’."
+In this buffer or in all files in ‘orgqda-tag-files’. If
+EXCLUDE-TAGS is non nil, use that instead of
+‘orgqda-exclude-tags’ for tags to exclude."
   (clrhash orgqda--current-tagscount)
   (orgqda--inhibit-org-startups
    (org-map-entries
@@ -907,16 +909,16 @@ In this buffer or in all files in ‘orgqda-tag-files’."
                       (buffer-base-buffer)))))
        (list bfn)))
     'archive 'comment))
-  (dolist (ex orgqda-exclude-tags)
+  (dolist (ex (or exclude-tags orgqda-exclude-tags))
     (remhash ex orgqda--current-tagscount))
   orgqda--current-tagscount)
 
-(defun orgqda--get-tags-alist (&optional sort)
+(defun orgqda--get-tags-alist (&optional sort exclude-tags)
   "Return an alist of all tags with counts.
 In this buffer or in all files in ‘orgqda-tag-files’.
 Optional SORT can be symbols: count-decreasing, count-increasing,
 a-z, or z-a."
-  (let ((tl (orgqda--hash-to-alist (orgqda--get-tags-hash))))
+  (let ((tl (orgqda--hash-to-alist (orgqda--get-tags-hash exclude-tags))))
     (cl-case sort
       (count-decreasing (cl-sort tl '> :key 'cdr))
       (count-increasing (cl-sort tl '< :key 'cdr))
