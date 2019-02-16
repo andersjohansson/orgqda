@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2018-04-06
+;; Modified: 2019-02-16
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -103,42 +103,41 @@ If not set through customize, set it through calling
 
 ;;; orgqda-helm-set-tags, main entry point
 ;;;###autoload
-(defun orgqda-helm-tags-set-tags (&optional arg just-align)
+(defun orgqda-helm-tags-set-tags (&optional arg)
   "Use helm-completion to select multiple tags to add to heading
 Continues completing until exited with C-RET,M-RET or C-g"
   (interactive "P")
-  (if (or arg just-align)
-      (funcall #'org-set-tags-command arg just-align)
+  (if (or arg)
+      (funcall #'org-set-tags-command arg)
     (if (org-at-heading-p)
-        (orgqda-helm-tags--set-tags-1)
+        (org-set-tags (orgqda-helm-tags--get-tags))
       (save-excursion
         (org-back-to-heading t)
-        (orgqda-helm-tags--set-tags-1)))))
+        (org-set-tags (orgqda-helm-tags--get-tags))))))
 
-(defun orgqda-helm-tags--set-tags-1 ()
+(defun orgqda-helm-tags--get-tags ()
+  "Get list of new tags via helm completion"
   (let* ((helm-exit-status 0)
          (helm-truncate-lines t)
-         (orgqda-helm-tags--current-tags (nreverse (org-get-local-tags)))
+         (orgqda-helm-tags--current-tags (nreverse (org-get-tags nil t)))
          ;; sort can be changed in helm session, keep that local
          (orgqda-helm-tags-sort orgqda-helm-tags-sort))
     (orgqda-helm-tags--set-comp-list)
-    (org-set-tags-to
-     (cl-remove-duplicates
-      (cl-loop with newtags
-               until (or (eq helm-exit-status 1) (equal "" newtags))
-               do (setq newtags
-                        (helm :sources
-                              (list orgqda-helm-tags-source
-                                    orgqda-helm-tags-new-tag-source
-                                    )
-                              :candidate-number-limit 99999
-                              :buffer "*helm orgqda tags*"))
-               when (listp newtags)
-               do (dolist (tag newtags)
-                    (push tag orgqda-helm-tags--current-tags)
-                    (orgqda-helm-tags--update-tag-in-complist tag))
-               finally return (nreverse orgqda-helm-tags--current-tags))
-      :test 'string=))))
+    (cl-remove-duplicates
+     (cl-loop with newtags
+              until (or (eq helm-exit-status 1) (equal "" newtags))
+              do (setq newtags
+                       (helm :sources
+                             (list orgqda-helm-tags-source
+                                   orgqda-helm-tags-new-tag-source)
+                             :candidate-number-limit 99999
+                             :buffer "*helm orgqda tags*"))
+              when (listp newtags)
+              do (dolist (tag newtags)
+                   (push tag orgqda-helm-tags--current-tags)
+                   (orgqda-helm-tags--update-tag-in-complist tag))
+              finally return (nreverse orgqda-helm-tags--current-tags))
+     :test 'string=)))
 
 ;;; Minor mode definition
 ;;;###autoload

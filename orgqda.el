@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2018-04-23
+;; Modified: 2019-02-16
 ;; Package-Requires: ((emacs "25.1") (org "9.0") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1018,7 +1018,7 @@ not loaded with ‘orgqda--get-tags-hash’"
   (string-collate-lessp y x nil t))
 
 (defun orgqda--get-tags-with-count ()
-  (dolist (x (org-get-tags-at nil t))
+  (dolist (x (org-get-tags nil t))
     (let ((ov (gethash x orgqda--current-tagscount 0)))
       (puthash x (1+ ov) orgqda--current-tagscount))))
 
@@ -1150,9 +1150,9 @@ Return number of replacements done."
   (let ((numberofreps 0))
     (orgqda--temp-work
      (while (search-forward (concat ":" oldname ":") nil t)
-       (org-set-tags-to
+       (org-set-tags
         (cl-remove-duplicates
-         (cl-substitute newname oldname (org-get-local-tags) :test 'string=)
+         (cl-substitute newname oldname (org-get-tags nil t) :test 'string=)
          :test 'string=))
        (setq numberofreps (1+ numberofreps))))
     numberofreps))
