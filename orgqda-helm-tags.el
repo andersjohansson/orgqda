@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2019-02-16
+;; Modified: 2019-06-12
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -82,7 +82,7 @@ If not set through customize, set it through calling
 (defvar orgqda-helm-tags-mode-map nil)
 (unless orgqda-helm-tags-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-q") #'orgqda-helm-tags-set-tags)
+    (define-key map [remap org-set-tags-command] #'orgqda-helm-tags-set-tags)
     (setq orgqda-helm-tags-mode-map map)))
 
 ;;; Helm sources
