@@ -359,12 +359,18 @@ active"
 (defun orgqda-transcript--get-link-plist ()
   "Returns the plist for an ‘oqdats’ link"
   (when (and mplayer-mode orgqda-transcript-mode)
-    (when-let ((time (mplayer--get-time))
-               (file (mplayer--get-filename)))
-      (list
-       :type "oqdats"
-       :link (format "oqdats:%s:%s" time file)
-       :description (mplayer--format-time time "%H:%M:%S")))))
+    (cl-loop with time = nil with file = nil ;; with iter = 0
+             repeat 3 do
+             (setq time (mplayer--get-time)
+                   file (mplayer--get-filename)
+                   ;; iter (1+ iter)) ; TODO, remn
+             if (and time file)
+             do ;; (message "On try %d" iter) and
+             return (list
+                     :type "oqdats"
+                     :link (format "oqdats:%s:%s" time file)
+                     :description (mplayer--format-time time "%H:%M:%S"))
+             else do (sit-for 0.05))))
 
 
 ;;; Internal functions
