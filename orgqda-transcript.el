@@ -363,9 +363,10 @@ active"
              repeat 3 do
              (setq time (mplayer--get-time)
                    file (mplayer--get-filename)
-                   ;; iter (1+ iter)) ; TODO, remn
+                   ;; iter (1+ iter)
+                   )
              if (and time file)
-             do ;; (message "On try %d" iter) and
+             ;;do  (message "On try %d" iter) and
              return (list
                      :type "oqdats"
                      :link (format "oqdats:%s:%s" time file)
