@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2018-04-06
+;; Modified: 2020-02-29
 ;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -286,7 +286,7 @@ Else, move to indentation position of this line."
   (interactive)
   (cond ((bolp)
          (orgqda-transcript--go-to-first-link) (setq orgqda-transcript-boi-forward t))
-        ((looking-back (concat "^" org-any-link-re) (point-at-bol))
+        ((looking-back (concat "^" org-link-any-re) (point-at-bol))
          (if (and (eq last-command this-command)
                   orgqda-transcript-boi-forward)
              (orgqda-transcript--goto-after-speaker)
@@ -354,7 +354,7 @@ Else, move to indentation position of this line."
 Activates when ‘mplayer-mode’ and ‘orgqda-transcript-mode’ are
 active"
   (when-let (lpl (orgqda-transcript--get-link-plist))
-    (apply #'org-store-link-props lpl)))
+    (apply #'org-link-store-props lpl)))
 
 (defun orgqda-transcript--get-link-plist ()
   "Returns the plist for an ‘oqdats’ link"
@@ -409,12 +409,12 @@ FN with SPEAKER as single argument."
 
 (defun orgqda-transcript--go-to-first-link ()
   (beginning-of-line 1)
-  (when (looking-at (concat org-any-link-re))
+  (when (looking-at (concat org-link-any-re))
     (goto-char (match-end 0))))
 
 (defun orgqda-transcript--get-link ()
   (when-let ((linkpl (orgqda-transcript--get-link-plist)))
-    (org-make-link-string
+    (org-link-make-string
      (plist-get linkpl :link)
      (plist-get linkpl :description))))
 
@@ -436,7 +436,7 @@ names, otherwise returns nil"
   "Return regexp for speaker name at beginning of line.
 
  Name is placed in match group 9."
-  (concat "^" org-bracket-link-regexp
+  (concat "^" org-link-bracket-re
           " +\\*\\(?9:[[:word:]]+\\)\\*:"))
 
 (provide 'orgqda-transcript)
