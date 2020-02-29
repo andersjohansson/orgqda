@@ -372,6 +372,23 @@ active"
                      :description (mplayer--format-time time "%H:%M:%S"))
              else do (sit-for 0.05))))
 
+(defun orgqda-transcript-clear-links ()
+  "Clear oqdats links in region or whole buffer."
+  (interactive)
+  (let* ((region? (use-region-p))
+         (beg (if region? (region-beginning) (point-min)))
+         (end (if region? (region-end) (point-max))))
+    (save-excursion
+      (save-match-data
+        (goto-char beg)
+        (while (search-forward-regexp org-link-bracket-re end t)
+          (let ((beg (match-beginning 0))
+                (end (match-end 0)))
+            (when (string-match "^oqdats:" (match-string 1))
+              (delete-region beg end)
+              (when (looking-at "^[[:space:]]+")
+                (replace-match "")))))))))
+
 
 ;;; Internal functions
 ;;;###autoload
