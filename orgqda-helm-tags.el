@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-02-29
+;; Modified: 2020-03-04
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -63,6 +63,11 @@ If not set through customize, set it through calling
 
 (defcustom orgqda-helm-tags-include-excluded nil
   "If non-nil, include tags listed in ‘orgqda-exclude-tags’ in the completion list"
+  :group 'orgqda
+  :type 'boolean)
+
+(defcustom orgqda-helm-tags-include-persistent nil
+  "If non-nil, always include tags in ‘org-tag-persistent-alist’ in the completion list"
   :group 'orgqda
   :type 'boolean)
 
@@ -236,13 +241,30 @@ Calls ‘orgqda-collect-tagged’"
             (orgqda-helm-tags--get-tags-list)))
          (width (cl-loop for tag in taglist
                          maximize (length (car tag))))
+         (width (max width
+                     (if orgqda-helm-tags-include-persistent
+                         (cl-loop for (x . y) in org-tag-persistent-alist
+                                  when (stringp x)
+                                  maximize (length x)))))
          (clfirst (cl-loop for tag in taglist
                            if (cl-member tag orgqda-helm-tags--current-tags
                                          :test
                                          (lambda (a b) (string= (car a) b)))
                            do (push (orgqda-helm-tags--format-list-item tag width t) cllast)
                            else collect (orgqda-helm-tags--format-list-item tag width))))
-    (setq orgqda-helm-tags--comp-list (nconc clfirst (nreverse cllast)))))
+    (setq orgqda-helm-tags--comp-list
+          (nconc
+           clfirst
+           (when orgqda-helm-tags-include-persistent
+             (cl-loop for (x . y) in org-tag-persistent-alist
+                      when (and (stringp x)
+                                (not (cl-member
+                                      x taglist
+                                      :test (lambda (a b) (string= a (car b))))))
+                      collect (orgqda-helm-tags--format-list-item
+                               (list x 0 "from ‘org-tag-persistent-alist’")
+                               width)))
+           (nreverse cllast)))))
 
 (defun orgqda-helm-tags--get-tags-list ()
   "Gets list of tags with count and (possible) coding info."
