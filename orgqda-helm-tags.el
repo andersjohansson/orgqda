@@ -31,6 +31,7 @@
 
 (require 'orgqda)
 (require 'org-agenda)
+(require 'org-capture)
 (require 'helm)
 (require 'helm-mode)
 
@@ -292,8 +293,8 @@ Coding info is the first line of the matching line for the tag in
 
 (defun orgqda-helm-tags--get-tag-info ()
   (when (and (search-forward-regexp
-              org-bracket-link-analytic-regexp (point-at-eol) t)
-             (equal "otag" (match-string 2)))
+              org-link-bracket-re (point-at-eol) t)
+             (save-match-data (string-match "^otag:" (match-string 1))))
     (let ((tag (cadr (split-string (match-string-no-properties 3) ":")))
           (text (substring-no-properties
                  (org-agenda-get-some-entry-text (point-marker) 1))))
