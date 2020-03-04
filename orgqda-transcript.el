@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2020-02-29
+;; Modified: 2020-03-04
 ;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -45,27 +45,39 @@
   "Whether to bind the F1,F2,... keys to useful commands in
 ‘orgqda-transcript-mode’"
   :type 'boolean
-  :safe #'booleanp
-  :group 'orgqda-transcript)
+  :safe #'booleanp)
+
+(defcustom orgqda-transcript-bind-1-4-keys nil
+  "Whether to bind keys 1-4 keys to useful commands in
+‘orgqda-transcript-mode’"
+  :type 'boolean
+  :safe #'booleanp)
+
 (defcustom orgqda-transcript-set-up-speaker-keys nil
   "Whether to bind F5 up to maximally F12 to special functions
   for inserting speakers and timestamps in
   ‘orgqda-transcript-mode’"
   :type 'booleanp
-  :safe #'booleanp
-  :group 'orgqda-transcript)
+  :safe #'booleanp)
+
+(defcustom orgqda-transcript-set-up-speaker-keys-5-9 nil
+  "Whether to bind keys from 5 up to maximally 0 to special functions
+  for inserting speakers and timestamps in
+  ‘orgqda-transcript-mode’"
+  :type 'booleanp
+  :safe #'booleanp)
+
 (defcustom orgqda-transcript-rebind-c-s-ret nil
   "Whether to rebind C-S-<RET> to insert timestamp and speaker
 name in ‘orgqda-transcript-mode’"
   :type 'boolean
-  :safe #'booleanp
-  :group 'orgqda-transcript)
+  :safe #'booleanp)
+
 (defcustom orgqda-transcript-rebind-s-ret nil
   "Whether to rebind S-<RET> to insert speaker name in
 parenthesis in ‘orgqda-transcript-mode’"
   :type 'boolean
-  :safe #'booleanp
-  :group 'orgqda-transcript)
+  :safe #'booleanp)
 
 ;;; Keybindings
 ;;;###autoload
@@ -88,6 +100,16 @@ parenthesis in ‘orgqda-transcript-mode’"
   "Bindings for first four Fn-keys.
 Used in ‘orgqda-transcript-mode’ activation if
 ‘orgqda-transcript-bind-fn-keys’ it non-nil")
+
+(defvar orgqda-transcript-1-4-bindings
+  `(("1" . mplayer-toggle-pause-with-rewind)
+    ("2" . mplayer-seek-backward)
+    ("3" . mplayer-seek-forward)
+    ("4" . orgqda-transcript-insert-link)
+    (,(kbd "C-4") . orgqda-transcript-seek-timestamp-backwards))
+  "Bindings for first four number-keys.
+Used in ‘orgqda-transcript-mode’ activation if
+‘orgqda-transcript-bind-number-keys’ it non-nil")
 
 ;;;###autoload
 (defvar-local orgqda-transcript-namelist nil "List of the names
@@ -151,6 +173,13 @@ parenthesis and on a new line."
       (if orgqda-transcript-bind-fn-keys
           (define-key orgqda-transcript-mode-map (car key) (cdr key))
         (define-key orgqda-transcript-mode-map (car key) nil)))
+
+    ;; 1-4
+    (dolist (key orgqda-transcript-1-4-bindings)
+      (if orgqda-transcript-bind-1-4-keys
+          (define-key orgqda-transcript-mode-map (car key) (cdr key))
+        (define-key orgqda-transcript-mode-map (car key) nil)))
+
     ;;F5-F12
     (if (and orgqda-transcript-set-up-speaker-keys (< 0 count 9))
         (dolist (name namelist)
@@ -169,7 +198,38 @@ parenthesis and on a new line."
           (message "orgqda-trancript set up: no names!")
         (message "orgqda-transcript set up: More than 8 names, no keys for speakers bound."))
       (dotimes (i 8)
-        (define-key orgqda-transcript-mode-map (kbd (format "<f%d>" (+ 5 i))) nil)))
+        (define-key orgqda-transcript-mode-map (kbd (format "<f%d>" (+ 5 i))) nil)
+        (define-key orgqda-transcript-mode-map (kbd (format "C-<f%d>" (+ 5 i))) nil)
+        (define-key orgqda-transcript-mode-map (kbd (format "S-<f%d>" (+ 5 i))) nil)
+        (define-key orgqda-transcript-mode-map (kbd (format "C-S-<f%d>" (+ 5 i))) nil)))
+
+    ;; same for 5-0-keys
+    (setq cc 5)
+    (if (and orgqda-transcript-set-up-speaker-keys-5-9 (< 0 count 7))
+        (dolist (name namelist)
+          (let ((fkey (format "%d" (mod cc 10))))
+            (define-key orgqda-transcript-mode-map (kbd fkey)
+              (orgqda-transcript--make-speaker-fn name 'orgqda-transcript-insert-newline-ts-speaker))
+            (define-key orgqda-transcript-mode-map (kbd (concat "C-" fkey))
+              (orgqda-transcript--make-speaker-fn name 'orgqda-transcript-insert-parenthesis-speaker))
+            (define-key orgqda-transcript-mode-map (kbd (concat "S-" fkey))
+              (orgqda-transcript--make-speaker-fn name 'orgqda-transcript-insert-speaker))
+            (define-key orgqda-transcript-mode-map (kbd (concat "C-S-" fkey))
+              (orgqda-transcript--make-speaker-fn name 'orgqda-transcript-switch-speaker)))
+          (setq cc (1+ cc)))
+      ;; else disable
+      (if (= count 0)
+          (message "orgqda-trancript set up: no names!")
+        (message "orgqda-transcript set up: More than 6 names, no 5-0 keys for speakers bound."))
+      (dotimes (i 6)
+        (let ((key (mod (+ 5 i) 10)))
+          (define-key orgqda-transcript-mode-map (kbd (format "%d" key)) nil)
+          (define-key orgqda-transcript-mode-map (kbd (format "C-%d" key)) nil)
+          ;; FIXME, this doesn’t work, since S shifts the symbol
+          ;; (S-7=/). And this will depend on keyboard layout...
+          ;; (define-key orgqda-transcript-mode-map (kbd (format "S-%d" key)) nil)
+          ;; (define-key orgqda-transcript-mode-map (kbd (format "C-S-%d" key)) nil)
+          )))
     ;; S-RET and C-S-RET
     (if (and orgqda-transcript-rebind-c-s-ret (eq count 2))
         (define-key orgqda-transcript-mode-map (kbd "<C-S-return>") #'orgqda-transcript-insert-newline-ts-other-speaker)
@@ -337,7 +397,7 @@ Else, move to indentation position of this line."
               (mplayer-find-file file))
           (mplayer-find-file file))
       (unless mp
-        (error "No file in link and no mplayer--process"))) 
+        (error "No file in link and no mplayer--process")))
     (mplayer-seek-position (string-to-number pos) t)))
 
 ;;;###autoload
