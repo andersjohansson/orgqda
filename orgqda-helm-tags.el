@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-03-04
+;; Modified: 2020-03-05
 ;; Package-Requires: ((emacs "25.1"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -246,7 +246,8 @@ Calls ‘orgqda-collect-tagged’"
                      (if orgqda-helm-tags-include-persistent
                          (cl-loop for (x . y) in org-tag-persistent-alist
                                   when (stringp x)
-                                  maximize (length x)))))
+                                  maximize (length x))
+                       0)))
          (clfirst (cl-loop for tag in taglist
                            if (cl-member tag orgqda-helm-tags--current-tags
                                          :test
