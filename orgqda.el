@@ -119,7 +119,7 @@ One of: _@#%"
 
 (defcustom orgqda-exclude-empty-file-trees t
   "When non-nil, excludes listing files where the current tag was
-not found when collecting occurences of tags"
+not found when collecting occurrences of tags"
   :type 'boolean
   :group 'orgqda)
 
