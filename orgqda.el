@@ -684,17 +684,16 @@ collection of orgqda files"
         (let* ((ln (line-number-at-pos))
                (bm (orgqda--get-encoded-bm))
                (link (format "opbm:%s" bm))
-               (head (org-link-display-format
-                      (substring-no-properties (org-get-heading))))
+               (desc (orgqda--clean-up-heading-desc (org-get-heading t t t t)))
                (ei1
                 (and orgqda-tag-collect-extra-info
                      (assoc-default
                       (buffer-name)
                       orgqda-tag-collect-extra-info 'string-match-p)))
-               (extrainfo (when ei1 (eval ei1)))
+               (extrainfo (if ei1 (eval ei1) ""))
                (hl (format "%s %d: [[%s][%s]]%s\n"
                            (make-string orgqda--ct-level 42)
-                           ln link head extrainfo))
+                           ln link desc extrainfo))
                (contents (orgqda--get-paragraph-or-sub-contents)))
           (concat hl contents))
       "Inte heading eller inlinetask???")))
@@ -801,8 +800,7 @@ each character in the buffer."
       ((org-at-heading-p)
        (org-copy-subtree)
        (with-temp-buffer
-         (insert "*")
-         (org-paste-subtree nil nil nil t)
+         (org-paste-subtree (1- orgqda--ct-level) nil nil t)
          (forward-line 1)
          (buffer-substring-no-properties
           (point) (point-max))))))))
@@ -889,6 +887,14 @@ each character in the buffer."
      (bookmark-make-record-default))
     '(10) ; add \n to escape table
     )))
+
+(defun orgqda--clean-up-heading-desc (h)
+  "Clean up a heading used as description for an opbm link"
+  (setq h (substring-no-properties h)
+        h (org-link-display-format h)
+        h (replace-regexp-in-string "\\[" "" h)
+        h (replace-regexp-in-string "\\]" "" h))
+  h)
 
 ;;;; List tags functions
 (defvar orgqda--current-tagscount (make-hash-table :test 'equal)
