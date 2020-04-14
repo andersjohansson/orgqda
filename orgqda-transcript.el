@@ -5,8 +5,8 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2020-03-04
-;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1"))
+;; Modified: 2020-04-14
+;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
 

@@ -5,8 +5,8 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2019-02-16
-;; Package-Requires: ((emacs "25.1") (org "9.0") (hierarchy "0.6.0"))
+;; Modified: 2020-04-14
+;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
 
@@ -34,6 +34,7 @@
 
 (require 'bookmark)
 (require 'org-inlinetask)
+(require 'org-element)
 (require 'cl-lib)
 (require 'subr-x) ;if-let
 (require 'hierarchy)
@@ -373,7 +374,7 @@ text for the root node."
                                      (when startprefix
                                        (format "(under prefix %s) " startprefix))
                                      "generated from "
-                                     (org-make-link-string
+                                     (org-link-make-string
                                       (concat "file:" origfile)
                                       (buffer-name origbuffer)) " at ")
                              "\n"))
@@ -856,7 +857,7 @@ each character in the buffer."
   (when (and (equal major-mode 'org-mode)
              orgqda-mode
              (not (org-at-heading-p)))
-    (org-store-link-props
+    (org-link-store-props
      :type "opbm"
      :link (format "opbm:%s" (orgqda--get-encoded-bm))
      :description (format "bm at: %s:%s"
@@ -864,7 +865,7 @@ each character in the buffer."
 
 (defun orgqda-opbm-open (opbm)
   (save-current-buffer
-    (let ((bm (cons "n" (read (org-link-unescape opbm)))))
+    (let ((bm (cons "n" (read (org-link-decode (org-link-unescape opbm))))))
       (find-file-other-window (bookmark-get-filename bm))
       (bookmark-default-handler bm)
       (recenter)))
@@ -883,10 +884,11 @@ each character in the buffer."
   "Encode a bookmark reference as a string."
   (require 'bookmark)
   (org-link-escape
-   (prin1-to-string
-    (bookmark-make-record-default))
-   '(10) ; add \n to escape table
-   t))
+   (org-link-encode
+    (prin1-to-string
+     (bookmark-make-record-default))
+    '(10) ; add \n to escape table
+    )))
 
 ;;;; List tags functions
 (defvar orgqda--current-tagscount (make-hash-table :test 'equal)
@@ -1068,7 +1070,7 @@ FORCE-SIMPLE."
              (tagpos (org-between-regexps-p ":" ":" (car oir) (cdr oir)))
              (tag (buffer-substring-no-properties (1+ (car tagpos)) (1- (cdr tagpos))))
              (link (format "otag:%s:%s" fn tag)))
-        (org-store-link-props
+        (org-link-store-props
          :type "otag"
          :link link
          :description tag)))))
