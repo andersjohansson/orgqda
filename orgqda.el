@@ -36,7 +36,7 @@
 (require 'org-inlinetask)
 (require 'org-element)
 (require 'cl-lib)
-(require 'subr-x) ;if-let
+(require 'subr-x) ;if-let, thread-last
 (require 'hierarchy)
 
 ;;; Variables
@@ -888,13 +888,13 @@ each character in the buffer."
     '(10) ; add \n to escape table
     )))
 
-(defun orgqda--clean-up-heading-desc (h)
+(defun orgqda--clean-up-heading-desc (heading)
   "Clean up a heading used as description for an opbm link"
-  (setq h (substring-no-properties h)
-        h (org-link-display-format h)
-        h (replace-regexp-in-string "\\[" "" h)
-        h (replace-regexp-in-string "\\]" "" h))
-  h)
+  (thread-last heading
+    (substring-no-properties)
+    (org-link-display-format)
+    (replace-regexp-in-string "\\[" "")
+    (replace-regexp-in-string "\\]" "")))
 
 ;;;; List tags functions
 (defvar orgqda--current-tagscount (make-hash-table :test 'equal)
