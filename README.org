@@ -24,6 +24,9 @@ When using a file based on a tag list (with otag-links), as a code book, set (di
 ** Hierarchy
 Codes can be put in a hierarchy if using a delimiter inside tag names (default ~_~, customizable via ~orgqda-hierarchy-delimiter~). The listing of tags is then done according to this implicit hierarchy (unless ~orgqda-use-tag-hierarchy~ is set to ~nil~).
 
+** Code relations -- codes occurring together.
+A simple command for displaying code relations is available as ~orgqda-view-tag-relations~. It counts the number of times a pair of tags occur together. With a prefix argument it counts triads.
+
 ** csv-export of coded regions
 I have been using the concept mapping software [[http://vue.tufts.edu/][VUE]] for sorting through coded regions graphically. The csv-export functions is a way of importing regions into VUE, or other programs.
 The csv-export code is currently not so generalized and may be changed.

@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2020-09-25
+;; Modified: 2020-09-26
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -661,7 +661,78 @@ Works on all current orgqda files."
   (orgqda-rename-tag oldname (concat prefix orgqda-hierarchy-delimiter oldname)))
 
 
-;;;; internal functions
+;;;; Code relations functionality
+(defvar orgqda--tag-relations-hash (make-hash-table :test 'equal)
+  "Hash table for tag-relations.")
+
+(defun orgqda-view-tag-relations (triads)
+  "Display occurrences of co-tagging.
+Prefix arg TRIADS non-nil means to counts groups of three tags."
+  (interactive "P")
+  (let ((origbuffer (current-buffer))
+        (origfile (buffer-file-name)))
+    (orgqda--collect-tag-relations triads)
+    (switch-to-buffer-other-window
+     (generate-new-buffer "*orgqda-tag-relations*"))
+    (org-insert-time-stamp (current-time) t t
+                           (concat "* Orgqda tag-relations generated from "
+                                   (org-link-make-string
+                                    (concat "file:" origfile)
+                                    (buffer-name origbuffer)) " at ")
+                           "\n")
+    (cl-loop for (combo . count)
+             in (cl-sort (orgqda--hash-to-alist orgqda--tag-relations-hash) #'> :key #'cdr)
+             do (insert (format "** [[otag:%s:%s][%s]] (%d)\n"
+                                origfile combo (replace-regexp-in-string "\\+" " + " combo) count)))
+    (goto-char (point-min))
+    (org-mode) (orgqda-list-mode) (flyspell-mode -1)
+    (setq buffer-read-only t)))
+
+(defun orgqda--collect-tag-relations (triads)
+  "Collect tag relations.
+TRIADS non-nil means to count groups of three tags."
+  (clrhash orgqda--tag-relations-hash)
+  (org-map-entries
+   (if triads #'orgqda--get-tag-relations-3 #'orgqda--get-tag-relations) nil
+   (or
+    (and orgqda-collect-from-all-files (orgqda-tag-files))
+    (when-let ((bfn
+                (or (buffer-file-name)
+                    (buffer-file-name
+                     (buffer-base-buffer)))))
+      (list bfn)))
+   'archive 'comment))
+
+(defun orgqda--get-tag-relations ()
+  "Get tag-relations for all pairs of tags."
+  (when-let ((tags (org-get-tags nil t))
+             (tags (sort tags #'string-lessp))
+             (lt (length tags)))
+    (cl-loop for i from 0 below (1- lt) do
+             (cl-loop for j from (1+ i) below lt do
+                      (let* ((t1 (nth i tags))
+                             (t2 (nth j tags))
+                             (tm (concat t1 "+" t2))
+                             (ov (gethash tm orgqda--tag-relations-hash 0)))
+                        (puthash tm (1+ ov) orgqda--tag-relations-hash))))))
+
+(defun orgqda--get-tag-relations-3 ()
+  "Get tag relations for all triads of tags."
+  (when-let ((tags (org-get-tags nil t))
+             (tags (sort tags #'string-lessp))
+             (lt (length tags)))
+    (cl-loop for i from 0 below (- lt 2) do
+             (cl-loop for j from (1+ i) below (1- lt) do
+                      (cl-loop for k from (1+ j) below lt do
+                               (let* ((tm (concat
+                                           (nth i tags) "+"
+                                           (nth j tags) "+"
+                                           (nth k tags)))
+                                      (ov (gethash tm orgqda--tag-relations-hash 0)))
+                                 (puthash tm (1+ ov) orgqda--tag-relations-hash)))))))
+
+
+;;;; Internal functions
 ;;;;; collection-functions
 (defun orgqda--coll-tagged (matcher level)
   "Collect tagged paragraphs or segments.
