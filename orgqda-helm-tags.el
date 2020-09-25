@@ -123,8 +123,8 @@ If not set through customize, set it through calling
 Continues completing until exited with C-RET, M-RET or C-g.
 Prefix ARG uses ordinary org tag insertion."
   (interactive "P")
-  (if (or arg)
-      (funcall #'org-set-tags-command arg)
+  (if arg
+      (org-set-tags-command)
     (if (org-at-heading-p)
         (org-set-tags (orgqda-helm-tags--get-tags))
       (save-excursion
