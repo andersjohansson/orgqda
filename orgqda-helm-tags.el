@@ -219,9 +219,9 @@ Calls ‘orgqda-collect-tagged’."
   "Resort the current completion list."
   (interactive)
   (setq orgqda-helm-tags-sort
-        (nth (mod (1+ (cl-position orgqda-helm-tags-sort orgqda-sort-args))
+        (car (nth (mod (1+ (cl-position orgqda-helm-tags-sort orgqda-sort-args :key #'car))
                   (length orgqda-sort-args))
-             orgqda-sort-args))
+             orgqda-sort-args)))
   (helm-force-update))
 
 ;;;; Internal functions

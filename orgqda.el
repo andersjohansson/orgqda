@@ -166,8 +166,14 @@ Usually set by the user as a file or dir local variable.")
 (defvar-local orgqda--taglist-full nil
   "Whether current taglist buffer includes extracts")
 
-(defconst orgqda-sort-args '(count-decreasing a-z count-increasing z-a)
-  "Symbol arguments for sorting.")
+(defconst orgqda-sort-args
+  '((count-decreasing . orgqda--hierarchy-count-greater-p)
+    (a-z . orgqda--string-lessp)
+    (z-a . orgqda--string-greaterp)
+    (count-increasing . orgqda--hierarchy-count-less-p))
+  "Alist mapping symbol keys for sorting to comparison functions.
+The order is the order used when cycling sorting in
+‘orgqda-helm-tags-set-tags’.")
 
 
 (defvar-local orgqda--old-org-current-tag-alist nil
@@ -975,18 +981,7 @@ a-z, or z-a. EXCLUDE-TAGS overrides ‘orgqda-exclude-tags’."
 Optional SORT can be symbols: count-decreasing (default),
 count-increasing, a-z, or z-a. TAGHASH specifies a custom taghash
 not loaded with ‘orgqda--get-tags-hash’."
-  (let ((taghash (or taghash (orgqda--get-tags-hash)))
-        (sortlist
-         (list
-          (cl-case sort
-            ((a-z z-a) #'orgqda--hierarchy-count-greater-p)
-            (t #'orgqda--string-lessp))
-          (cl-case sort
-            (count-decreasing #'orgqda--hierarchy-count-greater-p)
-            (count-increasing #'orgqda--hierarchy-count-less-p)
-            (a-z #'orgqda--string-lessp)
-            (z-a #'orgqda--string-greaterp)
-            (t #'orgqda--hierarchy-count-greater-p)))))
+  (let ((taghash (or taghash (orgqda--get-tags-hash))))
     (setq orgqda--current-htl
           (orgqda--make-htl
            :counts taghash))
@@ -995,8 +990,14 @@ not loaded with ‘orgqda--get-tags-hash’."
                          (if orgqda-use-tag-hierarchy
                              #'orgqda--hierarchy-parentfn
                            (lambda (_) nil)))
-    (dolist (sfn sortlist)
-      (hierarchy-sort (orgqda--htl-hierarchy orgqda--current-htl) sfn))))
+    ;; Possibly sort in two passes for a stable order
+    ;; Initial sort (if primarily sorting by count, sort those with equal counts a-z)
+    (when (not (member sort '(a-z z-a)))
+      (hierarchy-sort (orgqda--htl-hierarchy orgqda--current-htl) #'orgqda--string-lessp))
+    ;; The primary sorting
+    (hierarchy-sort
+     (orgqda--htl-hierarchy orgqda--current-htl)
+     (alist-get sort orgqda-sort-args #'orgqda--hierarchy-count-greater-p))))
 
 (defun orgqda--insert-hierarchical-taglist (full origbuffer filename &optional startlevel starttag)
   "Insert a hierarchical taglist.
