@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-04-14
+;; Modified: 2020-09-25
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -29,22 +29,26 @@
 ;; orgqda-helm-tags redefines org tagging to work in a faster way with
 ;; helm under orgqda-mode
 
+;;; Code:
+
 (require 'orgqda)
 (require 'org-agenda)
 (require 'org-capture)
 (require 'helm)
 (require 'helm-mode)
 
-;;; Custom variables
+;;;; Custom variables
 (defun orgqda-helm-tags-activate-completion (name val)
+  "Setter for ‘orgqda-helm-tags-completion’.
+Sets NAME to VAL and adds hook for activating
+‘orgqda-helm-tags-mode’ in ‘orgqda-mode’"
   (set-default name val)
   (if val
       (add-hook 'orgqda-mode-hook #'orgqda-helm-tags-mode-activate-in-hook)
     (remove-hook 'orggda-mode-hook #'orgqda-helm-tags-mode-activate-in-hook)))
 
 (defcustom orgqda-helm-tags-completion t
-  "Whether to use the custom ‘orgqda-helm-tags-set-tags’ for
-  inserting tags in ‘orgqda-mode’
+  "Whether to use the custom ‘orgqda-helm-tags-mode’  in ‘orgqda-mode’.
 
 If not set through customize, set it through calling
 ‘orgqda-helm-tags-activate-completion’ as:
@@ -63,16 +67,16 @@ If not set through customize, set it through calling
                  (const :tag "Z-A" z-a)))
 
 (defcustom orgqda-helm-tags-include-excluded nil
-  "If non-nil, include tags listed in ‘orgqda-exclude-tags’ in the completion list"
+  "If non-nil, include tags listed in ‘orgqda-exclude-tags’ for completion."
   :group 'orgqda
   :type 'boolean)
 
 (defcustom orgqda-helm-tags-include-persistent nil
-  "If non-nil, always include tags in ‘org-tag-persistent-alist’ in the completion list"
+  "If non-nil, include tags in ‘org-tag-persistent-alist’ for completion."
   :group 'orgqda
   :type 'boolean)
 
-;;; Variables
+;;;; Variables
 (defvar orgqda-helm-tags-history)
 
 (defvar orgqda-helm-tags-map
@@ -91,7 +95,7 @@ If not set through customize, set it through calling
     (define-key map [remap org-set-tags-command] #'orgqda-helm-tags-set-tags)
     (setq orgqda-helm-tags-mode-map map)))
 
-;;; Helm sources
+;;;; Helm sources
 (defvar orgqda-helm-tags-source
   (helm-build-sync-source "Orgqda select tags (C-RET finishes):"
     :history  'orgqda-helm-tags-history
@@ -112,11 +116,12 @@ If not set through customize, set it through calling
     :keymap orgqda-helm-tags-map
     :action '(("Insert new" . (lambda (c) (list c))))))
 
-;;; orgqda-helm-set-tags, main entry point
+;;;; orgqda-helm-set-tags, main entry point
 ;;;###autoload
 (defun orgqda-helm-tags-set-tags (&optional arg)
-  "Use helm-completion to select multiple tags to add to heading
-Continues completing until exited with C-RET,M-RET or C-g"
+  "Use helm-completion to select multiple tags to add to heading.
+Continues completing until exited with C-RET, M-RET or C-g.
+Prefix ARG uses ordinary org tag insertion."
   (interactive "P")
   (if (or arg)
       (funcall #'org-set-tags-command arg)
@@ -127,7 +132,7 @@ Continues completing until exited with C-RET,M-RET or C-g"
         (org-set-tags (orgqda-helm-tags--get-tags))))))
 
 (defun orgqda-helm-tags--get-tags ()
-  "Get list of new tags via helm completion"
+  "Get list of new tags via helm completion."
   (let* ((helm-exit-status 0)
          (helm-truncate-lines t)
          (orgqda-helm-tags--current-tags (nreverse (org-get-tags nil t)))
@@ -153,13 +158,13 @@ Continues completing until exited with C-RET,M-RET or C-g"
 ;; could be requested by capture templates
 ;;;###autoload
 (defun orgqda-helm-tags-get-tagstring-for-capture ()
-  "Returns a string of tags with completion for the current file captured to"
+  "Return a string of tags with completion for the current file captured to."
   (let ((orgqda-collect-from-all-files t)
         (orgqda-tag-files (list (buffer-file-name
                                  (org-capture-get :buffer)))))
     (concat ":" (mapconcat #'identity (orgqda-helm-tags--get-tags) ":") ":")))
 
-;;; Minor mode definition
+;;;; Minor mode definition
 ;;;###autoload
 (define-minor-mode orgqda-helm-tags-mode "Minor mode for using ‘orqda-helm-tags-completion’
 
@@ -167,14 +172,15 @@ Continues completing until exited with C-RET,M-RET or C-g"
   :keymap orgqda-helm-tags-mode-map)
 
 (defun orgqda-helm-tags-mode-activate-in-hook ()
+  "Activate ‘orgqda-helm-tags-mode’ if we are in ‘orgqda-mode’."
   (if orgqda-mode
       (orgqda-helm-tags-mode)
     (orgqda-helm-tags-mode -1)))
 
-;;; Actions in helm
+;;;; Actions in helm
 (defun orgqda-helm-tags-display-tagged (tag)
-  "Show occurences of currently selected tag.
-Calls ‘orgqda-collect-tagged’"
+  "Show occurences of currently selected TAG.
+Calls ‘orgqda-collect-tagged’."
   (with-helm-current-buffer
     ;; should ideally be killed after switching but how?
     (if (buffer-live-p orgqda-helm-tags--coll-buffer)
@@ -187,7 +193,7 @@ Calls ‘orgqda-collect-tagged’"
     (bury-buffer orgqda-helm-tags--coll-buffer)))
 
 (defun orgqda-helm-tags-delete-tag (_c)
-  "Deletes selected or marked tags at entry"
+  "Deletes selected or marked tags at entry."
   (let ((delete-tags
          (cl-intersection orgqda-helm-tags--current-tags
                           (helm-marked-candidates)
@@ -210,6 +216,7 @@ Calls ‘orgqda-collect-tagged’"
   ())
 
 (defun orgqda-helm-tags-resort-comp-list ()
+  "Resort the current completion list."
   (interactive)
   (setq orgqda-helm-tags-sort
         (nth (mod (1+ (cl-position orgqda-helm-tags-sort orgqda-sort-args))
@@ -217,9 +224,10 @@ Calls ‘orgqda-collect-tagged’"
              orgqda-sort-args))
   (helm-force-update))
 
-;;; Internal functions
-;;;; helm stuff
+;;;; Internal functions
+;;;;; helm stuff
 (defun orgqda-helm-tags--modeline ()
+  "Modeline display for helm completsion in ‘orgqda-helm-tags-set-tags’."
   (list "Tags"
         (concat
          "sort:"
@@ -232,9 +240,9 @@ Calls ‘orgqda-collect-tagged’"
 ;;    (substring cand 0 (next-property-change 0 cand))))
 
 
-;;;; Functions for initializing (or reloading) tag list
+;;;;; Functions for initializing (or reloading) tag list
 (defun orgqda-helm-tags--set-comp-list ()
-  "Loads tags and sets ‘orgqda-helm-tags--comp-list’"
+  "Load tags and set ‘orgqda-helm-tags--comp-list’."
   (let* (cllast
          (taglist
           (if helm-alive-p
@@ -282,7 +290,7 @@ Calls ‘orgqda-collect-tagged’"
                                           info)))))
 
 (defun orgqda-helm-tags--get-codebook-info ()
-  "Returns an alist of tag names and coding info
+  "Return alist of tag names and coding info.
 
 Coding info is the first line of the matching line for the tag in
 ‘orgqda-codebook-file’"
@@ -293,6 +301,7 @@ Coding info is the first line of the matching line for the tag in
      (list orgqda-codebook-file))))
 
 (defun orgqda-helm-tags--get-tag-info ()
+  "Get tag info for current entry in codebook file."
   (when (and (search-forward-regexp
               org-link-bracket-re (point-at-eol) t)
              (save-match-data (string-match "^otag:" (match-string 1))))
@@ -303,14 +312,17 @@ Coding info is the first line of the matching line for the tag in
         (cons tag text)))))
 
 (defmacro orgqda-helm-tags-propertize-if (condition string &rest properties)
-  "Returns STRING propertized with PROPERTIES if condition
-evaluates to non-nil, otherwise returns STRING"
+  "Return STRING with PROPERTIES if CONDITION is non-nil.
+Otherwise return STRING."
   (declare (indent 1) (debug t))
   `(if ,condition
        (propertize ,string ,@properties)
      ,string))
 
 (defun orgqda-helm-tags--format-list-item (x width &optional incurrent?)
+  "Format item for completion list.
+X is the item. WIDTH the display width to use. INCURRENT? a flag
+if the tag is in current list for the entry."
   (cons
    (orgqda-helm-tags-propertize-if incurrent?
      (format
@@ -326,8 +338,9 @@ evaluates to non-nil, otherwise returns STRING"
      'face '(font-lock-comment-face (:strike-through t)))
    (car x)))
 
-;;;; Functions for rewriting (reformatting) tag list after tags are added/removed
+;;;;; Functions for rewriting (reformatting) tag list after tags are added/removed
 (defun orgqda-helm-tags--update-tag-in-complist (tag)
+  "Update display of TAG in completion list."
   (setq orgqda-helm-tags--comp-list
         (if-let ((n (cl-position
                      tag orgqda-helm-tags--comp-list
@@ -340,9 +353,11 @@ evaluates to non-nil, otherwise returns STRING"
                  (orgqda-helm-tags--reformat-added-list-item (cons tag tag))))))
 
 (defun orgqda-helm-tags--reformat-added-list-item (li)
+  "Reformat display of a just added completion list item LI."
   (list (cons (propertize (concat  "+ " (car li)) 'face 'bold) (cdr li))))
 
 (defun orgqda-helm-tags--reformat-deleted-list-item (li)
+  "Reformat display of a just deleted completion list item LI."
   (list (cons (propertize (replace-regexp-in-string "^\\+" "" (car li))
                           'face nil)
               (cdr li))))
