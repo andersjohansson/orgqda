@@ -121,6 +121,25 @@ One of: _@#%"
   :type 'boolean
   :group 'orgqda)
 
+(defcustom orgqda-keep-tags-sorted nil
+  "If non-nil, keep the taglist in the entry sorted in ‘orgqda-mode’.
+If non-nil, should be a sorting scheme from ‘orgqda-sort-args’.
+
+You could directly set ‘org-tags-sort-function’, but this is for
+using it locally when using ‘orgqda-mode’ and with simple options
+corresponding to orgqda sorting.
+
+Most stable and useful is probably to sort alphabetically, using
+‘a-z’ or ‘z-a’. Sorting by count means sorting by the current
+“popularity” of tags across the orgqda collection and won’t be
+updated when tags are changed in other places than this headline."
+  :group 'orgqda
+  :type '(choice (const :tag "Don’t sort" nil)
+                 (const :tag "By count, decreasing" count-decreasing)
+                 (const :tag "By count, increasing" count-increasing)
+                 (const :tag "A-Z" a-z)
+                 (const :tag "Z-A" z-a)))
+
 ;;;###autoload
 (defvar-local orgqda-tag-files nil
   "Extra files from which tags should be fetched for completion.
@@ -275,9 +294,13 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
           (setq-local org-complete-tags-always-offer-all-agenda-tags t))
         (setq orgqda--old-org-current-tag-alist org-current-tag-alist
               org-current-tag-alist nil)
-        (setq-local org-open-at-point-functions '(orgqda-collect-tags-at-point)))
+        (setq-local org-open-at-point-functions '(orgqda-collect-tags-at-point))
+        (setq-local org-tags-sort-function
+                    (or (alist-get orgqda-keep-tags-sorted orgqda-sort-args)
+                        org-tags-sort-function)))
     (kill-local-variable 'org-complete-tags-always-offer-all-agenda-tags)
     (kill-local-variable 'org-open-at-point-functions)
+    (kill-local-variable 'org-tags-sort-function)
     (setq org-current-tag-alist orgqda--old-org-current-tag-alist)))
 
 ;;;###autoload
