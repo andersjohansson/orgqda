@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2020-09-26
+;; Modified: 2020-09-27
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -665,20 +665,24 @@ Works on all current orgqda files."
 (defvar orgqda--tag-relations-hash (make-hash-table :test 'equal)
   "Hash table for tag-relations.")
 
-(defun orgqda-view-tag-relations (triads)
+(defun orgqda-view-tag-relations (k)
   "Display occurrences of co-tagging.
-Prefix arg TRIADS non-nil means to counts groups of three tags."
-  (interactive "P")
+
+Numeric prefix arg K defines which tuples to count"
+  (interactive "p")
   (let ((origbuffer (current-buffer))
-        (origfile (buffer-file-name)))
-    (orgqda--collect-tag-relations triads)
+        (origfile (buffer-file-name))
+        (k (if (= 1 k) 2 k)))
+    (orgqda--collect-tag-relations k)
     (switch-to-buffer-other-window
      (generate-new-buffer "*orgqda-tag-relations*"))
     (org-insert-time-stamp (current-time) t t
-                           (concat "* Orgqda tag-relations generated from "
-                                   (org-link-make-string
-                                    (concat "file:" origfile)
-                                    (buffer-name origbuffer)) " at ")
+                           (format
+                            "* Orgqda %d-tag-relations generated from %s at "
+                            k
+                            (org-link-make-string
+                             (concat "file:" origfile)
+                             (buffer-name origbuffer)))
                            "\n")
     (cl-loop for (combo . count)
              in (cl-sort (orgqda--hash-to-alist orgqda--tag-relations-hash) #'> :key #'cdr)
@@ -688,12 +692,13 @@ Prefix arg TRIADS non-nil means to counts groups of three tags."
     (org-mode) (orgqda-list-mode) (flyspell-mode -1)
     (setq buffer-read-only t)))
 
-(defun orgqda--collect-tag-relations (triads)
-  "Collect tag relations.
-TRIADS non-nil means to count groups of three tags."
+(defun orgqda--collect-tag-relations (k)
+  "Collect tag relations between K tuples of tags in all orgqda files."
   (clrhash orgqda--tag-relations-hash)
   (org-map-entries
-   (if triads #'orgqda--get-tag-relations-3 #'orgqda--get-tag-relations) nil
+   (lambda () (orgqda--get-tag-relations-k k))
+   ;;(if triads #'orgqda--get-tag-relations-3 #'orgqda--get-tag-relations)
+   nil
    (or
     (and orgqda-collect-from-all-files (orgqda-tag-files))
     (when-let ((bfn
@@ -703,33 +708,28 @@ TRIADS non-nil means to count groups of three tags."
       (list bfn)))
    'archive 'comment))
 
-(defun orgqda--get-tag-relations ()
-  "Get tag-relations for all pairs of tags."
-  (when-let ((tags (org-get-tags nil t))
-             (tags (sort tags #'string-lessp))
-             (lt (length tags)))
-    (cl-loop for i from 0 below (1- lt) do
-             (cl-loop for j from (1+ i) below lt do
-                      (let* ((t1 (nth i tags))
-                             (t2 (nth j tags))
-                             (tm (concat t1 "+" t2))
-                             (ov (gethash tm orgqda--tag-relations-hash 0)))
-                        (puthash tm (1+ ov) orgqda--tag-relations-hash))))))
+;; Inspiration from:
+;; https://www.geeksforgeeks.org/print-subsets-given-size-set/
 
-(defun orgqda--get-tag-relations-3 ()
-  "Get tag relations for all triads of tags."
-  (when-let ((tags (org-get-tags nil t))
-             (tags (sort tags #'string-lessp))
-             (lt (length tags)))
-    (cl-loop for i from 0 below (- lt 2) do
-             (cl-loop for j from (1+ i) below (1- lt) do
-                      (cl-loop for k from (1+ j) below lt do
-                               (let* ((tm (concat
-                                           (nth i tags) "+"
-                                           (nth j tags) "+"
-                                           (nth k tags)))
-                                      (ov (gethash tm orgqda--tag-relations-hash 0)))
-                                 (puthash tm (1+ ov) orgqda--tag-relations-hash)))))))
+(defun orgqda--get-tag-relations-k (k)
+  "Get tag relations for all K tuples of tags at point."
+  (when-let ((taglist (org-get-tags nil t))
+             (taglist (sort taglist #'string-lessp))
+             (n (length taglist)))
+    (orgqda--get-tag-relations-rec taglist n k nil 0)))
+
+(defun orgqda--get-tag-relations-rec (tl n k data tlindex)
+  "Recursive fn using TL N K DATA TLINDEX."
+   ;; looks inefficient but is appears ok when byte-compiled
+  (let ((data (copy-sequence data)))
+    (if (= (length data) k)
+        (let* ((tm (string-join (nreverse data) "+"))
+               (ov (gethash tm orgqda--tag-relations-hash 0)))
+          (puthash tm (1+ ov) orgqda--tag-relations-hash))
+      (when (< tlindex n)
+        (orgqda--get-tag-relations-rec
+         tl n k (cons (nth tlindex tl) data) (1+ tlindex))
+        (orgqda--get-tag-relations-rec tl n k data (1+ tlindex))))))
 
 
 ;;;; Internal functions
