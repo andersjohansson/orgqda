@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2020-09-27
+;; Modified: 2020-10-02
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -720,7 +720,7 @@ Numeric prefix arg K defines which tuples to count"
 
 (defun orgqda--get-tag-relations-rec (tl n k data tlindex)
   "Recursive fn using TL N K DATA TLINDEX."
-   ;; looks inefficient but is appears ok when byte-compiled
+   ;; looks inefficient but it appears ok when byte-compiled
   (let ((data (copy-sequence data)))
     (if (= (length data) k)
         (let* ((tm (string-join (nreverse data) "+"))
@@ -736,7 +736,7 @@ Numeric prefix arg K defines which tuples to count"
 ;;;;; collection-functions
 (defun orgqda--coll-tagged (matcher level)
   "Collect tagged paragraphs or segments.
-MATCHER is used for mathcing and LEVEL is the level in the hierarchy
+MATCHER is used for matching and LEVEL is the level in the hierarchy
 for this tag.
 
 Return cons-cell: (total count . string of taglists)"
