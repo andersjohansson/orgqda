@@ -101,9 +101,7 @@ If not set through customize, set it through calling
   (helm-build-sync-source "Orgqda select tags (C-RET finishes):"
     :history  'orgqda-helm-tags-history
     :fuzzy-match t
-    ;; :match '(orgqda-helm-tags--fuzzy-match-name helm-fuzzy-match)
-    ;; TODO, can this be made to work so it primarily matches on tag
-    ;; name? (or real)
+    :match-on-real t
     :keymap orgqda-helm-tags-map
     :action  '(("Set tags to" . (lambda (_c) (helm-marked-candidates)))
                ("Delete marked tags" . orgqda-helm-tags-delete-tag))
@@ -235,11 +233,6 @@ Calls ‘orgqda-collect-tagged’."
          (symbol-name orgqda-helm-tags-sort)
          " \\<orgqda-helm-tags-map>\\[helm-cr-empty-string],\\<global-map>\\[keyboard-quit]:Finish "
          "\\<helm-map> \\[helm-help]:Help \\[helm-select-action]:Act \\[helm-maybe-exit-minibuffer]/ f1/f2/f-n:NthAct")))
-
-;; (defun orgqda-helm-tags--fuzzy-match-name (cand)
-;;   (helm-fuzzy-match
-;;    (substring cand 0 (next-property-change 0 cand))))
-
 
 ;;;;; Functions for initializing (or reloading) tag list
 (defun orgqda-helm-tags--set-comp-list ()
