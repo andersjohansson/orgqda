@@ -138,7 +138,16 @@ updated when tags are changed in other places than this headline."
                  (const :tag "By count, decreasing" count-decreasing)
                  (const :tag "By count, increasing" count-increasing)
                  (const :tag "A-Z" a-z)
-                 (const :tag "Z-A" z-a)))
+                 (const :tag "Z-A" z-a))
+  :safe (lambda (x) (or (null x) (orgqda-sort-arg-p x))))
+
+(defcustom orgqda-default-sort-order 'count-decreasing
+  "Default order for sorting when listing tags."
+  :type '(choice (const :tag "By count, decreasing" count-decreasing)
+                 (const :tag "By count, increasing" count-increasing)
+                 (const :tag "A-Z" a-z)
+                 (const :tag "Z-A" z-a))
+  :safe #'orgqda-sort-arg-p)
 
 ;;;###autoload
 (defvar-local orgqda-tag-files nil
@@ -184,6 +193,8 @@ Usually set by the user as a file or dir local variable.")
   "Sorting of current taglist buffer")
 (defvar-local orgqda--taglist-full nil
   "Whether current taglist buffer includes extracts")
+(defvar-local orgqda--old-org-current-tag-alist nil
+  "Saves state of ‘org-current-tag-alist’ between enabling and disabling ‘orgqda-mode’.")
 
 (defconst orgqda-sort-args
   '((count-decreasing . orgqda--hierarchy-count-greater-p)
@@ -194,9 +205,10 @@ Usually set by the user as a file or dir local variable.")
 The order is the order used when cycling sorting in
 ‘orgqda-helm-tags-set-tags’.")
 
-
-(defvar-local orgqda--old-org-current-tag-alist nil
-  "Saves state of ‘org-current-tag-alist’ between enabling and disabling ‘orgqda-mode’.")
+;;;###autoload
+(defun orgqda-sort-arg-p (arg)
+  "Non-nil if ARG is in ‘orgqda-sort-args’."
+  (cl-member arg orgqda-sort-args :key #'car))
 
 ;;;; KEYBINDINGS
 ;;;###autoload
@@ -370,7 +382,7 @@ Prefix ARG is passed through."
 ;;;###autoload
 (defun orgqda-list-tags (&optional sort full buf noupdate roottext startprefix)
   "List all tags in this buffer and/or ‘orgqda-tag-files’, with counts.
-Sorted by count or alphabetically if optional (prefix) argument
+Sorted by count, or alphabetically if optional (prefix) argument
 SORT is non-nil.
 
 For non-interactive calls: SORT can be given as a sort
@@ -390,7 +402,8 @@ this prefix."
       (orgqda--create-hierarchical-taglist
        (cond
         ((symbolp sort) sort)
-        (sort 'a-z))))
+        (sort 'a-z)
+        (t orgqda-default-sort-order))))
     (if buf
         (progn (switch-to-buffer-other-window buf)
                (setq buffer-read-only nil)

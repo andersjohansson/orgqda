@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-09-25
+;; Modified: 2020-10-02
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -58,13 +58,14 @@ If not set through customize, set it through calling
   :set #'orgqda-helm-tags-activate-completion
   :initialize #'custom-initialize-reset)
 
-(defcustom orgqda-helm-tags-sort 'count-decreasing
+(defcustom orgqda-helm-tags-sort orgqda-default-sort-order
   "Sorting scheme used in ‘orgqda-helm-set-tags’."
   :group 'orgqda
   :type '(choice (const :tag "By count, decreasing" count-decreasing)
                  (const :tag "By count, increasing" count-increasing)
                  (const :tag "A-Z" a-z)
-                 (const :tag "Z-A" z-a)))
+                 (const :tag "Z-A" z-a))
+  :safe #'orgqda-sort-arg-p)
 
 (defcustom orgqda-helm-tags-include-excluded nil
   "If non-nil, include tags listed in ‘orgqda-exclude-tags’ for completion."
