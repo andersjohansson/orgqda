@@ -321,6 +321,8 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
 ;;;; Interactive commands
 ;;;;; Commands for inserting
 (autoload 'org-inlinetask-in-task-p "org-inlinetask")
+(declare-function orgqda-helm-tags-set-tags "orgqda-helm-tags")
+
 ;;;###autoload
 (defun orgqda-insert-inlinetask (&optional arg title coding)
   "Insert a degenerate inlinetask after current paragraph.
