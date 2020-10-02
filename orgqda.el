@@ -149,6 +149,21 @@ updated when tags are changed in other places than this headline."
                  (const :tag "Z-A" z-a))
   :safe #'orgqda-sort-arg-p)
 
+(defcustom orgqda-only-count-matching nil
+  "When non-nil, only entries matched by tags in this list are counted and collected."
+  :type '(repeat string)
+  :safe #'orgqda--list-of-strings-p)
+
+(defcustom orgqda-use-tag-inheritance nil
+  "When non-nil, count entries using tag inheritance.
+
+Useful together with ‘orgqda-only-count-matching’, if you for
+  example want to analyse data for a specific kind of
+  entry (using a tag) but those entries should be considered
+  tagged with their parents’ tags."
+  :type 'boolean
+  :safe #'booleanp)
+
 ;;;###autoload
 (defvar-local orgqda-tag-files nil
   "Extra files from which tags should be fetched for completion.
@@ -272,6 +287,24 @@ Inhibits hooks for ‘text-mode’, ‘outline-mode’ and ‘org-mode’"
          (org-agenda-inhibit-startup t)
          (org-inhibit-startup t))
      ,@body))
+
+(defmacro orgqda--with-many-files (manyfiles &rest body)
+  "Execute BODY efficiently in each file of MANYFILES."
+  (declare (indent 1))
+  `(orgqda--inhibit-org-startups
+    ;; this basically copies the essentials for running on a set of
+    ;; files from ‘org-map-entries’
+    (let ((org-agenda-skip-archived-trees t)
+          (org-agenda-skip-comment-trees t)
+          org-todo-keywords-for-agenda
+	      org-done-keywords-for-agenda
+	      org-todo-keyword-alist-for-agenda
+	      org-tag-alist-for-agenda)
+      (org-agenda-prepare-buffers ,manyfiles)
+      (dolist (file ,manyfiles)
+        (with-current-buffer (org-find-base-buffer-visiting file)
+          ,@body)))))
+
 
 ;;;; Minor mode definitions
 ;;;###autoload
@@ -397,7 +430,8 @@ text for the root node. STARTPREFIX, searches only tags under
 this prefix."
   (interactive "P")
   (let ((origbuffer (current-buffer))
-        (origfile (buffer-file-name)))
+        (origfile (buffer-file-name))
+        (ocm orgqda-only-count-matching))
     (unless noupdate
       (orgqda--create-hierarchical-taglist
        (cond
@@ -414,6 +448,9 @@ this prefix."
         (insert (format "* %s\n" roottext))
       (org-insert-time-stamp (current-time) t t
                              (concat "* Orgqda taglist "
+                                     (when ocm
+                                       (format "(matching: %s) "
+                                               (mapconcat #'identity ocm "|")))
                                      (when startprefix
                                        (format "(under prefix %s) " startprefix))
                                      "generated from "
@@ -735,7 +772,7 @@ Numeric prefix arg K defines which tuples to count"
 
 (defun orgqda--get-tag-relations-rec (tl n k data tlindex)
   "Recursive fn using TL N K DATA TLINDEX."
-   ;; looks inefficient but it appears ok when byte-compiled
+  ;; looks inefficient but it appears ok when byte-compiled
   (let ((data (copy-sequence data)))
     (if (= (length data) k)
         (let* ((tm (string-join (nreverse data) "+"))
@@ -749,6 +786,7 @@ Numeric prefix arg K defines which tuples to count"
 
 ;;;; Internal functions
 ;;;;; collection-functions
+
 (defun orgqda--coll-tagged (matcher level)
   "Collect tagged paragraphs or segments.
 MATCHER is used for matching and LEVEL is the level in the hierarchy
@@ -757,27 +795,24 @@ for this tag.
 Return cons-cell: (total count . string of taglists)"
   (let* ((manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files)))
          (totalcount 0)
-         tags
-         (str
-          ;; iterate over files assume this file is included in
-          ;; orgqda-tag-files (or shouldn't be)
-          (if manyfiles
-              (orgqda--inhibit-org-startups
-               (dolist (file manyfiles tags)
-                 (with-current-buffer (find-file-noselect file)
-                   (let ((ct (orgqda--coll-tagged-in-buffer matcher (1+ level))))
-                     (unless (and orgqda-exclude-empty-file-trees
-                                  (= 0 (car ct)))
-                       (setq totalcount (+ totalcount (car ct)))
-                       (setq tags (concat tags
-                                          (orgqda--taglist-file-heading
-                                           (car ct) level)
-                                          (cdr ct)
-                                          "\n\n")))))))
-            ;;only this buffer
-            (let ((ct (orgqda--coll-tagged-in-buffer matcher level)))
-              (setq totalcount (+ totalcount (car ct)))
-              (cdr ct)))))
+         str)
+    (if manyfiles
+        ;; iterate over files assuming this file is included in
+        ;; orgqda-tag-files (or shouldn't be)
+        (orgqda--with-many-files manyfiles
+          (let ((ct (orgqda--coll-tagged-in-buffer matcher (1+ level))))
+            (unless (and orgqda-exclude-empty-file-trees
+                         (= 0 (car ct)))
+              (cl-incf totalcount (car ct))
+              (setq str (concat str
+                                (orgqda--taglist-file-heading
+                                 (car ct) level)
+                                (cdr ct)
+                                "\n\n")))))
+      ;;only this buffer
+      (let ((ct (orgqda--coll-tagged-in-buffer matcher level)))
+        (cl-incf totalcount (car ct))
+        (setq str (cdr ct))))
     (cons totalcount str)))
 
 (defun orgqda--taglist-file-heading (number level)
@@ -800,7 +835,7 @@ MATCHER is used for matching and LEVEL is the level in the hierarchy
 for this tag.
 Return cons-cell: (count in buffer count . string of taglist)"
   (let ((orgqda--ct-level level)
-        (org-use-tag-inheritance nil))
+        (org-use-tag-inheritance orgqda-use-tag-inheritance))
     (orgqda--temp-work
      (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub
                               (cdr matcher) nil)))
@@ -838,12 +873,10 @@ Return cons-cell: (count in buffer count . string of taglist)"
      "citat,fil,fil:rad,file:hash,head,matchad,extra,extra2\n" ;;TODO, give reasonable names here
      ;; iterate orgqda-tag-files
      (if manyfiles
-         (orgqda--inhibit-org-startups
-          (dolist (file manyfiles tags)
-            (with-current-buffer (find-file-noselect file)
-              (setq tags
-                    (concat tags
-                            (orgqda--coll-tagged-in-buffer-csv matcher))))))
+         (orgqda--with-many-files manyfiles
+           (setq tags
+                 (concat tags
+                         (orgqda--coll-tagged-in-buffer-csv matcher))))
        ;;only this buffer
        (orgqda--coll-tagged-in-buffer-csv matcher)))))
 
@@ -852,7 +885,7 @@ Return cons-cell: (count in buffer count . string of taglist)"
 MATCHER is used for matching.
 Return cons-cell: (count in buffer count . string of taglist)"
 
-  (let ((org-use-tag-inheritance nil))
+  (let ((org-use-tag-inheritance orgqda-use-tag-inheritance))
     (orgqda--temp-work
      (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
                               (cdr matcher) nil)))
@@ -1050,17 +1083,18 @@ In this buffer or in all files in ‘orgqda-tag-files’. If
 EXCLUDE-TAGS is non nil, use that instead of
 ‘orgqda-exclude-tags’ for tags to exclude."
   (clrhash orgqda--current-tagscount)
-  (orgqda--inhibit-org-startups
-   (org-map-entries
-    #'orgqda--get-tags-with-count nil
-    (or
-     (and orgqda-collect-from-all-files (orgqda-tag-files))
-     (when-let ((bfn
-                 (or (buffer-file-name)
-                     (buffer-file-name
-                      (buffer-base-buffer)))))
-       (list bfn)))
-    'archive 'comment))
+  (let ((org-use-tag-inheritance orgqda-use-tag-inheritance))
+    (orgqda--with-many-files (or (and orgqda-collect-from-all-files
+                                      (orgqda-tag-files))
+                                 (when-let ((bfn
+                                             (or (buffer-file-name)
+                                                 (buffer-file-name
+                                                  (buffer-base-buffer)))))
+                                   (list bfn)))
+      (org-scan-tags
+       #'orgqda--get-tags-with-count
+       (cdr (orgqda--make-tags-matcher 'none))
+       nil)))
   (dolist (ex (or exclude-tags orgqda-exclude-tags))
     (remhash ex orgqda--current-tagscount))
   orgqda--current-tagscount)
@@ -1181,33 +1215,38 @@ Ignore case and collate depending on current locale."
 
 (defun orgqda--get-tags-with-count ()
   "Add tags at point to ‘orgqda--current-tagscount’."
-  (dolist (x (org-get-tags nil t))
-    (let ((ov (gethash x orgqda--current-tagscount 0)))
-      (puthash x (1+ ov) orgqda--current-tagscount))))
+  (dolist (tag org-scanner-tags)
+    (let ((ov (gethash tag orgqda--current-tagscount 0)))
+      (puthash tag (1+ ov) orgqda--current-tagscount))))
 
 (defun orgqda--make-tags-matcher (&optional match force-simple)
   "Construct a tags matcher, excluding commented and archived trees.
 
 Match string is passed in MATCH or prompted for.
 
-The matcher is constructed bypassing ‘org-make-tags-matcher’ if
+The matcher is constructed by bypassing ‘org-make-tags-matcher’ if
 the match is for a single tag, since generation otherwise takes
-too long with long tag names. This behaviour can be forced with
+too long with long tag names (‘org-make-tags-matcher’ does some
+expensive stuff, and this is no good when we are collecting
+extracts for all tags). This behaviour can be forced with
 FORCE-SIMPLE."
   (let* ((match (or match
                     (completing-read
                      "Match: "
                      (orgqda--get-tags-for-completion)
                      nil nil (orgqda-tag-at-point))))
-         (mf (if (or force-simple
-                     (string-match-p "^[[:alnum:]_@#%:]+$" match))
-                 `(member ,match tags-list)
-               (nth 2 (cdr (org-make-tags-matcher match))))))
+         conds)
+    (when orgqda-only-count-matching
+      (push '(cl-intersection tags-list orgqda-only-count-matching :test #'equal) conds))
+    (cond
+     ((symbolp match)) ;; no more conditions (usually when counting)
+     ((or force-simple
+          (string-match-p "^[[:alnum:]_@#%:]+$" match))
+      (push `(member ,match tags-list) conds))
+     (t (push (nth 2 (cdr (org-make-tags-matcher match))) conds)))
     (cons match `(lambda (todo tags-list level)
                    (setq org-cached-props nil)
-                   (and (not (org-in-commented-heading-p))
-                        (not (member "ARCHIVE" tags-list))
-                        ,mf)))))
+                   (and ,@(nreverse conds))))))
 
 ;;;;;; link type for taglist
 (org-link-set-parameters "otag"
