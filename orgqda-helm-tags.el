@@ -299,7 +299,7 @@ Coding info is the first line of the matching line for the tag in
   (when (and (search-forward-regexp
               org-link-bracket-re (point-at-eol) t)
              (save-match-data (string-match "^otag:" (match-string 1))))
-    (let ((tag (cadr (split-string (match-string-no-properties 3) ":")))
+    (let ((tag (nth 2 (split-string (match-string-no-properties 1) ":")))
           (text (substring-no-properties
                  (org-agenda-get-some-entry-text (point-marker) 1))))
       (when (and tag (not (string-blank-p text)))
