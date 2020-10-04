@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-10-02
+;; Modified: 2020-10-04
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -70,12 +70,19 @@ If not set through customize, set it through calling
 (defcustom orgqda-helm-tags-include-excluded nil
   "If non-nil, include tags listed in ‘orgqda-exclude-tags’ for completion."
   :group 'orgqda
-  :type 'boolean)
+  :type 'boolean
+  :safe #'booleanp)
 
 (defcustom orgqda-helm-tags-include-persistent nil
   "If non-nil, include tags in ‘org-tag-persistent-alist’ for completion."
   :group 'orgqda
   :type 'boolean)
+
+(defcustom orgqda-helm-tags-fuzzy-match t
+  "If non-nil, use fuzzy matching in ‘orgqda-helm-tags-set-tags’."
+  :group 'orgqda
+  :type 'boolean
+  :safe #'booleanp)
 
 ;;;; Variables
 (defvar orgqda-helm-tags-history)
@@ -97,11 +104,12 @@ If not set through customize, set it through calling
     (setq orgqda-helm-tags-mode-map map)))
 
 ;;;; Helm sources
-(defvar orgqda-helm-tags-source
+(defun orgqda-helm-tags--build-source ()
+  "Return a suitable helm-source for ‘orgqda-helm-tags-source’."
   (helm-build-sync-source "Orgqda select tags (C-RET finishes):"
     :history  'orgqda-helm-tags-history
-    :fuzzy-match t
-    :match-on-real t
+    :fuzzy-match orgqda-helm-tags-fuzzy-match
+    :match-part #'orgqda-helm-tags-match-part
     :keymap orgqda-helm-tags-map
     :action  '(("Set tags to" . (lambda (_c) (helm-marked-candidates)))
                ("Delete marked tags" . orgqda-helm-tags-delete-tag))
@@ -136,15 +144,14 @@ Prefix ARG uses ordinary org tag insertion."
          (helm-truncate-lines t)
          (orgqda-helm-tags--current-tags (nreverse (org-get-tags nil t)))
          ;; sort can be changed in helm session, keep that local
-         (orgqda-helm-tags-sort orgqda-helm-tags-sort))
+         (orgqda-helm-tags-sort orgqda-helm-tags-sort)
+         (sources (list (orgqda-helm-tags--build-source) orgqda-helm-tags-new-tag-source)))
     (orgqda-helm-tags--set-comp-list)
     (cl-remove-duplicates
      (cl-loop with newtags
               until (or (eq helm-exit-status 1) (equal "" newtags))
               do (setq newtags
-                       (helm :sources
-                             (list orgqda-helm-tags-source
-                                   orgqda-helm-tags-new-tag-source)
+                       (helm :sources sources
                              :candidate-number-limit 99999
                              :buffer "*helm orgqda tags*"))
               when (listp newtags)
@@ -225,6 +232,13 @@ Calls ‘orgqda-collect-tagged’."
 
 ;;;; Internal functions
 ;;;;; helm stuff
+(defun orgqda-helm-tags-match-part (cand)
+  "Function for transforming CAND to avoid matching displayed count."
+  (let* ((eot (next-property-change 0 cand))
+         (boc (next-property-change eot cand)))
+    (concat (substring cand 0 eot)
+            (substring cand boc))))
+
 (defun orgqda-helm-tags--modeline ()
   "Modeline display for helm completsion in ‘orgqda-helm-tags-set-tags’."
   (list "Tags"
