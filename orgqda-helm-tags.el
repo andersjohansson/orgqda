@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-10-04
+;; Modified: 2020-10-05
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -109,7 +109,6 @@ If not set through customize, set it through calling
   (helm-build-sync-source "Orgqda select tags (C-RET finishes):"
     :history  'orgqda-helm-tags-history
     :fuzzy-match orgqda-helm-tags-fuzzy-match
-    :match-part #'orgqda-helm-tags-match-part
     :keymap orgqda-helm-tags-map
     :action  '(("Set tags to" . (lambda (_c) (helm-marked-candidates)))
                ("Delete marked tags" . orgqda-helm-tags-delete-tag))
@@ -232,12 +231,6 @@ Calls ‘orgqda-collect-tagged’."
 
 ;;;; Internal functions
 ;;;;; helm stuff
-(defun orgqda-helm-tags-match-part (cand)
-  "Function for transforming CAND to avoid matching displayed count."
-  (let* ((eot (next-property-change 0 cand))
-         (boc (next-property-change eot cand)))
-    (concat (substring cand 0 eot)
-            (substring cand boc))))
 
 (defun orgqda-helm-tags--modeline ()
   "Modeline display for helm completsion in ‘orgqda-helm-tags-set-tags’."
@@ -327,24 +320,26 @@ Otherwise return STRING."
        (propertize ,string ,@properties)
      ,string))
 
-(defun orgqda-helm-tags--format-list-item (x width &optional incurrent?)
+(cl-defun orgqda-helm-tags--format-list-item ((tag count info) width &optional incurrent?)
   "Format item for completion list.
-X is the item. WIDTH the display width to use. INCURRENT? a flag
-if the tag is in current list for the entry."
+TAG, COUNT, and INFO is the information for the tag. WIDTH the
+display width to use. INCURRENT? a flag for whether the tag is in
+the current list for the entry."
   (cons
    (orgqda-helm-tags-propertize-if incurrent?
      (format
       (format "%%-%ds %%5s %%s" width)
-      (if (and orgqda-helm-tags-include-excluded (member (car x) orgqda-exclude-tags))
-          (propertize (car x) 'face 'font-lock-comment-face)
-        (car x))
-      (propertize (format "%d" (cadr x))
-                  'face 'font-lock-function-name-face)
-      (if-let ((info (nth 2 x)))
-          (propertize info 'face 'shadow)
-        ""))
+      (if (and orgqda-helm-tags-include-excluded (member tag orgqda-exclude-tags))
+          (propertize tag 'face 'font-lock-comment-face)
+        tag)
+      (let* ((cs (format "%d" count)))
+        (propertize
+         (make-string (length cs) ?\s)
+         'display cs
+         'face 'font-lock-function-name-face))
+      (if info (propertize info 'face 'shadow) ""))
      'face '(font-lock-comment-face (:strike-through t)))
-   (car x)))
+   tag))
 
 ;;;;; Functions for rewriting (reformatting) tag list after tags are added/removed
 (defun orgqda-helm-tags--update-tag-in-complist (tag)
