@@ -144,7 +144,8 @@ Prefix ARG uses ordinary org tag insertion."
          (orgqda-helm-tags--current-tags (nreverse (org-get-tags nil t)))
          ;; sort can be changed in helm session, keep that local
          (orgqda-helm-tags-sort orgqda-helm-tags-sort)
-         (sources (list (orgqda-helm-tags--build-source) orgqda-helm-tags-new-tag-source)))
+         (sources (list (orgqda-helm-tags--build-source) orgqda-helm-tags-new-tag-source))
+         (helm-fuzzy-sort-fn #'helm-fuzzy-matching-sort-fn-preserve-ties-order))
     (orgqda-helm-tags--set-comp-list)
     (cl-remove-duplicates
      (cl-loop with newtags
