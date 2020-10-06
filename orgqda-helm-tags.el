@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-10-05
+;; Modified: 2020-10-06
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -278,17 +278,15 @@ Calls ‘orgqda-collect-tagged’."
            (nreverse cllast)))))
 
 (defun orgqda-helm-tags--get-tags-list ()
-  "Gets list of tags with count and (possible) coding info."
+  "Get list of tags with count and (possible) coding info."
   (let ((info (orgqda-helm-tags--get-codebook-info)))
-    (cl-loop for x in (orgqda--get-tags-alist
-                       orgqda-helm-tags-sort
-                       (if orgqda-helm-tags-include-excluded
-                           '("")
-                         orgqda-exclude-tags))
-             collect (list (car x)
-                           (cdr x)
-                           (assoc-default (car x)
-                                          info)))))
+    (cl-loop for (tag . count) in
+             (orgqda--get-tags-alist orgqda-helm-tags-sort
+                                     (if orgqda-helm-tags-include-excluded
+                                         ;; non-nil for overriding the default
+                                         '("")
+                                       orgqda-exclude-tags))
+             collect (list tag count (assoc-default tag info)))))
 
 (defun orgqda-helm-tags--get-codebook-info ()
   "Return alist of tag names and coding info.
