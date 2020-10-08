@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-10-06
+;; Modified: 2020-10-08
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -77,6 +77,14 @@ If not set through customize, set it through calling
   "If non-nil, include tags in ‘org-tag-persistent-alist’ for completion."
   :group 'orgqda
   :type 'boolean)
+
+(defcustom orgqda-helm-tags-exclude-tags nil
+  "List of tags to exclude from completion in ‘orgqda-helm-set-tags’.
+
+This is an alternative to set an additional list of tags that should not clutter the completion, apart from ‘orgqda-exclude-tags’. See also ‘orgqda-helm-tags-include-excluded’."
+  :group 'orgqda
+  :type '(repeat string)
+  :safe #'orgqda--list-of-strings-p)
 
 (defcustom orgqda-helm-tags-fuzzy-match t
   "If non-nil, use fuzzy matching in ‘orgqda-helm-tags-set-tags’."
@@ -283,10 +291,12 @@ Calls ‘orgqda-collect-tagged’."
   (let ((info (orgqda-helm-tags--get-codebook-info)))
     (cl-loop for (tag . count) in
              (orgqda--get-tags-alist orgqda-helm-tags-sort
-                                     (if orgqda-helm-tags-include-excluded
-                                         ;; non-nil for overriding the default
-                                         '("")
-                                       orgqda-exclude-tags))
+                                     (append
+                                      (if orgqda-helm-tags-include-excluded
+                                          ;; non-nil for overriding the default
+                                          '("")
+                                        orgqda-exclude-tags)
+                                      orgqda-helm-tags-exclude-tags))
              collect (list tag count (assoc-default tag info)))))
 
 (defun orgqda-helm-tags--get-codebook-info ()
