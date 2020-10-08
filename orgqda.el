@@ -849,19 +849,33 @@ Return cons-cell: (count in buffer count . string of taglist)"
         (let* ((ln (line-number-at-pos))
                (bm (orgqda--get-encoded-bm))
                (link (format "opbm:%s" bm))
-               (desc (orgqda--clean-up-heading-desc (org-get-heading nil t t t)))
+               (desc (orgqda--clean-up-heading-desc (org-get-heading t t t t)))
+               inherited-tags
+               (local-tags
+                (if orgqda-use-tag-inheritance
+                    (cl-loop for tag in org-scanner-tags
+                             if (get-text-property 0 'inherited tag)
+                             do (push tag inherited-tags)
+                             else collect tag)
+                  org-scanner-tags))
                (ei1
                 (and orgqda-tag-collect-extra-info
                      (assoc-default
                       (buffer-name)
                       orgqda-tag-collect-extra-info 'string-match-p)))
                (extrainfo (if ei1 (eval ei1) ""))
-               (hl (format "%s %d: [[%s][%s]]%s\n"
+               (hl (format "%s %d: [[%s][%s]]%s%s %s\n"
                            (make-string orgqda--ct-level 42)
-                           ln link desc extrainfo))
+                           ln link desc extrainfo
+                           (if inherited-tags
+                               (format
+                                " (inherited: %s)"
+                                (org-make-tag-string inherited-tags))
+                             "")
+                           (org-make-tag-string local-tags)))
                (contents (orgqda--get-paragraph-or-sub-contents)))
           (concat hl contents))
-      "Inte heading eller inlinetask???")))
+      "ERROR: Not at a heading or inlinetask!")))
 
 ;;;;; CSV-collection-functions
 ;;TODO, perhaps more duplication could be avoided
