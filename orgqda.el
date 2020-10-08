@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2020-10-02
+;; Modified: 2020-10-08
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -936,11 +936,13 @@ each character in the buffer."
                           (forward-line 0) (point)))))
       ((org-at-heading-p)
        (org-copy-subtree)
-       (with-temp-buffer
-         (org-paste-subtree (1- orgqda--ct-level) nil nil t)
-         (forward-line 1)
-         (buffer-substring-no-properties
-          (point) (point-max))))))))
+       (orgqda--inhibit-org-startups
+        (with-temp-buffer
+          (org-mode)
+          (org-paste-subtree (1- orgqda--ct-level) nil nil t)
+          (forward-line 1)
+          (buffer-substring-no-properties
+           (point) (point-max)))))))))
 
 ;; inspired by:
 ;; http://endlessparentheses.com/meta-binds-part-2-a-peeve-with-paragraphs.html
