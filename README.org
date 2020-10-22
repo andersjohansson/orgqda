@@ -52,6 +52,7 @@ orgqda-collect-tagged-csv-save-all
 ** List of customizable variables with default values
 #+BEGIN_EXAMPLE
 orgqda-csv-dir "~"
+orgqda-collect-coverage nil
 orgqda-tag-collect-extra-info nil
 orgqda-collect-from-all-files t
 orgqda-tag-collect-extra-info-csv nil

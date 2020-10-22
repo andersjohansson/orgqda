@@ -53,6 +53,10 @@
   :group 'orgqda
   :safe 'file-directory-p)
 
+(defcustom orgqda-collect-coverage nil
+  "Display coverage (percentage of file the coded segment makes up) in ‘orgqda’."
+  :type 'boolean)
+
 (defcustom orgqda-tag-collect-extra-info nil
   "Possibly adds extra info to extracted tagged parts.
 An alist where keys are regexps to be matched against ‘buffer-name’
@@ -829,6 +833,8 @@ to be used."
   "Level of headlines for tagcollection.
 Used for passing this through to‘orgqda--get-paragraph-or-sub’")
 
+(defvar orgqda--current-buffer-length nil)
+
 (defun orgqda--coll-tagged-in-buffer (matcher level)
   "Collect tagged paragraphs in buffer.
 MATCHER is used for matching and LEVEL is the level in the hierarchy
@@ -837,8 +843,9 @@ Return cons-cell: (count in buffer count . string of taglist)"
   (let ((orgqda--ct-level level)
         (org-use-tag-inheritance orgqda-use-tag-inheritance))
     (orgqda--temp-work
-     (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub
-                              (cdr matcher) nil)))
+     (let* ((orgqda--current-buffer-length (point-max))
+            (tl (org-scan-tags 'orgqda--get-paragraph-or-sub
+                               (cdr matcher) nil)))
        (cons (length tl)
              (mapconcat 'identity tl "\n"))))))
 
@@ -864,16 +871,19 @@ Return cons-cell: (count in buffer count . string of taglist)"
                       (buffer-name)
                       orgqda-tag-collect-extra-info 'string-match-p)))
                (extrainfo (if ei1 (eval ei1) ""))
-               (hl (format "%s %d: [[%s][%s]]%s%s %s\n"
+               (contents (orgqda--get-paragraph-or-sub-contents))
+               (coverage (if orgqda-collect-coverage
+                             (format " (%.2f%%)" (* 100 (/ (float (length contents)) orgqda--current-buffer-length)))
+                           ""))
+               (hl (format "%s %d: [[%s][%s]]%s%s%s %s\n"
                            (make-string orgqda--ct-level 42)
-                           ln link desc extrainfo
+                           ln link desc coverage extrainfo
                            (if inherited-tags
                                (format
                                 " (inherited: %s)"
                                 (org-make-tag-string inherited-tags))
                              "")
-                           (org-make-tag-string local-tags)))
-               (contents (orgqda--get-paragraph-or-sub-contents)))
+                           (org-make-tag-string local-tags))))
           (concat hl contents))
       "ERROR: Not at a heading or inlinetask!")))
 
