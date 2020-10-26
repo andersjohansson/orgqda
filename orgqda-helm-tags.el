@@ -92,6 +92,19 @@ This is an alternative to set an additional list of tags that should not clutter
   :type 'boolean
   :safe #'booleanp)
 
+(defcustom orgqda-helm-tags-match nil
+  "What should match when completing tags with ‘orgqda-helm-set-tags’.
+
+Nil means match only tag name; ‘count’, means match on count,
+‘description’ means to match also on codebook description, and
+‘all’ means to match on full string."
+  :group 'orgqda
+  :type '(choice (const :tag "Match only tag name" nil)
+                 (const :tag "Match tag name and count" 'count)
+                 (const :tag "Match tag name and codebook description" 'description)
+                 (const :tag "Match tag name, count, and codebook description" 'all))
+  :safe 'symbolp)
+
 (defcustom orgqda-helm-tags-display-align nil
   "If non-nil, align tag counts using display properties instead of faces.
 Useful if a variable-pitch face is used in helm."
@@ -356,10 +369,16 @@ the current list for the entry."
         tag)
       (let* ((cs (format "%d" count)))
         (propertize
-         (make-string (length cs) ?\s)
-         'display cs
+         (if (member orgqda-helm-tags-match '(count all))
+             cs
+           (propertize (make-string (length cs) ?\s) 'display cs))
          'face 'font-lock-function-name-face))
-      (if info (propertize info 'face 'shadow) ""))
+      (if info (propertize
+                (if (member orgqda-helm-tags-match '(description all))
+                    info
+                  (propertize " " 'display info))
+                'face 'shadow)
+        ""))
      'face '(font-lock-comment-face (:strike-through t)))
    tag))
 
