@@ -1,11 +1,11 @@
 ;;; orgqda.el --- Qualitative data analysis using org-mode  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2014-2017 Anders Johansson
+;; Copyright (C) 2014-2020 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2020-10-08
+;; Modified: 2020-10-26
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda

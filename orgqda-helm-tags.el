@@ -1,6 +1,6 @@
 ;;; orgqda-helm-tags.el --- New completion for orgqda-mode tags -*- lexical-binding: t -*-
 
-;; Copyright (C) 2017 Anders Johansson
+;; Copyright (C) 2017-2020 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1

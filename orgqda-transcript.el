@@ -1,11 +1,11 @@
 ;;; orgqda-transcript.el --- Interview transcript mode for org-mode -*- lexical-binding: t -*-
 
-;; Copyright (C) 2017 Anders Johansson
+;; Copyright (C) 2017-2020 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2020-09-25
+;; Modified: 2020-10-26
 ;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
