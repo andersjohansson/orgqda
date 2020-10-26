@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-10-08
+;; Modified: 2020-10-26
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -88,6 +88,13 @@ This is an alternative to set an additional list of tags that should not clutter
 
 (defcustom orgqda-helm-tags-fuzzy-match t
   "If non-nil, use fuzzy matching in ‘orgqda-helm-tags-set-tags’."
+  :group 'orgqda
+  :type 'boolean
+  :safe #'booleanp)
+
+(defcustom orgqda-helm-tags-display-align nil
+  "If non-nil, align tag counts using display properties instead of faces.
+Useful if a variable-pitch face is used in helm."
   :group 'orgqda
   :type 'boolean
   :safe #'booleanp)
@@ -337,7 +344,13 @@ the current list for the entry."
   (cons
    (orgqda-helm-tags-propertize-if incurrent?
      (format
-      (format "%%-%ds %%5s %%s" width)
+      (if orgqda-helm-tags-display-align
+          (concat "%s"
+                  (propertize " " 'display `(space :align-to ,width))
+                  "%s"
+                  (propertize " " 'display `(space :align-to ,(+ 5 width)))
+                  "%s")
+        (format "%%-%ds %%5s %%s" width))
       (if (and orgqda-helm-tags-include-excluded (member tag orgqda-exclude-tags))
           (propertize tag 'face 'font-lock-comment-face)
         tag)
