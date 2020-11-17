@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2020-10-26
+;; Modified: 2020-11-17
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -401,9 +401,9 @@ this prefix."
     (unless noupdate
       (orgqda--create-hierarchical-taglist
        (cond
+        ((null sort) orgqda-default-sort-order)
         ((symbolp sort) sort)
-        (sort 'a-z)
-        (t orgqda-default-sort-order))))
+        (sort 'a-z))))
     (if buf
         (progn (switch-to-buffer-other-window buf)
                (setq buffer-read-only nil)
