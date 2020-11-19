@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2020-11-17
+;; Modified: 2020-11-19
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -233,7 +233,7 @@ The order is the order used when cycling sorting in
     (define-key map (kbd "s") #'orgqda-sort-taglist)
     (define-key map (kbd "S") #'orgqda-sort-taglist-buffer)
     (define-key map (kbd "g") #'orgqda-revert-taglist)
-    (define-key map (kbd "q") #'kill-buffer)
+    (define-key map (kbd "q") #'quit-window)
     (setq orgqda-list-mode-map map)))
 
 (defvar orgqda-codebook-mode-map nil
