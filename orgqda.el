@@ -154,7 +154,9 @@ updated when tags are changed in other places than this headline."
   :safe #'orgqda-sort-arg-p)
 
 (defcustom orgqda-only-count-matching nil
-  "When non-nil, only entries matched by tags in this list are counted and collected."
+  "When non-nil, only entries with matching tags are counted and collected.
+Each item in this list is a regex matched against tags with
+‘string-match-p’."
   :type '(repeat string)
   :safe #'orgqda--list-of-strings-p)
 
@@ -1261,7 +1263,7 @@ FORCE-SIMPLE."
                      nil nil (orgqda-tag-at-point))))
          conds)
     (when orgqda-only-count-matching
-      (push '(cl-intersection tags-list orgqda-only-count-matching :test #'equal) conds))
+      (push '(cl-intersection orgqda-only-count-matching tags-list :test #'string-match-p) conds))
     (cond
      ((symbolp match)) ;; no more conditions (usually when counting)
      ((or force-simple
