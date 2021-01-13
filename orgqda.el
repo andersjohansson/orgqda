@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2020-11-19
+;; Modified: 2021-01-13
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -996,7 +996,7 @@ each character in the buffer."
        (orgqda--inhibit-org-startups
         (with-temp-buffer
           (org-mode)
-          (org-paste-subtree (1- orgqda--ct-level) nil nil t)
+          (org-paste-subtree orgqda--ct-level nil nil t)
           (forward-line 1)
           (buffer-substring-no-properties
            (point) (point-max)))))))))
