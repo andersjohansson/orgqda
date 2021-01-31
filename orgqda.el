@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2021-01-13
+;; Modified: 2021-01-31
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -655,58 +655,26 @@ EV is the mouse event."
          (etag (orgqda--otag-at-point (posn-point end))))
     (when (and stag etag
                (eq (posn-window start) (posn-window end))
-               (y-or-n-p (format "Merge tags %s 🠖 %s? " stag etag)))
+               (y-or-n-p (format "Merge tags %s → %s? " stag etag)))
       (orgqda-rename-tag stag etag))))
 
 (defun orgqda-rename-tag (oldname newname)
   "Rename tag OLDNAME to NEWNAME in current orgqda files."
   (interactive (let ((complist (orgqda--get-tags-for-completion)))
-                 (list
-                  (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
-                  (completing-read "New tag name: " (reverse complist) nil nil))))
-  (let (repslist)
-    (if-let ((manyfiles
-              (orgqda--with-current-buffer-if orgqda--originating-buffer
-                (and orgqda-collect-from-all-files (orgqda-tag-files)))))
-        (orgqda--with-current-buffer-if orgqda--originating-buffer
-          (dolist (file manyfiles)
-            (with-current-buffer (find-file-noselect file)
-              (push (cons (file-name-base file)
-                          (orgqda--rename-tag-in-buffer oldname newname))
-                    repslist))))
-      ;; Only originating or this buffer.
-      (orgqda--with-current-buffer-if orgqda--originating-buffer
-        (push (cons (buffer-name)
-                    (orgqda--rename-tag-in-buffer oldname newname))
-              repslist)))
-    ;; Maybe rename in codebook-file.
-    (when-let
-        ((cbfile (or orgqda-codebook-file
-                     (orgqda--with-current-buffer-if orgqda--originating-buffer
-                       orgqda-codebook-file))))
-      (with-current-buffer (find-file-noselect cbfile)
-        (push (cons
-               (concat (file-name-base cbfile) " (links)")
-               (orgqda--rename-tag-links-in-buffer oldname newname))
-              repslist)))
-    (setq repslist (nreverse repslist))
-    ;; Report message:
-    (cl-loop with total = 0
-             for x in repslist
-             unless (= 0 (cdr x))
-             do (cl-incf total (cdr x))
-             and concat (concat (car x) " "
-                                (propertize (number-to-string (cdr x))
-                                            'face 'bold) ", ")
-             into filesums
-             finally do
-             (message "Replaced %s → %s. Σ %s, %s"
-                      (propertize oldname 'face 'italic)
-                      (propertize newname 'face 'italic)
-                      (propertize (number-to-string total) 'face 'bold)
-                      filesums))
-    (when (or orgqda-list-mode orgqda-codebook-mode)
-      (orgqda-revert-taglist))))
+                 (list (completing-read "Old tag name: " complist nil nil
+                                        (orgqda--otag-at-point))
+                       (completing-read "New tag name: " (reverse complist)
+                                        nil nil))))
+  (orgqda--delete-or-rename-tag oldname newname))
+
+(defun orgqda-delete-tag (tagname)
+  "Delete tag TAGNAME in current orgqda files."
+  (interactive (list (completing-read "Tag to delete: "
+                                      (orgqda--get-tags-for-completion)
+                                      nil nil
+                                      (orgqda--otag-at-point))))
+  (orgqda--delete-or-rename-tag tagname nil))
+
 
 (defun orgqda-prefix-tag (oldname prefix)
   "Add a prefix PREFIX to existing tag OLDNAME.
@@ -1372,16 +1340,67 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
 
 
 ;;;;; Functions for rename commands
+(defun orgqda--delete-or-rename-tag (oldname newname)
+  "Renames tag OLDNAME → NEWNAME in current orgqda files.
+If NEWNAME is nil, delete the tag."
+  (let (repslist)
+    (if-let ((manyfiles
+              (orgqda--with-current-buffer-if orgqda--originating-buffer
+                (and orgqda-collect-from-all-files (orgqda-tag-files)))))
+        (orgqda--with-current-buffer-if orgqda--originating-buffer
+          (dolist (file manyfiles)
+            (with-current-buffer (find-file-noselect file)
+              (push (cons (file-name-base file)
+                          (orgqda--rename-tag-in-buffer oldname newname))
+                    repslist))))
+      ;; Only originating or this buffer.
+      (orgqda--with-current-buffer-if orgqda--originating-buffer
+        (push (cons (buffer-name)
+                    (orgqda--rename-tag-in-buffer oldname newname))
+              repslist)))
+    ;; Maybe rename in codebook-file.
+    (when-let
+        ((cbfile (or orgqda-codebook-file
+                     (orgqda--with-current-buffer-if orgqda--originating-buffer
+                       orgqda-codebook-file))))
+      (with-current-buffer (find-file-noselect cbfile)
+        (push (cons
+               (concat (file-name-base cbfile) " (links)")
+               (orgqda--rename-tag-links-in-buffer oldname newname))
+              repslist)))
+    (setq repslist (nreverse repslist))
+    ;; Report message:
+    (cl-loop with total = 0
+             for x in repslist
+             unless (= 0 (cdr x))
+             do (cl-incf total (cdr x))
+             and concat (concat (car x) " "
+                                (propertize (number-to-string (cdr x))
+                                            'face 'bold) ", ")
+             into filesums
+             finally do
+             (message "%s %s%s. Σ %s, %s"
+                      (if newname "Replaced" "Deleted")
+                      (propertize oldname 'face 'italic)
+                      (if newname (concat " → " (propertize newname 'face 'italic)) "")
+                      (propertize (number-to-string total) 'face 'bold)
+                      filesums))
+    (when (or orgqda-list-mode orgqda-codebook-mode)
+      (orgqda-revert-taglist))))
+
 (defun orgqda--rename-tag-in-buffer (oldname newname)
   "Rename all ocurrences of OLDNAME as an org tag with NEWNAME.
+If NEWNAME is nil, deletes the tag.
 Return number of replacements done."
   (let ((numberofreps 0))
     (orgqda--temp-work
      (while (search-forward (concat ":" oldname ":") nil t)
        (org-set-tags
         (cl-remove-duplicates
-         (cl-substitute newname oldname (org-get-tags nil t) :test 'string=)
-         :test 'string=))
+         (if newname
+             (cl-substitute newname oldname (org-get-tags nil t) :test #'string=)
+           (cl-remove oldname (org-get-tags nil t) :test #'string=))
+         :test #'string=))
        (setq numberofreps (1+ numberofreps))))
     numberofreps))
 
@@ -1391,7 +1410,12 @@ Return number of replacements done."
    (cl-loop while (search-forward-regexp
                    (format "\\(\\[\\[otag:[^:]+:\\)%s\\]\\[%s\\]\\]"
                            old old) nil t)
-            count (progn (replace-match (format "\\1%s][%s]]" new new)) t))))
+            count (progn (if new
+                             (replace-match (format "\\1%s][%s]]" new new))
+                           (replace-match ""))
+                         t))))
+
+;;;;; Completion
 
 (defun orgqda--get-tags-for-completion ()
   "Return current list of tags in orgqda (possibly many files)."
