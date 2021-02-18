@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2020-10-26
+;; Modified: 2021-02-18
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -119,6 +119,8 @@ Useful if a variable-pitch face is used in helm."
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map helm-comp-read-map)
     (define-key map (kbd "C-c C-s") #'orgqda-helm-tags-resort-comp-list)
+    (define-key map (kbd "C-i") #'orgqda-helm-tags-tab)
+    (define-key map (kbd "C-l") #'orgqda-helm-tags-hierarchy-up)
     map))
 
 (defvar orgqda-helm-tags--coll-buffer nil)
@@ -212,6 +214,26 @@ Prefix ARG uses ordinary org tag insertion."
     (orgqda-helm-tags-mode -1)))
 
 ;;;; Actions in helm
+(defun orgqda-helm-tags-tab ()
+  "Complete tag prefixes or choose action."
+  (interactive)
+  (let ((sel (helm-get-selection)))
+    (if (and
+         (string-prefix-p helm-pattern sel)
+         (string-match orgqda-hierarchy-delimiter sel (length helm-pattern)))
+        (with-selected-window (or (active-minibuffer-window)
+                                  (minibuffer-window))
+          (delete-minibuffer-contents)
+          (insert (substring-no-properties sel 0 (1+ (match-beginning 0)))))
+      (helm-select-action))))
+
+(defun orgqda-helm-tags-hierarchy-up ()
+  "Remove one level of hierarchy from current pattern."
+  (interactive)
+  (with-selected-window (or (active-minibuffer-window)
+                            (minibuffer-window))
+    (zap-up-to-char -1 (string-to-char orgqda-hierarchy-delimiter))))
+
 (defun orgqda-helm-tags-display-tagged (tag)
   "Show occurences of currently selected TAG.
 Calls ‘orgqda-collect-tagged’."
