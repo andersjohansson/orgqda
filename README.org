@@ -55,6 +55,7 @@ orgqda-csv-dir "~"
 orgqda-collect-coverage nil
 orgqda-tag-collect-extra-info nil
 orgqda-collect-from-all-files t
+orgqda-respect-restriction-for-single-file t
 orgqda-tag-collect-extra-info-csv nil
 orgqda-tag-collect-extra-info2-csv nil
 orgqda-convert-csv-to-encoding nil

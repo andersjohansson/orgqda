@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2021-01-31
+;; Modified: 2021-02-18
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -73,6 +73,12 @@ buffers with names containing 'fieldnotes':
 This applies to the tag listing and collection commands in orgqda."
   :type 'boolean
   :group 'orgqda)
+
+(defcustom orgqda-respect-restriction-for-single-file t
+  "If only collecting tags from a single file, collect in narrowed buffer."
+  :type 'boolean
+  :group 'orgqda
+  :safe #'booleanp)
 
 (defcustom orgqda-tag-collect-extra-info-csv nil
   "Like ‘orgqda-tag-collect-extra-info’ for the first extra-field in csv-export."
@@ -267,12 +273,14 @@ The order is the order used when cycling sorting in
     (setq orgqda-codebook-mode-map map)))
 
 ;;;; Macros
-(defmacro orgqda--temp-work (&rest body)
-  "Macro for working on BODY temporarily.
+(defmacro orgqda--temp-work (widened? &rest body)
+  "Macro for working on BODY temporarily, possibly in WIDENED buffer.
 Shortcut for (‘save-excursion’ (‘save-restriction’ (‘widen’) (‘goto-char’) (‘point-min’)))."
+  (declare (indent 1))
   `(save-excursion
      (save-restriction
-       (widen) (goto-char (point-min))
+       (when ,widened? (widen))
+       (goto-char (point-min))
        ,@body)))
 
 (defmacro orgqda--with-current-buffer-if (buffer &rest body)
@@ -767,27 +775,26 @@ MATCHER is used for matching and LEVEL is the level in the hierarchy
 for this tag.
 
 Return cons-cell: (total count . string of taglists)"
-  (let* ((manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files)))
-         (totalcount 0)
-         str)
+  (let ((manyfiles (and orgqda-collect-from-all-files (orgqda-tag-files))))
     (if manyfiles
         ;; iterate over files assuming this file is included in
         ;; orgqda-tag-files (or shouldn't be)
-        (orgqda--with-many-files manyfiles
-          (let ((ct (orgqda--coll-tagged-in-buffer matcher (1+ level))))
-            (unless (and orgqda-exclude-empty-file-trees
-                         (= 0 (car ct)))
-              (cl-incf totalcount (car ct))
-              (setq str (concat str
-                                (orgqda--taglist-file-heading
-                                 (car ct) level)
-                                (cdr ct)
-                                "\n\n")))))
+        (let ((totalcount 0)
+              str)
+          (orgqda--with-many-files manyfiles
+            (let ((ct (orgqda--coll-tagged-in-buffer matcher (1+ level))))
+              (unless (and orgqda-exclude-empty-file-trees
+                           (= 0 (car ct)))
+                (cl-incf totalcount (car ct))
+                (setq str (concat str
+                                  (orgqda--taglist-file-heading
+                                   (car ct) level)
+                                  (cdr ct)
+                                  "\n\n")))))
+          (cons totalcount str))
       ;;only this buffer
-      (let ((ct (orgqda--coll-tagged-in-buffer matcher level)))
-        (cl-incf totalcount (car ct))
-        (setq str (cdr ct))))
-    (cons totalcount str)))
+      (orgqda--coll-tagged-in-buffer
+       matcher level orgqda-respect-restriction-for-single-file))))
 
 (defun orgqda--taglist-file-heading (number level)
   "Generate the heading for a file in a taglist.
@@ -805,19 +812,19 @@ Used for passing this through to‘orgqda--get-paragraph-or-sub’")
 
 (defvar orgqda--current-buffer-length nil)
 
-(defun orgqda--coll-tagged-in-buffer (matcher level)
+(defun orgqda--coll-tagged-in-buffer (matcher level &optional unwidened)
   "Collect tagged paragraphs in buffer.
 MATCHER is used for matching and LEVEL is the level in the hierarchy
-for this tag.
+for this tag. UNWIDENED preserves restriction for the collection.
 Return cons-cell: (count in buffer count . string of taglist)"
   (let ((orgqda--ct-level level)
         (org-use-tag-inheritance orgqda-use-tag-inheritance))
-    (orgqda--temp-work
-     (let* ((orgqda--current-buffer-length (point-max))
-            (tl (org-scan-tags 'orgqda--get-paragraph-or-sub
-                               (cdr matcher) nil)))
-       (cons (length tl)
-             (mapconcat 'identity tl "\n"))))))
+    (orgqda--temp-work (not unwidened)
+      (let* ((orgqda--current-buffer-length (point-max))
+             (tl (org-scan-tags 'orgqda--get-paragraph-or-sub
+                                (cdr matcher) nil)))
+        (cons (length tl)
+              (mapconcat 'identity tl "\n"))))))
 
 (defun orgqda--get-paragraph-or-sub ()
   "Extract a paragraph or subtree depending on what is tagged."
@@ -880,10 +887,10 @@ MATCHER is used for matching.
 Return cons-cell: (count in buffer count . string of taglist)"
 
   (let ((org-use-tag-inheritance orgqda-use-tag-inheritance))
-    (orgqda--temp-work
-     (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
-                              (cdr matcher) nil)))
-       (mapconcat 'identity tl "")))))
+    (orgqda--temp-work t
+      (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
+                               (cdr matcher) nil)))
+        (mapconcat 'identity tl "")))))
 
 (defun orgqda--get-paragraph-or-sub-to-csv ()
   "Extract a paragraph or subtree for csv-export."
@@ -1393,27 +1400,27 @@ If NEWNAME is nil, delete the tag."
 If NEWNAME is nil, deletes the tag.
 Return number of replacements done."
   (let ((numberofreps 0))
-    (orgqda--temp-work
-     (while (search-forward (concat ":" oldname ":") nil t)
-       (org-set-tags
-        (cl-remove-duplicates
-         (if newname
-             (cl-substitute newname oldname (org-get-tags nil t) :test #'string=)
-           (cl-remove oldname (org-get-tags nil t) :test #'string=))
-         :test #'string=))
-       (setq numberofreps (1+ numberofreps))))
+    (orgqda--temp-work t
+      (while (search-forward (concat ":" oldname ":") nil t)
+        (org-set-tags
+         (cl-remove-duplicates
+          (if newname
+              (cl-substitute newname oldname (org-get-tags nil t) :test #'string=)
+            (cl-remove oldname (org-get-tags nil t) :test #'string=))
+          :test #'string=))
+        (setq numberofreps (1+ numberofreps))))
     numberofreps))
 
 (defun orgqda--rename-tag-links-in-buffer (old new)
   "Rename all tag links in buffer with tag name OLD to NEW."
-  (orgqda--temp-work
-   (cl-loop while (search-forward-regexp
-                   (format "\\(\\[\\[otag:[^:]+:\\)%s\\]\\[%s\\]\\]"
-                           old old) nil t)
-            count (progn (if new
-                             (replace-match (format "\\1%s][%s]]" new new))
-                           (replace-match ""))
-                         t))))
+  (orgqda--temp-work t
+    (cl-loop while (search-forward-regexp
+                    (format "\\(\\[\\[otag:[^:]+:\\)%s\\]\\[%s\\]\\]"
+                            old old) nil t)
+             count (progn (if new
+                              (replace-match (format "\\1%s][%s]]" new new))
+                            (replace-match ""))
+                          t))))
 
 ;;;;; Completion
 
