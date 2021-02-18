@@ -50,7 +50,6 @@
 (defcustom orgqda-csv-dir "~"
   "Directory for saving csv-files."
   :type 'directory
-  :group 'orgqda
   :safe 'file-directory-p)
 
 (defcustom orgqda-collect-coverage nil
@@ -65,30 +64,25 @@ and values are Lisp forms that are evaluated to get extra info.
 An example that adds a possible parent heading on level 4 for
 buffers with names containing 'fieldnotes':
 '((\"fieldnotes\" . (format \" (from: %s)\" (orgqda-get-parent-hl 4))))"
-  :type '(alist :key-type regexp :value-type sexp)
-  :group 'orgqda)
+  :type '(alist :key-type regexp :value-type sexp))
 
 (defcustom orgqda-collect-from-all-files t
   "Whether to collect tags from all files defined in ‘orgqda-tag-files’.
 This applies to the tag listing and collection commands in orgqda."
-  :type 'boolean
-  :group 'orgqda)
+  :type 'boolean)
 
 (defcustom orgqda-respect-restriction-for-single-file t
   "If only collecting tags from a single file, collect in narrowed buffer."
   :type 'boolean
-  :group 'orgqda
   :safe #'booleanp)
 
 (defcustom orgqda-tag-collect-extra-info-csv nil
   "Like ‘orgqda-tag-collect-extra-info’ for the first extra-field in csv-export."
-  :type '(alist :key-type regexp :value-type sexp)
-  :group 'orgqda)
+  :type '(alist :key-type regexp :value-type sexp))
 
 (defcustom orgqda-tag-collect-extra-info2-csv nil
   "Like ‘orgqda-tag-collect-extra-info’ for the second extra-field in csv-export."
-  :type '(alist :key-type regexp :value-type sexp)
-  :group 'orgqda)
+  :type '(alist :key-type regexp :value-type sexp))
 
 (defcustom orgqda-convert-csv-to-encoding nil
   "Encoding to use for saved csv files.
@@ -102,8 +96,7 @@ shortcut for \"iso-8859-1\""
            (const nil :tag "don’t convert")
            (const t :tag "iso-8859-1"))
          (cl-loop for cs in coding-system-list
-                  collect (list 'const cs)))
-  :group 'orgqda)
+                  collect (list 'const cs))))
 
 (defcustom orgqda-exclude-tags nil
   "Tags to exclude when listing coding tags.
@@ -123,13 +116,11 @@ One of: _@#%"
 
 (defcustom orgqda-use-tag-hierarchy t
   "If tags delimited with ‘orgqda-hierarchy-delimiter’ should be considered grouped."
-  :type 'boolean
-  :group 'orgqda)
+  :type 'boolean)
 
 (defcustom orgqda-exclude-empty-file-trees t
   "When non-nil, excludes listing files without matches for current tag."
-  :type 'boolean
-  :group 'orgqda)
+  :type 'boolean)
 
 (defcustom orgqda-keep-tags-sorted nil
   "If non-nil, keep the taglist in the entry sorted in ‘orgqda-mode’.
@@ -143,7 +134,6 @@ Most stable and useful is probably to sort alphabetically, using
 ‘a-z’ or ‘z-a’. Sorting by count means sorting by the current
 “popularity” of tags across the orgqda collection and won’t be
 updated when tags are changed in other places than this headline."
-  :group 'orgqda
   :type '(choice (const :tag "Don’t sort" nil)
                  (const :tag "By count, decreasing" count-decreasing)
                  (const :tag "By count, increasing" count-increasing)
