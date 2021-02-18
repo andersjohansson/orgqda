@@ -443,10 +443,10 @@ this prefix."
         ((symbolp sort) sort)
         (sort 'a-z))))
     (if buf
-        (progn (switch-to-buffer-other-window buf)
+        (progn (pop-to-buffer buf)
                (setq buffer-read-only nil)
                (erase-buffer))
-      (switch-to-buffer-other-window
+      (pop-to-buffer
        (generate-new-buffer "*orgqda-taglist*")))
     (if roottext
         (insert (format "* %s\n" roottext))
@@ -591,7 +591,7 @@ switching is done and view buffer just returned."
         (org-content oclevel))
       (if noswitch
           buffer
-        (switch-to-buffer-other-window buffer)))))
+        (pop-to-buffer buffer)))))
 
 (defvar orgqda--csv-curr-mname nil)
 
@@ -602,7 +602,7 @@ switching is done and view buffer just returned."
   (let* ((matcher (orgqda--make-tags-matcher match))
          (orgqda--csv-curr-mname (car matcher))
          (cont (orgqda--coll-tagged-csv matcher)))
-    (switch-to-buffer-other-window
+    (pop-to-buffer
      (generate-new-buffer (format "*csvtags:%s*" orgqda--csv-curr-mname)))
     (when orgqda-convert-csv-to-encoding
       (orgqda--csv-convert-buffer-to-encoding))
@@ -698,7 +698,7 @@ Numeric prefix arg K defines which tuples to count"
         (origfile (buffer-file-name))
         (k (if (= 1 k) 2 k)))
     (orgqda--collect-tag-relations k)
-    (switch-to-buffer-other-window
+    (pop-to-buffer
      (generate-new-buffer "*orgqda-tag-relations*"))
     (org-insert-time-stamp (current-time) t t
                            (format
@@ -1033,7 +1033,7 @@ each character in the buffer."
       (find-file-other-window (bookmark-get-filename bm))
       (bookmark-default-handler bm)
       (recenter)))
-  (switch-to-buffer-other-window (current-buffer)))
+  (pop-to-buffer (current-buffer)))
 
 (defun orgqda-link-desc-export (_link desc format)
   "Export function for special orgqda links.
