@@ -380,7 +380,8 @@ TITLE is a string defining a title for the inlinetask and CODING
 if non-nil additionally calls `org-set-tags-command`."
   (interactive "P")
   (let ((cg (prepare-change-group))
-        (oldpoint (point)))
+        (oldpoint (point))
+        (inhibit-read-only t))
     (activate-change-group cg)
     (unless (org-inlinetask-in-task-p) ; add nothing if already in task
       (unless (and (bolp) (eolp)) ; only move if inside a line of text
