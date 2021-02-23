@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2021-02-18
+;; Modified: 2021-02-23
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -160,9 +160,9 @@ Each item in this list is a regex matched against tags with
   "When non-nil, count entries using tag inheritance.
 
 Useful together with ‘orgqda-only-count-matching’, if you for
-  example want to analyse data for a specific kind of
-  entry (using a tag) but those entries should be considered
-  tagged with their parents’ tags."
+example want to analyse data for a specific kind of entry (using
+a tag) but those entries should be considered tagged with their
+parents’ tags."
   :type 'boolean
   :safe #'booleanp)
 
