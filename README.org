@@ -65,6 +65,7 @@ orgqda-use-tag-hierarchy t
 orgqda-exclude-empty-file-trees t
 orgqda-keep-tags-sorted nil
 orgqda-default-sort-order count-decreasing
+orgqda-tagcount-show-files nil
 #+END_EXAMPLE
 
 ** orgqda-helm-tags.el

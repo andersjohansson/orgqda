@@ -166,6 +166,11 @@ parents’ tags."
   :type 'boolean
   :safe #'booleanp)
 
+(defcustom orgqda-tagcount-show-files nil
+  "When non-nil, show the counts for individual files when listing tags."
+  :type 'boolean
+  :safe #'booleanp)
+
 ;;;###autoload
 (defvar-local orgqda-tag-files nil
   "Extra files from which tags should be fetched for completion.
@@ -1176,17 +1181,19 @@ ITEM represents the item and FILENAME where it is from."
 
 (defun orgqda--tagcount-string (tag)
   "Generate string of counts for TAG."
-  (cl-loop for (file . c) in
-           (cl-sort (gethash tag (orgqda--htl-counts orgqda--current-htl) nil)
-                    #'string-lessp :key #'car)
-           unless (equal file 'found)
-           collect
-           (if (equal "" file)
-               (format "*%d*" c)
-             (format "/%s/: *%d*" (file-name-base file) c))
-           into l
-           finally return
-           (concat " (" (mapconcat #'identity l ", ") ")")))
+  (let ((count (gethash tag (orgqda--htl-counts orgqda--current-htl) nil)))
+    (if orgqda-tagcount-show-files
+        (cl-loop for (file . c) in
+                 (cl-sort count #'string-lessp :key #'car)
+                 unless (equal file 'found)
+                 collect
+                 (if (equal "" file)
+                     (format "*%d*" c)
+                   (format "/%s/: *%d*" (file-name-base file) c))
+                 into l
+                 finally return
+                 (concat " (" (mapconcat #'identity l ", ") ")"))
+      (format " (*%d*)" (alist-get "" count 0)))))
 
 (defun orgqda--hierarchy-parentfn (tag)
   "Return parent of TAG. Also update count of parent."
