@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2021-02-23
+;; Modified: 2021-03-03
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -825,14 +825,11 @@ Return cons-cell: (count in buffer count . string of taglist)"
                (bm (orgqda--get-encoded-bm))
                (link (format "opbm:%s" bm))
                (desc (orgqda--clean-up-heading-desc (org-get-heading t t t t)))
-               inherited-tags
-               (local-tags
-                (if orgqda-use-tag-inheritance
-                    (cl-loop for tag in org-scanner-tags
-                             if (get-text-property 0 'inherited tag)
-                             do (push tag inherited-tags)
-                             else collect tag)
-                  org-scanner-tags))
+               (inherited-tags
+                (when orgqda-use-tag-inheritance
+                  (cl-loop for tag in org-scanner-tags
+                           when (get-text-property 0 'inherited tag)
+                           collect tag)))
                (ei1
                 (and orgqda-tag-collect-extra-info
                      (assoc-default
@@ -851,7 +848,7 @@ Return cons-cell: (count in buffer count . string of taglist)"
                                 " (inherited: %s)"
                                 (org-make-tag-string inherited-tags))
                              "")
-                           (org-make-tag-string local-tags))))
+                           (org-make-tag-string org-scanner-tags))))
           (concat hl contents))
       "ERROR: Not at a heading or inlinetask!")))
 
