@@ -1164,7 +1164,7 @@ STARTTAG is the prefix where the search should start."
   "Insert a single item in a taglist.
 ITEM represents the item and FILENAME where it is from."
   (insert
-   (format "* [[otag:%s:%s][%s]] (%d)\n"
+   (format "* [[otag:%s:%s][%s]]%s\n"
            filename
            (if (string=
                 orgqda-hierarchy-delimiter
@@ -1172,26 +1172,40 @@ ITEM represents the item and FILENAME where it is from."
                (concat "{" item "}") ;make regexp-match for prefix
              item)
            item
-           (gethash item (orgqda--htl-counts orgqda--current-htl) 0))))
+           (orgqda--tagcount-string item))))
+
+(defun orgqda--tagcount-string (tag)
+  "Generate string of counts for TAG."
+  (cl-loop for (file . c) in
+           (cl-sort (gethash tag (orgqda--htl-counts orgqda--current-htl) nil)
+                    #'string-lessp :key #'car)
+           unless (equal file 'found)
+           collect
+           (if (equal "" file)
+               (format "*%d*" c)
+             (format "/%s/: *%d*" (file-name-base file) c))
+           into l
+           finally return
+           (concat " (" (mapconcat #'identity l ", ") ")")))
 
 (defun orgqda--hierarchy-parentfn (tag)
   "Return parent of TAG. Also update count of parent."
   (let* ((splittag (split-string tag orgqda-hierarchy-delimiter t)))
     (when (> (safe-length splittag) 1)
       (let* ((parent (replace-regexp-in-string (concat (car (last splittag)) orgqda-hierarchy-delimiter "?$") "" tag))
-             (c (gethash tag (orgqda--htl-counts orgqda--current-htl) 0))
-             (pc (gethash parent (orgqda--htl-counts orgqda--current-htl) 0)))
-        (puthash parent (+ c pc) (orgqda--htl-counts orgqda--current-htl))
+             (c (alist-get "" (gethash tag (orgqda--htl-counts orgqda--current-htl)) 0))
+             (pc (alist-get "" (gethash parent (orgqda--htl-counts orgqda--current-htl)) 0)))
+        (puthash parent (list (cons "" (+ c pc))) (orgqda--htl-counts orgqda--current-htl))
         parent))))
 
 (defun orgqda--hierarchy-count-greater-p (x y)
   "Return non-nil if tag X has greater count than Y."
-  (> (gethash x (orgqda--htl-counts orgqda--current-htl) -1)
-     (gethash y (orgqda--htl-counts orgqda--current-htl) -2)))
+  (> (alist-get "" (gethash x (orgqda--htl-counts orgqda--current-htl)) -1)
+     (alist-get "" (gethash y (orgqda--htl-counts orgqda--current-htl)) -2)))
 (defun orgqda--hierarchy-count-less-p (x y)
   "Return non-nil if tag X has smaller count than Y."
-  (< (gethash x (orgqda--htl-counts orgqda--current-htl) -2)
-     (gethash y (orgqda--htl-counts orgqda--current-htl) -1)))
+  (< (alist-get "" (gethash x (orgqda--htl-counts orgqda--current-htl)) -2)
+     (alist-get "" (gethash y (orgqda--htl-counts orgqda--current-htl)) -1)))
 
 (defun orgqda--string-lessp (s1 s2)
   "Return non-nil if S1 is less than S2 in collation order.
@@ -1205,8 +1219,10 @@ Ignore case and collate depending on current locale."
 (defun orgqda--get-tags-with-count ()
   "Add tags at point to ‘orgqda--current-tagscount’."
   (dolist (tag org-scanner-tags)
-    (let ((ov (gethash tag orgqda--current-tagscount 0)))
-      (puthash tag (1+ ov) orgqda--current-tagscount))))
+    (let ((ov (gethash tag orgqda--current-tagscount nil)))
+      (cl-incf (alist-get buffer-file-name ov 0 nil #'equal)) ; need ‘equal’
+      (cl-incf (alist-get "" ov 0)) ; this is ok because (eq "" "") is t
+      (puthash tag ov orgqda--current-tagscount))))
 
 (defun orgqda--make-tags-matcher (&optional match force-simple)
   "Construct a tags matcher, excluding commented and archived trees.
@@ -1284,16 +1300,16 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
     (save-match-data
       (org-element-map (org-element-parse-buffer) 'link #'orgqda--update-tag-count-link)
       ;; do the replacements
-      (cl-loop for x in orgqda--pending-tag-count-replacements
+      (cl-loop for (match . rep) in (reverse orgqda--pending-tag-count-replacements)
                do
-               (set-match-data (car x))
-               (replace-match (cdr x))
-               (set-match-data (car x) t)))
+               (set-match-data match)
+               (replace-match rep)
+               (set-match-data match t)))
     ;; list new and removed tags
     (maphash
-     (lambda (key val)
-       (unless (listp val)
-         (puthash key val newtags)))
+     (lambda (tag count)
+       (unless (assq 'found count)
+         (puthash tag count newtags)))
      (orgqda--htl-counts orgqda--current-htl))
     (when (or orgqda--removed-tags
               (not (hash-table-empty-p newtags)))
@@ -1318,19 +1334,19 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
            (tag (if (string-match-p "^{[^{}]+}$" tag)
                     (substring tag 1 -1)
                   tag))
-           (found (gethash tag (orgqda--htl-counts orgqda--current-htl)))
-           (count (if (listp found) (car found) found))
-           (countprint (concat "("
-                               (if count (number-to-string count) "0?")
-                               ")")))
-      (when (and found (not (listp found)))
-        ;;mark the ones found by making the count a list
-        (puthash tag (list found) (orgqda--htl-counts orgqda--current-htl)))
+           (count (gethash tag (orgqda--htl-counts orgqda--current-htl))))
+      (when (and count (not (assq 'found count)))
+        ;;mark the ones found by adding found to the count alist
+        (puthash tag
+                 (cl-acons 'found nil count)
+                 (orgqda--htl-counts orgqda--current-htl)))
       (unless count (push tag orgqda--removed-tags))
       (save-excursion
         (goto-char (org-element-property :end link))
-        (when (looking-at "([0-9]+)")
-          (push (cons (match-data) countprint)
+        (when (looking-at "([^)]+)") ; ok, hope no one uses parentheses in
+                                     ; file names 😬
+          (push (cons (match-data)
+                      (if count (orgqda--tagcount-string tag) "(*0?!*)"))
                 orgqda--pending-tag-count-replacements))))))
 
 
@@ -1475,11 +1491,11 @@ set to ‘orgqda-tag-files’"
            collect (cons k v)))
 
 (defun orgqda--hl-get-count ()
-  "Return count in parantheses at end of headline, or 0."
+  "Return first count in parentheses in headline, or 0."
   (save-excursion
     (save-match-data
       (if (search-forward-regexp
-           "(\\([0-9]+\\))\\( +[[:alnum:]_@#%:]+\\)?$"
+           "(\\*\\([0-9]+\\)\\*)"
            (point-at-eol) t)
           (string-to-number (match-string 1))
         0))))
