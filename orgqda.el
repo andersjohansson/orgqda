@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2021-03-03
+;; Modified: 2021-03-04
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1495,7 +1495,7 @@ set to ‘orgqda-tag-files’"
   "Convert HASHTABLE to alist."
   (cl-loop for k being the hash-keys of hashtable
            using (hash-values v)
-           collect (cons k v)))
+           collect (cons k (alist-get "" v 0))))
 
 (defun orgqda--hl-get-count ()
   "Return first count in parentheses in headline, or 0."
