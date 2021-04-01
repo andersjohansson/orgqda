@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2021-02-18
+;; Modified: 2021-04-01
 ;; Package-Requires: ((emacs "25.1") (org "9.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -112,6 +112,11 @@ Useful if a variable-pitch face is used in helm."
   :type 'boolean
   :safe #'booleanp)
 
+(defcustom orgqda-helm-tags-fuzzy-sort-fn #'helm-fuzzy-matching-sort-fn-preserve-ties-order
+  "Function used for ‘helm-fuzzy-sort-fn’ in ‘orgqda-helm-tags-set-tags’."
+  :group 'orgqda
+  :type 'function)
+
 ;;;; Variables
 (defvar orgqda-helm-tags-history)
 
@@ -175,7 +180,7 @@ Prefix ARG uses ordinary org tag insertion."
          ;; sort can be changed in helm session, keep that local
          (orgqda-helm-tags-sort orgqda-helm-tags-sort)
          (sources (list (orgqda-helm-tags--build-source) orgqda-helm-tags-new-tag-source))
-         (helm-fuzzy-sort-fn #'helm-fuzzy-matching-sort-fn-preserve-ties-order))
+         (helm-fuzzy-sort-fn orgqda-helm-tags-fuzzy-sort-fn))
     (orgqda-helm-tags--set-comp-list)
     (cl-remove-duplicates
      (cl-loop with newtags
