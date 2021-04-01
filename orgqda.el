@@ -423,12 +423,14 @@ Prefix ARG is passed through."
 ;;;;; Commands for listing tags
 
 ;;;###autoload
-(defun orgqda-list-tags (&optional sort full buf noupdate roottext startprefix)
+(defun orgqda-list-tags (&optional prefix full buf noupdate roottext startprefix)
   "List all tags in this buffer and/or ‘orgqda-tag-files’, with counts.
-Sorted by count, or alphabetically if optional (prefix) argument
-SORT is non-nil.
+Sorted by count, or alphabetically with one PREFIX argument. Two
+PREFIX arguments means only collect in current buffer, ignoring
+any setting of ‘orgqda-tag-files’. Three PREFIX arguments means
+sort alphabetically and only count in current buffer.
 
-For non-interactive calls: SORT can be given as a sort
+For non-interactive calls: PREFIX can be given as a sort
 symbol (see ‘orgqda--create-hierarchical-taglist’). FULL non-nil
 means also insert extracted paragraphs for all tags. If a buffer
 is provided in BUF overwrite this buffer with the list instead of
@@ -442,14 +444,18 @@ this prefix."
   (let ((origbuffer (current-buffer))
         (origfile (buffer-file-name))
         (ocm orgqda-only-count-matching)
+        (sort (cond
+               ((member prefix '((4) (64))) 'a-z)
+               ((symbolp prefix) prefix)
+               (t orgqda-default-sort-order)))
+        (orgqda-tag-files
+         (if (member prefix '((16) (64)))
+             nil
+           orgqda-tag-files))
         tagfiles)
     (unless noupdate
-      (orgqda--create-hierarchical-taglist
-       (cond
-        ((null sort) orgqda-default-sort-order)
-        ((symbolp sort) sort)
-        (sort 'a-z)))
-      (setq tagfiles (when orgqda-collect-from-all-files (orgqda-tag-files))))
+      (orgqda--create-hierarchical-taglist sort)
+      (setq tagfiles (when orgqda-tag-files orgqda-collect-from-all-files (orgqda-tag-files))))
     (if buf
         (progn (pop-to-buffer buf)
                (setq buffer-read-only nil)
