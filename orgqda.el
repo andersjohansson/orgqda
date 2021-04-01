@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2021-03-04
+;; Modified: 2021-04-01
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -441,13 +441,15 @@ this prefix."
   (interactive "P")
   (let ((origbuffer (current-buffer))
         (origfile (buffer-file-name))
-        (ocm orgqda-only-count-matching))
+        (ocm orgqda-only-count-matching)
+        tagfiles)
     (unless noupdate
       (orgqda--create-hierarchical-taglist
        (cond
         ((null sort) orgqda-default-sort-order)
         ((symbolp sort) sort)
-        (sort 'a-z))))
+        (sort 'a-z)))
+      (setq tagfiles (when orgqda-collect-from-all-files (orgqda-tag-files))))
     (if buf
         (progn (pop-to-buffer buf)
                (setq buffer-read-only nil)
@@ -456,18 +458,26 @@ this prefix."
        (generate-new-buffer "*orgqda-taglist*")))
     (if roottext
         (insert (format "* %s\n" roottext))
-      (org-insert-time-stamp (current-time) t t
-                             (concat "* Orgqda taglist "
-                                     (when ocm
-                                       (format "(matching: %s) "
-                                               (mapconcat #'identity ocm "|")))
-                                     (when startprefix
-                                       (format "(under prefix %s) " startprefix))
-                                     "generated from "
-                                     (org-link-make-string
-                                      (concat "file:" origfile)
-                                      (buffer-name origbuffer)) " at ")
-                             "\n"))
+      (insert
+       (concat "* Orgqda taglist "
+               (when ocm
+                 (format "(matching: %s) "
+                         (mapconcat #'identity ocm "|")))
+               (when startprefix
+                 (format "(under prefix %s) " startprefix))
+               "generated from "
+               (org-link-make-string
+                (concat "file:" origfile)
+                (buffer-name origbuffer))
+               " at "
+               (format-time-string "[%Y-%m-%d %a %H:%M]")
+               "\n"
+               (when tagfiles
+                 (concat ":ORGQDA_TAG_FILES:\n"
+                         (cl-loop for f in (sort tagfiles #'string-version-lessp)
+                                  concat
+                                  (concat "- " (org-link-make-string f (file-name-base f)) "\n"))
+                         ":END:\n")))))
     (orgqda--insert-hierarchical-taglist full origbuffer origfile 1 startprefix)
     (goto-char (point-min))
     (org-mode) (orgqda-list-mode) (flyspell-mode -1)
