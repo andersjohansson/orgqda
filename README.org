@@ -68,19 +68,22 @@ orgqda-default-sort-order count-decreasing
 orgqda-tagcount-show-files nil
 #+END_EXAMPLE
 
-** orgqda-helm-tags.el
-Included in the repository is a library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~. Tags can also be removed with a secondary action or tagged extracts viewed with a persistent action. If a codebook file is defined, the display fetches the first line (which should be a short description/definition of the code/tag) from this for each tag, to ease correct tagging. Sorting of the completion list can be defined in ~orgqda-helm-tags-sort~, and cycled in the helm session with ~C-c C-s~.
+** Auxilary libraries
+The repository includes some extra libraries that can be useful for coding and interacting with orgqda and qualitative text data in general.
+
+*** orgqda-helm-tags.el
+A library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~. Tags can also be removed with a secondary action or tagged extracts viewed with a persistent action. If a codebook file is defined, the display fetches the first line (which should be a short description/definition of the code/tag) from this for each tag, to ease correct tagging. Sorting of the completion list can be defined in ~orgqda-helm-tags-sort~, and cycled in the helm session with ~C-c C-s~.
 
 The library defines a minor mode, ~orgqda-helm-tags-mode~, that overrides the ~C-c C-q~ binding and that is enabled with ~orgqda-mode~ if ~orgqda-helm-tags-completion~ is non-nil. This minor mode can be used outside ~orgqda~ as well (although it depends on some functionality from ~orgqda.el~).
 
-** orgqda-transcript.el
-Included in the repository is a library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with orgqda). It uses ~mplayer-mode~, although it currently and unfortunately depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things: [[https://github.com/andersjohansson/mplayer-mode/tree/org-sessions][org-sessions branch of mplayer-mode]] (see also [[https://github.com/markhepburn/mplayer-mode/issues/10][a discussion about the future of mplayer-mode]]).
-
-~orgqda-transcript-mode~ defines a few functions and variables for defining a list of speakers, inserting timestamps, speaker names, switching speakers (if something was misattributed), measuring speaking time, etc. Take a look at the commands and custom variables if you are interested. As everything here, it is of course kind of idiosyncratic and aligned with my current workflow, and also more or less a work in progress.
-
-** orgqda-transient.el
+*** orgqda-transient.el
 Defines convenient transient keymaps (using the [[https://github.com/magit/transient/][transient]] library) for accesing the ~orgqda~ commands.
 Bind ~orgqda-transient~ to a suitable key in ~orgqda-mode-map~.
+
+*** orgqda-transcript.el
+A library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with orgqda). It uses ~mplayer-mode~, although it currently and unfortunately depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things: [[https://github.com/andersjohansson/mplayer-mode/tree/org-sessions][org-sessions branch of mplayer-mode]] (see also [[https://github.com/markhepburn/mplayer-mode/issues/10][a discussion about the future of mplayer-mode]]).
+
+~orgqda-transcript-mode~ defines a few functions and variables for defining a list of speakers, inserting timestamps, speaker names, switching speakers (if something was misattributed), measuring speaking time, etc. Take a look at the commands and custom variables if you are interested. As everything here, it is of course kind of idiosyncratic and aligned with my current workflow, and also more or less a work in progress.
 
 ** Notes on configuration
 I often load ~orgqda-mode~ through file or dir local variables, and as activation of the mode can depend on other variables being defined locally (most importantly ~orgqda-tag-files~) loading order is important (i.e. that ~orgqda-mode~ gets activated after local variables are set). A solution is to activate it in a locally defined ~hack-local-variables-hook~. So adding this to a ~.dir-locals.el~ file is one way of making it work:
