@@ -3,7 +3,7 @@
 ;; Copyright (C) 2014-2020 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
-;; Version: 0.1
+;; Version: 0.2
 ;; Created: 2014-10-12
 ;; Modified: 2021-04-12
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))

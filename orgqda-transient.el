@@ -6,6 +6,7 @@
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
 ;; Modified: 2021-04-12
+;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
