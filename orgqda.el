@@ -718,7 +718,7 @@ Numeric prefix arg K defines which tuples to count"
   (interactive "p")
   (let ((origbuffer (current-buffer))
         (origfile (buffer-file-name))
-        (k (if (= 1 k) 2 k)))
+        (k (if (< k 2) 2 k)))
     (orgqda--collect-tag-relations k)
     (pop-to-buffer
      (generate-new-buffer "*orgqda-tag-relations*"))

@@ -31,6 +31,8 @@
 (require 'orgqda)
 (require 'transient)
 
+;;;; Starting point
+
 (transient-define-prefix orgqda-transient ()
   "Transient for invoking orgqda commands"
   [["Toggle"
@@ -42,12 +44,16 @@
    ["Collect"
     ("c" "Collect tagged" orgqda-collect-tagged)
     ("C-c" "Collect tagged" orgqda-collect-tagged)]
+   ["Relations"
+    ("k" orgqda-transient-tag-relations-k)
+    ("r" "Tag relations" orgqda-transient-tag-relations)]
    ["Csv"
     ("v" "Collect csv" orgqda-collect-tagged-csv)
     ("V" "Collect csv save" orgqda-collect-tagged-csv-save)
     ("b" "Save all as csv" orgqda-collect-tagged-csv-save-all)]])
 
 
+;;;; List-tags
 (transient-define-prefix orgqda-transient-list-tags ()
   "Transient for ‘orgqda-list-tags’"
   [["Options"
@@ -88,6 +94,23 @@
                     nil nil nil
                     (when startprefix (concat startprefix "_"))
                     notagfiles))
+
+;;;; Tag relations
+(transient-define-suffix orgqda-transient-tag-relations (k)
+  :description "Tag relations"
+  (interactive (list
+                (transient-arg-value "tr=" (transient-args transient-current-command))))
+
+  (orgqda-view-tag-relations (if k (string-to-number k) 2)))
+
+(transient-define-argument orgqda-transient-tag-relations-k ()
+  :description "k-tuples"
+  :class 'transient-option
+  :argument "k="
+  :reader #'transient-read-number-N+)
+
+
+
 
 (provide 'orgqda-transient)
 ;;; orgqda-transient.el ends here
