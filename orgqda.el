@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2014-10-12
-;; Modified: 2021-04-01
+;; Modified: 2021-04-12
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -423,12 +423,10 @@ Prefix ARG is passed through."
 ;;;;; Commands for listing tags
 
 ;;;###autoload
-(defun orgqda-list-tags (&optional prefix full buf noupdate roottext startprefix)
+(defun orgqda-list-tags (&optional sort full buf noupdate roottext startprefix no-tag-files)
   "List all tags in this buffer and/or ‘orgqda-tag-files’, with counts.
-Sorted by count, or alphabetically with one PREFIX argument. Two
-PREFIX arguments means only collect in current buffer, ignoring
-any setting of ‘orgqda-tag-files’. Three PREFIX arguments means
-sort alphabetically and only count in current buffer.
+Sorted by count, or alphabetically if optional (prefix) argument
+SORT is non-nil.
 
 For non-interactive calls: PREFIX can be given as a sort
 symbol (see ‘orgqda--create-hierarchical-taglist’). FULL non-nil
@@ -439,22 +437,24 @@ creating a new. The taglist is normally updated via
 by giving a non-nil NOUPDATE. Then a special list can be used by
 setting ‘orgqda--current-htl’ suitably. ROOTTEXT specifies the
 text for the root node. STARTPREFIX, searches only tags under
-this prefix."
+this prefix. NO-TAG-FILES means only collect in current buffer,
+ignoring any setting of ‘orgqda-tag-files’."
   (interactive "P")
   (let ((origbuffer (current-buffer))
         (origfile (buffer-file-name))
         (ocm orgqda-only-count-matching)
-        (sort (cond
-               ((member prefix '((4) (64))) 'a-z)
-               ((symbolp prefix) prefix)
-               (t orgqda-default-sort-order)))
         (orgqda-tag-files
-         (if (member prefix '((16) (64)))
-             nil
-           orgqda-tag-files))
+         (if no-tag-files nil orgqda-tag-files))
         tagfiles)
     (unless noupdate
-      (orgqda--create-hierarchical-taglist sort)
+      (orgqda--create-hierarchical-taglist
+       (cond
+        ((symbolp sort) sort)
+        (sort 'a-z)
+        (t orgqda-default-sort-order)))
+      ;; have to fetch the list again here for listing below, it is
+      ;; done deep in the call of
+      ;; ‘orgqda--create-hierarchical-taglist’ above
       (setq tagfiles (when orgqda-tag-files orgqda-collect-from-all-files (orgqda-tag-files))))
     (if buf
         (progn (pop-to-buffer buf)
@@ -470,7 +470,7 @@ this prefix."
                  (format "(matching: %s) "
                          (mapconcat #'identity ocm "|")))
                (when startprefix
-                 (format "(under prefix %s) " startprefix))
+                 (format "(under prefix ~%s~) " startprefix))
                "generated from "
                (org-link-make-string
                 (concat "file:" origfile)
