@@ -1114,7 +1114,7 @@ EXCLUDE-TAGS is non nil, use that instead of
 In this buffer or in all files in ‘orgqda-tag-files’.
 Optional SORT can be symbols: count-decreasing, count-increasing,
 a-z, or z-a. EXCLUDE-TAGS overrides ‘orgqda-exclude-tags’."
-  (let ((tl (orgqda--hash-to-alist (orgqda--get-tags-hash exclude-tags))))
+  (let ((tl (orgqda--tags-hash-to-alist (orgqda--get-tags-hash exclude-tags))))
     (cl-case sort
       (count-decreasing (cl-sort tl '> :key 'cdr))
       (count-increasing (cl-sort tl '< :key 'cdr))
@@ -1509,6 +1509,12 @@ set to ‘orgqda-tag-files’"
 
 (defun orgqda--hash-to-alist (hashtable)
   "Convert HASHTABLE to alist."
+  (cl-loop for k being the hash-keys of hashtable
+           using (hash-values v)
+           collect (cons k v)))
+
+(defun orgqda--tags-hash-to-alist (hashtable)
+  "Convert tag HASHTABLE to alist."
   (cl-loop for k being the hash-keys of hashtable
            using (hash-values v)
            collect (cons k (alist-get "" v 0))))
