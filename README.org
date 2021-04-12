@@ -78,6 +78,10 @@ Included in the repository is a library with some functions for helping in trans
 
 ~orgqda-transcript-mode~ defines a few functions and variables for defining a list of speakers, inserting timestamps, speaker names, switching speakers (if something was misattributed), measuring speaking time, etc. Take a look at the commands and custom variables if you are interested. As everything here, it is of course kind of idiosyncratic and aligned with my current workflow, and also more or less a work in progress.
 
+** orgqda-transient.el
+Defines convenient transient keymaps (using the [[https://github.com/magit/transient/][transient]] library) for accesing the ~orgqda~ commands.
+Bind ~orgqda-transient~ to a suitable key in ~orgqda-mode-map~.
+
 ** Notes on configuration
 I often load ~orgqda-mode~ through file or dir local variables, and as activation of the mode can depend on other variables being defined locally (most importantly ~orgqda-tag-files~) loading order is important (i.e. that ~orgqda-mode~ gets activated after local variables are set). A solution is to activate it in a locally defined ~hack-local-variables-hook~. So adding this to a ~.dir-locals.el~ file is one way of making it work:
 
