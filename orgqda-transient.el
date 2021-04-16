@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
-;; Modified: 2021-04-12
+;; Modified: 2021-04-16
 ;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -45,7 +45,7 @@
     ("c" "Collect tagged" orgqda-collect-tagged)
     ("C-c" "Collect tagged" orgqda-collect-tagged)]
    ["Relations"
-    ("k" orgqda-transient-tag-relations-k)
+    ("R" orgqda-transient-tag-relations-k)
     ("r" "Tag relations" orgqda-transient-tag-relations)]
    ["Csv"
     ("v" "Collect csv" orgqda-collect-tagged-csv)
