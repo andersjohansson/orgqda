@@ -40,17 +40,22 @@
    ["List"
     ("l" "List tags" orgqda-list-tags)
     ("L" "List and extract" orgqda-list-tags-full)
-    ("k" "List with options" orgqda-transient-list-tags)]
+    ("o" "List with options" orgqda-transient-list-tags)]
    ["Collect"
     ("c" "Collect tagged" orgqda-collect-tagged)
-    ("C-c" "Collect tagged" orgqda-collect-tagged)]
+    ]
    ["Relations"
+    ("r" "Tag relations" orgqda-transient-tag-relations)
     ("R" orgqda-transient-tag-relations-k)
-    ("r" "Tag relations" orgqda-transient-tag-relations)]
+    ]
    ["Csv"
     ("v" "Collect csv" orgqda-collect-tagged-csv)
     ("V" "Collect csv save" orgqda-collect-tagged-csv-save)
-    ("b" "Save all as csv" orgqda-collect-tagged-csv-save-all)]])
+    ("b" "Save all as csv" orgqda-collect-tagged-csv-save-all)]
+   ["Actions"
+    ("n" "Rename tag" orgqda-rename-tag)
+    ("p" "Prefix tag" orgqda-prefix-tag)
+    ("k" "delete tag" orgqda-delete-tag)]])
 
 
 ;;;; List-tags
