@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-04-12
+;; Modified: 2021-04-16
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -671,8 +671,8 @@ EV is the mouse event."
   (interactive "e")
   (let* ((start (event-start ev))
          (end (event-end ev))
-         (stag (orgqda--otag-at-point (posn-point start)))
-         (etag (orgqda--otag-at-point (posn-point end))))
+         (stag (orgqda--tag-at-point (posn-point start)))
+         (etag (orgqda--tag-at-point (posn-point end))))
     (when (and stag etag
                (eq (posn-window start) (posn-window end))
                (y-or-n-p (format "Merge tags %s → %s? " stag etag)))
@@ -682,7 +682,7 @@ EV is the mouse event."
   "Rename tag OLDNAME to NEWNAME in current orgqda files."
   (interactive (let ((complist (orgqda--get-tags-for-completion)))
                  (list (completing-read "Old tag name: " complist nil nil
-                                        (orgqda--otag-at-point))
+                                        (orgqda--tag-at-point))
                        (completing-read "New tag name: " (reverse complist)
                                         nil nil))))
   (orgqda--delete-or-rename-tag oldname newname))
@@ -692,7 +692,7 @@ EV is the mouse event."
   (interactive (list (completing-read "Tag to delete: "
                                       (orgqda--get-tags-for-completion)
                                       nil nil
-                                      (orgqda--otag-at-point))))
+                                      (orgqda--tag-at-point))))
   (orgqda--delete-or-rename-tag tagname nil))
 
 
@@ -702,7 +702,7 @@ Works on all current orgqda files."
   (interactive (let* ((complist (orgqda--get-tags-for-completion))
                       (preflist (orgqda--get-prefixes-for-completion complist)))
                  (list
-                  (completing-read "Old tag name: " complist nil nil (orgqda--otag-at-point))
+                  (completing-read "Old tag name: " complist nil nil (orgqda--tag-at-point))
                   (completing-read "Prefix:"  preflist nil nil))))
   (orgqda-rename-tag oldname (concat prefix orgqda-hierarchy-delimiter oldname)))
 
@@ -1262,7 +1262,7 @@ FORCE-SIMPLE."
                     (completing-read
                      "Match: "
                      (orgqda--get-tags-for-completion)
-                     nil nil (orgqda-tag-at-point))))
+                     nil nil (orgqda--tag-at-point))))
          conds)
     (when orgqda-only-count-matching
       (push '(cl-intersection orgqda-only-count-matching tags-list :test #'string-match-p) conds))
@@ -1483,14 +1483,28 @@ PREFLIST is the remaining list. PREF the current prefix."
                   (car preflist))))
       (cons curr (orgqda--build-prefixes (cdr preflist) curr)))))
 
-(defun orgqda--otag-at-point (&optional pos)
-  "Get the tag name of the otag-link at point or POS."
+(defun orgqda--tag-at-point (&optional pos)
+  "Get the tag name of the otag-link, or tag in taglist, at point or POS."
   (save-excursion
     (when pos (goto-char pos))
-    (let ((context (org-element-lineage (org-element-context) '(link) t)))
-      (when (and (eq (org-element-type context) 'link)
-                 (string= (org-element-property :type context) "otag"))
-        (cadr (split-string (org-element-property :path context) ":"))))))
+    (let* ((context (org-element-lineage
+                     (org-element-context)
+                     '(link headline inline-src-block inlinetask)
+                     t))
+           (type (org-element-type context)))
+      (cond ((and (eq type 'link)
+                  (string= (org-element-property :type context) "otag"))
+             (cadr (split-string (org-element-property :path context) ":")))
+            ((and (memq type '(headline inlinetask))
+                  (org-match-line org-complex-heading-regexp))
+             (let ((tags-beg (match-beginning 5))
+	               (tags-end (match-end 5)))
+               (when (and tags-beg (>= (point) tags-beg) (< (point) tags-end))
+	             ;; On tags.
+                 (let* ((beg-tag (or (search-backward ":" tags-beg t) (point)))
+			            (end-tag (search-forward ":" tags-end nil 2)))
+		           (buffer-substring (1+ beg-tag) (1- end-tag))))))))))
+
 
 ;;;;; Various functions
 (defun orgqda-tag-files ()
@@ -1546,22 +1560,9 @@ set to ‘orgqda-tag-files’"
 Supposed to be run as one of the hooks in
  ‘org-open-at-point-functions’ for the single tag at point."
   (when orgqda-mode
-    (when-let ((tag (orgqda-tag-at-point)))
+    (when-let ((tag (orgqda--tag-at-point)))
       (orgqda-collect-tagged tag)
       t)))
-
-(defun orgqda-tag-at-point ()
-  "Return tag at point or nil."
-  (when (and
-         (save-excursion (beginning-of-line)
-                         (looking-at org-complex-heading-regexp))
-         (match-beginning 5) ; we are in tags
-         (>= (point) (match-beginning 5)))
-    (let ((min (match-beginning 5))
-          (max (point-at-eol)))
-      (when-let ((end (save-excursion (search-forward ":" max t)))
-                 (beg (save-excursion (search-backward ":" min t))))
-        (buffer-substring-no-properties (1+ beg) (1- end))))))
 
 ;;;; Advice
 
