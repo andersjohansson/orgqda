@@ -338,7 +338,6 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
 ‘orgqda-csv-dir’ first.
 
 \\{orgqda-mode-map}"
-  ;;TODO Dok ^
   :lighter " QDA"
   :keymap orgqda-mode-map
   :group 'orgqda
@@ -743,7 +742,6 @@ Numeric prefix arg K defines which tuples to count"
   (clrhash orgqda--tag-relations-hash)
   (org-map-entries
    (lambda () (orgqda--get-tag-relations-k k))
-   ;;(if triads #'orgqda--get-tag-relations-3 #'orgqda--get-tag-relations)
    nil
    (or
     (and orgqda-collect-from-all-files (orgqda-tag-files))
