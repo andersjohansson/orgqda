@@ -108,15 +108,12 @@ Applies to ‘orgqda-list-tags’ and ‘orgqda-list-tags-full’."
 
 (defcustom orgqda-hierarchy-delimiter "_"
   "The character to use for delimiting a hierarchy within tags.
-One of: _@#%"
+One of: _@#%, or nil to disable hierarchical grouping."
   :type '(choice (const "_")
                  (const "@")
                  (const "#")
-                 (const "%")))
-
-(defcustom orgqda-use-tag-hierarchy t
-  "If tags delimited with ‘orgqda-hierarchy-delimiter’ should be considered grouped."
-  :type 'boolean)
+                 (const "%")
+                 (const :tag "Disable" nil)))
 
 (defcustom orgqda-exclude-empty-file-trees t
   "When non-nil, excludes listing files without matches for current tag."
@@ -1140,7 +1137,7 @@ not loaded with ‘orgqda--get-tags-hash’."
            :counts taghash))
     (hierarchy-add-trees (orgqda--htl-hierarchy orgqda--current-htl)
                          (hash-table-keys taghash)
-                         (if orgqda-use-tag-hierarchy
+                         (if orgqda-hierarchy-delimiter
                              #'orgqda--hierarchy-parentfn
                            (lambda (_) nil)))
     ;; Possibly sort in two passes for a stable order
