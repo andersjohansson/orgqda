@@ -1424,7 +1424,8 @@ If NEWNAME is nil, delete the tag."
   "Rename all ocurrences of OLDNAME as an org tag with NEWNAME.
 If NEWNAME is nil, deletes the tag.
 Return number of replacements done."
-  (let ((numberofreps 0))
+  (let ((numberofreps 0)
+        (inhibit-read-only t)) ;; important that tags are really replaced
     (orgqda--temp-work t
       (while (search-forward (concat ":" oldname ":") nil t)
         (org-set-tags
