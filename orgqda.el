@@ -37,6 +37,7 @@
 (require 'bookmark)
 (require 'org-inlinetask)
 (require 'org-element)
+(require 'org-agenda)
 (require 'cl-lib)
 (require 'subr-x) ;if-let, thread-last
 (require 'hierarchy)
@@ -185,9 +186,9 @@ Usually set by the user as a file or dir local variable.")
 
 ;;;###autoload
 (defvar-local orgqda-codebook-file nil
-  "A file that is used as a codebook, including lists of
-tags (otag-links) This file will be updated when tags are
-renamed.
+  "A file that is used as a codebook.
+Including lists of tags (otag-links) This file will be updated
+when tags are renamed.
 
 Usually set by the user as a file or dir local variable.")
 ;;;###autoload
@@ -206,14 +207,13 @@ Usually set by the user as a file or dir local variable.")
   (and (listp arg) (cl-every 'stringp arg)))
 
 (defvar-local orgqda--originating-buffer nil
-  "Buffer where the call for the current orgqda tag listing or
-  collected regions listing were made")
+  "Buffer from which the current orgqda list or collection was invoked.")
 (defvar-local orgqda--taglist-sort nil
-  "Sorting of current taglist buffer")
+  "Sorting of current taglist buffer.")
 (defvar-local orgqda--taglist-full nil
-  "Whether current taglist buffer includes extracts")
+  "Whether current taglist buffer includes extracts.")
 (defvar-local orgqda--old-org-current-tag-alist nil
-  "Saves state of ‘org-current-tag-alist’ between enabling and disabling ‘orgqda-mode’.")
+  "Saved state of ‘org-current-tag-alist’ before enabling ‘orgqda-mode’.")
 
 (defconst orgqda-sort-args
   '((count-decreasing . orgqda--hierarchy-count-greater-p)
@@ -362,7 +362,7 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
   :lighter " QDAl")
 
 (define-minor-mode orgqda-codebook-mode
-  "Mode for updating and sorting lists of tags in a codebook file
+  "Mode for updating and sorting lists of tags in a codebook file.
 
 \\{orgqda-codebook-mode-map}"
   :keymap orgqda-codebook-mode-map
