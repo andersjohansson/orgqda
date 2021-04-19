@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-04-16
+;; Modified: 2021-04-19
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -525,7 +525,7 @@ If not in ‘orgqda-list-mode’, calls
 (defvar orgqda--current-sorting-args nil)
 
 ;;;###autoload
-(defun orgqda-sort-taglist (order)
+(defun orgqda-sort-taglist (&optional order)
   "Sort current taglist using ‘org-sort-entries’.
 
 Sorts current subtree and children, active region, or children of
@@ -535,20 +535,23 @@ Sorting is determined via ORDER which can be a/A/c/C for
 alphabetical, alphabetical reversed, count decreasing, count
 increasing, respectively."
   (interactive "cSort order: a[lpha] c[count], A/C means reversed.")
-  (let ((inhibit-read-only t)
-        (inhibit-message t)
-        (sortlist
-         (list
-          (cl-case order
-            ((?a ?A) '(nil ?f orgqda--hl-get-count >))
-            ((?c ?C) '(nil ?a))
-            (t (user-error "No correct order specified")))
-          (cl-case order
-            (?a '(nil ?a))
-            (?A '(nil ?A))
-            (?c '(nil ?f orgqda--hl-get-count >))
-            (?C '(nil ?f orgqda--hl-get-count <))
-            (t (user-error "No correct order specified"))))))
+  (let* ((inhibit-read-only t)
+         (inhibit-message t)
+         (order (or order ?c))
+         (sortlist
+          (list
+           (cl-case order
+             ((?a ?A a-z z-a)
+              '(nil ?f orgqda--hl-get-count >))
+             ((?c ?C count-decreasing count-increasing)
+              '(nil ?a))
+             (t (user-error "No correct order specified")))
+           (cl-case order
+             ((?a a-z) '(nil ?a))
+             ((?A z-a) '(nil ?A))
+             ((?c count-decreasing) '(nil ?f orgqda--hl-get-count >))
+             ((?C count-increasing) '(nil ?f orgqda--hl-get-count <))
+             (t (user-error "No correct order specified"))))))
     (if (region-active-p)
         ;; don’t do double sort here, too difficult keeping region
         (apply #'org-sort-entries (cadr sortlist))
@@ -565,17 +568,18 @@ increasing, respectively."
             (?a 'a-z) (?A 'z-a) (?c 'count-decreasing) (?C 'count-increasing)))))
 
 ;;;###autoload
-(defun orgqda-sort-taglist-buffer ()
+(defun orgqda-sort-taglist-buffer (&optional order)
   "Sort the current taglist buffer.
-calls ‘orgqda-sort-taglist’ for whole buffer"
-  (interactive)
+calls ‘orgqda-sort-taglist’ for whole buffer.
+Sort by ORDER."
+  (interactive "cSort order: a[lpha] c[count], A/C means reversed.")
   (save-mark-and-excursion
     (while (org-up-heading-safe))
     (when (or (org-goto-sibling)
               (org-goto-sibling t))
       (goto-char (point-min))
       (set-mark (point-max)))
-    (call-interactively #'orgqda-sort-taglist)))
+    (funcall #'orgqda-sort-taglist order)))
 
 
 ;;;;; Commands for collecting

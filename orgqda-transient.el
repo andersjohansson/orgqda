@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
-;; Modified: 2021-04-16
+;; Modified: 2021-04-19
 ;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -42,12 +42,10 @@
     ("L" "List and extract" orgqda-list-tags-full)
     ("o" "List with options" orgqda-transient-list-tags)]
    ["Collect"
-    ("c" "Collect tagged" orgqda-collect-tagged)
-    ]
+    ("c" "Collect tagged" orgqda-collect-tagged)]
    ["Relations"
     ("r" "Tag relations" orgqda-transient-tag-relations)
-    ("R" orgqda-transient-tag-relations-k)
-    ]
+    ("R" orgqda-transient-tag-relations-k)]
    ["Csv"
     ("v" "Collect csv" orgqda-collect-tagged-csv)
     ("V" "Collect csv save" orgqda-collect-tagged-csv-save)
@@ -73,7 +71,18 @@
   :class 'transient-switches
   :argument-format "sort=%s"
   :argument-regexp "\\(count-decreasing\\|a-z\\|z-a\\|count-increasing\\)"
-  :choices '("count-decreasing" "a-z" "z-a" "count-increasing"))
+  :choices '("count-decreasing" "a-z" "z-a" "count-increasing")
+  :init-value #'orgqda-transient--set-sort-init)
+
+(defun orgqda-transient--set-sort-init (obj)
+  "Set initial value of sort OBJ."
+  ;; CHECK: does this interfere with transient value saving? Haven’t
+  ;; looked into that yet.
+  (oset obj value
+        (concat "sort="
+                (if orgqda--taglist-sort
+                    (symbol-name orgqda--taglist-sort)
+                  (symbol-name orgqda-default-sort-order)))))
 
 (transient-define-argument orgqda-transient-startprefix ()
   :description "Start prefix"
@@ -115,6 +124,34 @@
   :reader #'transient-read-number-N+)
 
 
+
+;;;; Transient for orgqda-codebook-mode
+
+(transient-define-prefix orgqda-transient-codebook ()
+  "Transient for invoking invoking orgqda commands in codebook."
+  [["Orgqda"
+    ("a" "Orgqda actions" orgqda-transient)]
+   ["Revert"
+    ("g" "Revert list (update buffer)" orgqda-revert-taglist)]
+   ["Sorting"
+    ("o" orgqda-transient-sort)
+    ("s" "Sort taglist" orgqda-transient-sort-taglist)
+    ("S" "Sort taglist, whole buffer" orgqda-transient-sort-taglist-buffer)]
+   ["Actions"
+    ("n" "Rename tag" orgqda-rename-tag)
+    ("p" "Prefix tag" orgqda-prefix-tag)
+    ("k" "Delete tag" orgqda-delete-tag)]])
+
+
+(transient-define-suffix orgqda-transient-sort-taglist (sort)
+  :description "orgqda-sort-taglist"
+  (interactive (list (transient-arg-value "sort=" (transient-args transient-current-command))))
+  (orgqda-sort-taglist (intern-soft sort)))
+
+(transient-define-suffix orgqda-transient-sort-taglist-buffer (sort)
+  :description "orgqda-sort-taglist-buffer"
+  (interactive (list (transient-arg-value "sort=" (transient-args transient-current-command))))
+  (orgqda-sort-taglist-buffer (intern-soft sort)))
 
 
 (provide 'orgqda-transient)
