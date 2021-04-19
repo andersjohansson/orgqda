@@ -716,7 +716,7 @@ Works on all current orgqda files."
                                       (orgqda--tag-at-point))))
   (when (and orgqda-codebook-file (file-readable-p orgqda-codebook-file))
     (find-file orgqda-codebook-file)
-    (orgqda-find-otag-link tag)))
+    (orgqda--find-otag-link tag)))
 
 (defun orgqda--find-otag-link (tag &optional pass-error)
   "Go to first otag link to TAG in current buffer.
