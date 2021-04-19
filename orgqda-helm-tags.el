@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2021-04-12
+;; Modified: 2021-04-19
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (orgqda "0.2") (helm "3.6"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -146,7 +146,8 @@ Useful if a variable-pitch face is used in helm."
     :fuzzy-match orgqda-helm-tags-fuzzy-match
     :keymap orgqda-helm-tags-map
     :action  '(("Set tags to" . (lambda (_c) (helm-marked-candidates)))
-               ("Delete marked tags" . orgqda-helm-tags-delete-tag))
+               ("Delete marked tags" . orgqda-helm-tags-delete-tag)
+               ("Browse tag in codebook" . orgqda-helm-tags-browse-in-codebook))
     :persistent-action #'orgqda-helm-tags-display-tagged
     :update #'orgqda-helm-tags--set-comp-list
     :mode-line #'orgqda-helm-tags--modeline
@@ -207,7 +208,8 @@ Prefix ARG uses ordinary org tag insertion."
 
 ;;;; Minor mode definition
 ;;;###autoload
-(define-minor-mode orgqda-helm-tags-mode "Minor mode for using ‘orqda-helm-tags-completion’
+(define-minor-mode orgqda-helm-tags-mode
+  "Minor mode for using ‘orqda-helm-tags-completion’.
 
 \\{orgqda-helm-tags-mode-map}"
   :keymap orgqda-helm-tags-mode-map)
@@ -276,13 +278,33 @@ Calls ‘orgqda-collect-tagged’."
   ;; return empty list to continue loop
   ())
 
+(defun orgqda-helm-tags-browse-in-codebook (tag)
+  "Browse selected TAG in codebook."
+  (with-helm-current-buffer
+    (condition-case nil
+        (progn
+          (if (and orgqda-codebook-file (file-readable-p orgqda-codebook-file))
+              (let ((buf (find-file-noselect orgqda-codebook-file)))
+                (with-current-buffer buf
+                  (orgqda--find-otag-link tag t))
+                ;; if search worked, pop-to-buffer and pass "" to quit the helm loop
+                (switch-to-buffer-other-window buf)
+                "")
+            (message "No codebook")
+            ;; continue loop
+            '())
+          "")
+      ;; if search failed, continue loop
+      (search-failed (progn (message "Search in codebook failed")
+                            '())))))
+
 (defun orgqda-helm-tags-resort-comp-list ()
   "Resort the current completion list."
   (interactive)
   (setq orgqda-helm-tags-sort
         (car (nth (mod (1+ (cl-position orgqda-helm-tags-sort orgqda-sort-args :key #'car))
-                  (length orgqda-sort-args))
-             orgqda-sort-args)))
+                       (length orgqda-sort-args))
+                  orgqda-sort-args)))
   (helm-force-update))
 
 ;;;; Internal functions

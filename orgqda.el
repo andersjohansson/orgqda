@@ -706,6 +706,27 @@ Works on all current orgqda files."
                   (completing-read "Prefix:"  preflist nil nil))))
   (orgqda-rename-tag oldname (concat prefix orgqda-hierarchy-delimiter oldname)))
 
+;;;; Navigating to codebook
+
+(defun orgqda-find-tag-in-codebook (tag)
+  "Navigate to tag TAG in ‘orgqda-codebook-file’."
+  (interactive (list (completing-read "Tag to to find in codebook: "
+                                      (orgqda--get-tags-for-completion)
+                                      nil nil
+                                      (orgqda--tag-at-point))))
+  (when (and orgqda-codebook-file (file-readable-p orgqda-codebook-file))
+    (find-file orgqda-codebook-file)
+    (orgqda-find-otag-link tag)))
+
+(defun orgqda--find-otag-link (tag &optional pass-error)
+  "Go to first otag link to TAG in current buffer.
+Only reports errors if PASS-ERROR is non-nil."
+  (widen)
+  (goto-char (point-min))
+  (when (search-forward-regexp (concat "\\[\\[otag:[^:]+:" tag "\\]") nil (not pass-error))
+    (beginning-of-line)
+    (pulse-momentary-highlight-one-line (point))))
+
 
 ;;;; Code relations functionality
 (defvar orgqda--tag-relations-hash (make-hash-table :test 'equal)
