@@ -1559,7 +1559,7 @@ set to ‘orgqda-tag-files’"
   (save-excursion
     (save-match-data
       (if (search-forward-regexp
-           "(\\*\\([0-9]+\\)\\*)"
+           "(\\*\\([0-9]+\\)\\*.*)"
            (point-at-eol) t)
           (string-to-number (match-string 1))
         0))))
