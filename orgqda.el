@@ -1225,6 +1225,7 @@ ITEM represents the item and FILENAME where it is from."
                  collect
                  (if (equal "" file)
                      (format "*%d*" c)
+                   ;; FIXME: should escape/remove () in file names here
                    (format "/%s/: *%d*" (file-name-base file) c))
                  into l
                  finally return
@@ -1386,8 +1387,8 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
       (unless count (push tag orgqda--removed-tags))
       (save-excursion
         (goto-char (org-element-property :end link))
-        (when (looking-at "([^)]+)") ; ok, hope no one uses parentheses in
-                                     ; file names 😬
+        (when (looking-at "([^)]+)") ; FIXME: ok, hope no one uses parentheses in
+                                        ; file names 😬
           (push (cons (match-data)
                       (if count (orgqda--tagcount-string tag) "(*0?!*)"))
                 orgqda--pending-tag-count-replacements))))))
