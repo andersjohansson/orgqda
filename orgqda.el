@@ -169,6 +169,20 @@ parents’ tags."
   :type 'boolean
   :safe #'booleanp)
 
+(defcustom orgqda-tagcount-files-transform-functions '(file-name-base orgqda--file-name-remove-parentheses)
+  "List of functions to apply to displayed file names for tagcounts.
+Transforms the file name with each function in list order.
+
+It is important that ‘orgqda--file-name-remove-parentheses’ is in
+the list, otherwise updating codebook tag lists will fail."
+  :type '(repeat function))
+
+(defun orgqda--file-name-remove-parentheses (filename)
+  "Return FILENAME with parentheses removed."
+  (string-replace
+   ")" ""
+   (string-replace "(" "" filename)))
+
 ;;;###autoload
 (defvar-local orgqda-tag-files nil
   "Extra files from which tags should be fetched for completion.
@@ -1225,8 +1239,17 @@ ITEM represents the item and FILENAME where it is from."
                  collect
                  (if (equal "" file)
                      (format "*%d*" c)
-                   ;; FIXME: should escape/remove () in file names here
-                   (format "/%s/: *%d*" (file-name-base file) c))
+                   ;; FIXME: running all functions in
+                   ;; tagcount-files-transform-functions for every
+                   ;; displayed tag could be expensive. Transformed
+                   ;; names could be stored and retrieved in a
+                   ;; hash-table, if that’s quicker.
+                   (format "/%s/: *%d*"
+                           (cl-loop with f = file
+                                    for fun in orgqda-tagcount-files-transform-functions
+                                    do (setq f (funcall fun f))
+                                    finally return f)
+                           c))
                  into l
                  finally return
                  (concat "(" (mapconcat #'identity l ", ") ")"))
@@ -1387,8 +1410,7 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
       (unless count (push tag orgqda--removed-tags))
       (save-excursion
         (goto-char (org-element-property :end link))
-        (when (looking-at "([^)]+)") ; FIXME: ok, hope no one uses parentheses in
-                                        ; file names 😬
+        (when (looking-at "([^)]+)")
           (push (cons (match-data)
                       (if count (orgqda--tagcount-string tag) "(*0?!*)"))
                 orgqda--pending-tag-count-replacements))))))

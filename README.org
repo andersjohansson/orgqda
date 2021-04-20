@@ -65,6 +65,7 @@ orgqda-exclude-empty-file-trees t
 orgqda-keep-tags-sorted nil
 orgqda-default-sort-order count-decreasing
 orgqda-tagcount-show-files nil
+orgqda-tagcount-files-transform-functions '(file-name-base orgqda--file-name-remove-parentheses)
 #+END_EXAMPLE
 
 ** Auxilary libraries
