@@ -1365,14 +1365,15 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
     (setq orgqda--pending-tag-count-replacements nil
           orgqda--removed-tags nil)
     ;; update counts
-    (save-match-data
-      (org-element-map (org-element-parse-buffer) 'link #'orgqda--update-tag-count-link)
-      ;; do the replacements
-      (cl-loop for (match . rep) in (reverse orgqda--pending-tag-count-replacements)
-               do
-               (set-match-data match)
-               (replace-match rep)
-               (set-match-data match t)))
+    (save-excursion
+      (save-match-data
+        (org-element-map (org-element-parse-buffer) 'link #'orgqda--update-tag-count-link)
+        ;; do the replacements
+        (cl-loop for (match . rep) in (reverse orgqda--pending-tag-count-replacements)
+                 do
+                 (set-match-data match)
+                 (replace-match rep)
+                 (set-match-data match t))))
     ;; list new and removed tags
     (maphash
      (lambda (tag count)
