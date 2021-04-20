@@ -737,7 +737,7 @@ Works on all current orgqda files."
 Only reports errors if PASS-ERROR is non-nil."
   (widen)
   (goto-char (point-min))
-  (when (search-forward-regexp (concat "\\[\\[otag:[^:]+:" tag "\\]") nil (not pass-error))
+  (when (search-forward-regexp (concat "\\[\\[otag:[^:]*:" tag "\\]") nil (not pass-error))
     (beginning-of-line)
     (pulse-momentary-highlight-one-line (point))))
 
@@ -1327,15 +1327,16 @@ FORCE-SIMPLE."
                          :store #'orgqda-otag-store-link)
 
 (defun orgqda-otag-open (otag)
-  "Visit line number defined in OTAG in file."
+  "Collect extracts tagged with the tag defined in OTAG link."
   (let ((fln (split-string otag ":")))
-    (with-current-buffer (find-file-noselect (car fln))
+    (orgqda--with-current-buffer-if  (unless (string-blank-p (car fln))
+                                       (find-file-noselect (car fln)))
       (orgqda-collect-tagged (cadr fln)))))
 
 (defun orgqda-otag-store-link ()
   "Store a link to a org mode file and tag."
-  (let* ((oir (org-in-regexp "\\(:[[:alnum:]_@#%:]+\\):[ \t]*$")))
-    (when (and (equal major-mode 'org-mode) oir)
+  (when (equal major-mode 'org-mode)
+    (when-let ((oir (org-in-regexp "\\(:[[:alnum:]_@#%:]+\\):[ \t]*$")))
       (let* ((fn (buffer-file-name))
              (tagpos (org-between-regexps-p ":" ":" (car oir) (cdr oir)))
              (tag (buffer-substring-no-properties (1+ (car tagpos)) (1- (cdr tagpos))))
@@ -1486,7 +1487,7 @@ Return number of replacements done."
   "Rename all tag links in buffer with tag name OLD to NEW."
   (orgqda--temp-work t
     (cl-loop while (search-forward-regexp
-                    (format "\\(\\[\\[otag:[^:]+:\\)%s\\]\\[%s\\]\\]"
+                    (format "\\(\\[\\[otag:[^:]*:\\)%s\\]\\[%s\\]\\]"
                             old old) nil t)
              count (progn (if new
                               (replace-match (format "\\1%s][%s]]" new new))
