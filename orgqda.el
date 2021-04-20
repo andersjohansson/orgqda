@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-04-19
+;; Modified: 2021-04-20
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1205,7 +1205,7 @@ STARTTAG is the prefix where the search should start."
   "Insert a single item in a taglist.
 ITEM represents the item and FILENAME where it is from."
   (insert
-   (format "* [[otag:%s:%s][%s]]%s\n"
+   (format "* [[otag:%s:%s][%s]] %s\n"
            filename
            (if (string=
                 orgqda-hierarchy-delimiter
@@ -1229,8 +1229,8 @@ ITEM represents the item and FILENAME where it is from."
                    (format "/%s/: *%d*" (file-name-base file) c))
                  into l
                  finally return
-                 (concat " (" (mapconcat #'identity l ", ") ")"))
-      (format " (*%d*)" (alist-get "" count 0)))))
+                 (concat "(" (mapconcat #'identity l ", ") ")"))
+      (format "(*%d*)" (alist-get "" count 0)))))
 
 (defun orgqda--hierarchy-parentfn (tag)
   "Return parent of TAG. Also update count of parent."
