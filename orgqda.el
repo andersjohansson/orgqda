@@ -498,11 +498,11 @@ ignoring any setting of ‘orgqda-tag-files’."
                          ":END:\n")))))
     (orgqda--insert-hierarchical-taglist full origbuffer origfile 1 startprefix)
     (goto-char (point-min))
-    (org-mode) (orgqda-list-mode) (flyspell-mode -1)
-    (setq buffer-read-only t
-          orgqda--originating-buffer origbuffer
-          orgqda--taglist-sort sort
-          orgqda--taglist-full full)))
+    (org-mode) (view-mode) (orgqda-list-mode) (flyspell-mode -1)
+    (setq ;; buffer-read-only t
+     orgqda--originating-buffer origbuffer
+     orgqda--taglist-sort sort
+     orgqda--taglist-full full)))
 
 ;;;###autoload
 (defun orgqda-list-tags-full (&optional sort buf)
@@ -625,7 +625,7 @@ switching is done and view buffer just returned."
                                (format "* Tagged: %s, (%d) " mname (car cont)) "\n")
         (insert (cdr cont))
         (goto-char (point-min))
-        (org-mode) (flyspell-mode -1) (setq buffer-read-only t)
+        (org-mode) (flyspell-mode -1) (view-mode)
         (org-content oclevel))
       (if noswitch
           buffer
