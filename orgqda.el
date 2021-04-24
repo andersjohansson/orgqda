@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-04-20
+;; Modified: 2021-04-24
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -450,12 +450,14 @@ text for the root node. STARTPREFIX, searches only tags under
 this prefix. NO-TAG-FILES means only collect in current buffer,
 ignoring any setting of ‘orgqda-tag-files’."
   (interactive "P")
-  (let ((origbuffer (current-buffer))
-        (origfile (buffer-file-name))
-        (ocm orgqda-only-count-matching)
-        (orgqda-tag-files
-         (if no-tag-files nil orgqda-tag-files))
-        tagfiles)
+  (let* ((origbuffer (current-buffer))
+         (origfile (buffer-file-name))
+         (ocm orgqda-only-count-matching)
+         (orgqda-tag-files
+          (if no-tag-files nil orgqda-tag-files))
+         ;; no need to show origin files if only one
+         (orgqda-tagcount-show-files (if orgqda-tag-files orgqda-tagcount-show-files nil))
+         tagfiles)
     (unless noupdate
       (orgqda--create-hierarchical-taglist
        (cond
