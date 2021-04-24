@@ -897,9 +897,9 @@ Return cons-cell: (count in buffer count . string of taglist)"
                (coverage (if orgqda-collect-coverage
                              (format " (%.2f%%)" (* 100 (/ (float (length contents)) orgqda--current-buffer-length)))
                            ""))
-               (hl (format "%s %d: [[%s][%s]]%s%s%s %s\n"
+               (hl (format "%s [[%s][%d: %s]]%s%s%s %s\n"
                            (make-string orgqda--ct-level 42)
-                           ln link desc coverage extrainfo
+                           link ln desc coverage extrainfo
                            (if inherited-tags
                                (format
                                 " (inherited: %s)"
