@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
-;; Modified: 2021-04-20
+;; Modified: 2021-04-26
 ;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -135,6 +135,7 @@
     ("g" "Revert list (update buffer)" orgqda-revert-taglist)]
    ["Sorting"
     ("o" orgqda-transient-sort)
+    ("n" "Non-recursive" "non-recursive")
     ("s" "Sort taglist" orgqda-transient-sort-taglist)
     ("S" "Sort taglist, whole buffer" orgqda-transient-sort-taglist-buffer)]
    ["Actions"
@@ -143,10 +144,13 @@
     ("k" "Delete tag" orgqda-delete-tag)]])
 
 
-(transient-define-suffix orgqda-transient-sort-taglist (sort)
+(transient-define-suffix orgqda-transient-sort-taglist (sort non-recursive)
   :description "orgqda-sort-taglist"
-  (interactive (list (transient-arg-value "sort=" (transient-args transient-current-command))))
-  (orgqda-sort-taglist (intern-soft sort)))
+  (interactive (let ((args (transient-args transient-current-command)))
+                 (list (transient-arg-value "sort=" args)
+                       (transient-arg-value "non-recursive" args))))
+  (orgqda-sort-taglist (intern-soft sort)
+                       non-recursive))
 
 (transient-define-suffix orgqda-transient-sort-taglist-buffer (sort)
   :description "orgqda-sort-taglist-buffer"
