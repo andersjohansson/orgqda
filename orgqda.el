@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-04-26
+;; Modified: 2021-05-27
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1296,7 +1296,7 @@ Ignore case and collate depending on current locale."
     (let ((ov (gethash tag orgqda--current-tagscount nil)))
       (cl-incf (alist-get buffer-file-name ov 0 nil #'equal)) ; need ‘equal’
       (cl-incf (alist-get "" ov 0)) ; this is ok because (eq "" "") is t
-      (puthash tag ov orgqda--current-tagscount))))
+      (puthash (substring-no-properties tag) ov orgqda--current-tagscount))))
 
 (defun orgqda--make-tags-matcher (&optional match force-simple)
   "Construct a tags matcher, excluding commented and archived trees.
