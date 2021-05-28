@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2021-04-19
+;; Modified: 2021-05-27
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (orgqda "0.2") (helm "3.6"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -357,16 +357,19 @@ Calls ‘orgqda-collect-tagged’."
 
 (defun orgqda-helm-tags--get-tags-list ()
   "Get list of tags with count and (possible) coding info."
-  (let ((info (orgqda-helm-tags--get-codebook-info)))
-    (cl-loop for (tag . count) in
-             (orgqda--get-tags-alist orgqda-helm-tags-sort
-                                     (append
-                                      (if orgqda-helm-tags-include-excluded
-                                          ;; non-nil for overriding the default
-                                          '("")
-                                        orgqda-exclude-tags)
-                                      orgqda-helm-tags-exclude-tags))
-             collect (list tag count (assoc-default tag info)))))
+  (let ((info (orgqda-helm-tags--get-codebook-info))
+        (taglist (orgqda--get-tags-alist orgqda-helm-tags-sort
+                                         (append
+                                          (if orgqda-helm-tags-include-excluded
+                                              ;; non-nil for overriding the default
+                                              '("")
+                                            orgqda-exclude-tags)
+                                          orgqda-helm-tags-exclude-tags))))
+    (append
+     (cl-loop for (tag . count) in taglist
+              collect (list tag count (nth 2 (assoc-string tag info))))
+     ;; Tags in codebook with no count
+     (cl-set-difference info taglist :test #'string= :key #'car))))
 
 (defun orgqda-helm-tags--get-codebook-info ()
   "Return alist of tag names and coding info.
@@ -374,10 +377,12 @@ Calls ‘orgqda-collect-tagged’."
 Coding info is the first line of the matching line for the tag in
 ‘orgqda-codebook-file’"
   (when orgqda-codebook-file
-    (org-map-entries
-     #'orgqda-helm-tags--get-tag-info
-     t
-     (list orgqda-codebook-file))))
+    (cl-delete-if
+     #'null
+     (org-map-entries
+      #'orgqda-helm-tags--get-tag-info
+      t
+      (list orgqda-codebook-file)))))
 
 (defun orgqda-helm-tags--get-tag-info ()
   "Get tag info for current entry in codebook file."
@@ -387,8 +392,8 @@ Coding info is the first line of the matching line for the tag in
     (let ((tag (nth 2 (split-string (match-string-no-properties 1) ":")))
           (text (substring-no-properties
                  (org-agenda-get-some-entry-text (point-marker) 1))))
-      (when (and tag (not (string-blank-p text)))
-        (cons tag text)))))
+      (when (and tag (not (eq ?{ (string-to-char tag))))
+        (list tag 0 text)))))
 
 (defmacro orgqda-helm-tags-propertize-if (condition string &rest properties)
   "Return STRING with PROPERTIES if CONDITION is non-nil.
