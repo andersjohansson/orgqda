@@ -1580,9 +1580,12 @@ set to ‘orgqda-tag-files’"
   (require 'org-agenda)
   (let ((org-agenda-files orgqda-tag-files)
         (org-directory
-         (if (stringp orgqda-tag-files)
-             (file-name-directory (expand-file-name orgqda-tag-files))
-           org-directory)))
+         (cond ((stringp orgqda-tag-files)
+                (file-name-directory (expand-file-name orgqda-tag-files)))
+               ((and (listp orgqda-tag-files)
+                     (cl-notany #'file-name-absolute-p orgqda-tag-files))
+                default-directory)
+               (t org-directory))))
     (org-agenda-files t)))
 
 (defun orgqda--hash-to-alist (hashtable)
