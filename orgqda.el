@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-05-27
+;; Modified: 2021-05-28
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1390,7 +1390,14 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
     (when (or orgqda--removed-tags
               (not (hash-table-empty-p newtags)))
       (let ((buf (generate-new-buffer "*Tag changes*"))
-            (inhibit-read-only t))
+            (inhibit-read-only t)
+            (localvars (buffer-local-variables))
+            (bf (buffer-file-name)))
+        (with-current-buffer buf
+          (cl-loop for (var . val) in localvars
+                   if (string-match "^orgqda"
+					                (symbol-name var))
+                   do (set (make-local-variable var) val)))
         (orgqda--create-hierarchical-taglist nil newtags)
         (orgqda-list-tags nil nil buf t "Possibly added tags")
         (with-current-buffer buf
@@ -1400,7 +1407,11 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
             (goto-char (point-max))
             (insert
              (concat "* Possibly removed tags\n- "
-                     (mapconcat #'identity orgqda--removed-tags "\n-")))))))))
+                     (mapconcat #'identity orgqda--removed-tags "\n- "))))
+          (when bf
+            (setq-local org-refile-targets
+                        `(((,bf) . (:maxlevel . 4)))))
+          (goto-char (point-min)))))))
 
 (defun orgqda--update-tag-count-link (link)
   "Update displayed tag count for tag linked to by LINK."
