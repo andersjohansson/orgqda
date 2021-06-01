@@ -66,6 +66,7 @@ orgqda-keep-tags-sorted nil
 orgqda-default-sort-order count-decreasing
 orgqda-tagcount-show-files nil
 orgqda-tagcount-files-transform-functions '(file-name-base orgqda--file-name-remove-parentheses)
+orgqda-taglink-include-filename t
 #+END_EXAMPLE
 
 ** Auxilary libraries

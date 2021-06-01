@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-05-28
+;; Modified: 2021-06-01
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -176,6 +176,12 @@ Transforms the file name with each function in list order.
 It is important that ‘orgqda--file-name-remove-parentheses’ is in
 the list, otherwise updating codebook tag lists will fail."
   :type '(repeat function))
+
+(defcustom orgqda-taglink-include-filename t
+  "Style for taglinks (otag) when listing tags.
+Non-nil means include the filename for the file where searching started,"
+  :type 'boolean
+  :safe #'booleanp)
 
 (defun orgqda--file-name-remove-parentheses (filename)
   "Return FILENAME with parentheses removed."
@@ -453,6 +459,7 @@ ignoring any setting of ‘orgqda-tag-files’."
   (let* ((origbuffer (current-buffer))
          (origfile (buffer-file-name))
          (ocm orgqda-only-count-matching)
+         (include-filename orgqda-taglink-include-filename)
          (orgqda-tag-files
           (if no-tag-files nil orgqda-tag-files))
          ;; no need to show origin files if only one
@@ -496,7 +503,7 @@ ignoring any setting of ‘orgqda-tag-files’."
                                   concat
                                   (concat "- " (org-link-make-string f (file-name-base f)) "\n"))
                          ":END:\n")))))
-    (orgqda--insert-hierarchical-taglist full origbuffer origfile 1 startprefix)
+    (orgqda--insert-hierarchical-taglist full origbuffer (if include-filename origfile "") 1 startprefix)
     (goto-char (point-min))
     (org-mode) (view-mode) (orgqda-list-mode) (flyspell-mode -1)
     (setq ;; buffer-read-only t
@@ -1335,9 +1342,18 @@ FORCE-SIMPLE."
 
 (defun orgqda-otag-open (otag)
   "Collect extracts tagged with the tag defined in OTAG link."
-  (let ((fln (split-string otag ":")))
-    (orgqda--with-current-buffer-if  (unless (string-blank-p (car fln))
-                                       (find-file-noselect (car fln)))
+  (let* ((fln (split-string otag ":"))
+         (tagfile (unless (string-blank-p (car fln))
+                    (car fln)))
+         (buf (or (when (file-readable-p tagfile)
+                    (find-file-noselect tagfile))
+                  (when (buffer-live-p orgqda--originating-buffer)
+                    orgqda--originating-buffer)
+                  (when orgqda-collect-from-all-files
+                    (when-let ((tf (car-safe (orgqda-tag-files))))
+                      (when (file-readable-p tf)
+                        (find-file-noselect tf)))))))
+    (orgqda--with-current-buffer-if buf
       (orgqda-collect-tagged (cadr fln)))))
 
 (defun orgqda-otag-store-link ()
