@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
-;; Modified: 2021-04-26
+;; Modified: 2021-06-07
 ;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -53,7 +53,8 @@
    ["Actions"
     ("n" "Rename tag" orgqda-rename-tag)
     ("p" "Prefix tag" orgqda-prefix-tag)
-    ("k" "delete tag" orgqda-delete-tag)]])
+    ("P" "Rename prefix" orgqda-rename-prefix)
+    ("k" "Delete tag" orgqda-delete-tag)]])
 
 
 ;;;; List-tags
@@ -141,6 +142,7 @@
    ["Actions"
     ("r" "Rename tag" orgqda-rename-tag)
     ("p" "Prefix tag" orgqda-prefix-tag)
+    ("P" "Rename prefix" orgqda-rename-prefix)
     ("k" "Delete tag" orgqda-delete-tag)]])
 
 

@@ -35,6 +35,7 @@
 ;;; Code:
 
 (require 'bookmark)
+(require 'org)
 (require 'org-inlinetask)
 (require 'org-element)
 (require 'org-agenda)
@@ -733,6 +734,21 @@ Works on all current orgqda files."
                   (completing-read "Old tag name: " complist nil nil (orgqda--tag-at-point))
                   (completing-read "Prefix:"  preflist nil nil))))
   (orgqda-rename-tag oldname (concat prefix orgqda-hierarchy-delimiter oldname)))
+
+(defun orgqda-rename-prefix (oldprefix newprefix &optional taglist)
+  "Rename OLDPREFIX to NEWPREFIX for all tags using it in current orgqda files.
+TAGLIST can be passed as the list of tags to replace on."
+  (interactive (let* ((tl (orgqda--get-tags-for-completion))
+                      (pl (orgqda--get-prefixes-for-completion tl)))
+                 (list
+                  (completing-read "Old prefix: " pl nil nil)
+                  (completing-read "New prefix:" pl nil nil)
+                  tl)))
+  (cl-loop for tag in taglist
+           when (string-prefix-p oldprefix tag)
+           do (orgqda-rename-tag
+               tag
+               (concat newprefix (string-remove-prefix oldprefix tag)))))
 
 ;;;; Navigating to codebook
 
