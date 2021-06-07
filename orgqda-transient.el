@@ -126,10 +126,10 @@
 
 
 
-;;;; Transient for orgqda-codebook-mode
+;;;; Transient for orgqda-list-mode and orgqda-codebook-mode
 
-(transient-define-prefix orgqda-transient-codebook ()
-  "Transient for invoking invoking orgqda commands in codebook."
+(transient-define-prefix orgqda-transient-list ()
+  "Transient for invoking invoking orgqda commands in list- and codebook-mode."
   [["Orgqda"
     ("a" "Orgqda actions" orgqda-transient)]
    ["Revert"
