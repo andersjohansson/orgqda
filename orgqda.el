@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-06-01
+;; Modified: 2021-06-07
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1253,21 +1253,28 @@ ITEM represents the item and FILENAME where it is from."
                  collect
                  (if (equal "" file)
                      (format "*%d*" c)
-                   ;; FIXME: running all functions in
-                   ;; tagcount-files-transform-functions for every
-                   ;; displayed tag could be expensive. Transformed
-                   ;; names could be stored and retrieved in a
-                   ;; hash-table, if that’s quicker.
                    (format "/%s/: *%d*"
-                           (cl-loop with f = file
-                                    for fun in orgqda-tagcount-files-transform-functions
-                                    do (setq f (funcall fun f))
-                                    finally return f)
+                           (orgqda--tagcount-transform-file-name file)
                            c))
                  into l
                  finally return
                  (concat "(" (mapconcat #'identity l ", ") ")"))
       (format "(*%d*)" (alist-get "" count 0)))))
+
+(defvar orgqda--tagcount-filename-hash (make-hash-table
+                                        :size 10
+                                        :rehash-size 5
+                                        :test 'equal))
+
+(defun orgqda--tagcount-transform-file-name (filename)
+  "Transform FILENAME according to ‘orgqda-tagcount-files-transform-functions’."
+  (or (gethash filename orgqda--tagcount-filename-hash)
+      (puthash filename
+               (cl-loop with f = filename
+                        for fun in orgqda-tagcount-files-transform-functions
+                        do (setq f (funcall fun f))
+                        finally return f)
+               orgqda--tagcount-filename-hash)))
 
 (defun orgqda--hierarchy-parentfn (tag)
   "Return parent of TAG. Also update count of parent."
