@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2021-05-27
+;; Modified: 2021-06-09
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (orgqda "0.2") (helm "3.6"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -205,6 +205,28 @@ Prefix ARG uses ordinary org tag insertion."
         (orgqda-tag-files (list (buffer-file-name
                                  (org-capture-get :buffer)))))
     (concat ":" (mapconcat #'identity (orgqda-helm-tags--get-tags) ":") ":")))
+
+;;;###autoload
+(defun orgqda-helm-tags-get-tag (prompt &optional initial-input require-match no-reload)
+  "Return a single existing tag selected with helm.
+PROMPT, INITIAL-INPUT, REQUIRE-MATCH as in ‘completing-read’.
+NO-RELOAD means to reuse previously initialized list of tags."
+  (helm :sources
+        (list (helm-build-sync-source "Select one tag:"
+                :history  'orgqda-helm-tags-history
+                :fuzzy-match orgqda-helm-tags-fuzzy-match
+                :keymap orgqda-helm-tags-map
+                :persistent-action #'orgqda-helm-tags-display-tagged
+                :mode-line #'orgqda-helm-tags--modeline
+                :init (unless no-reload #'orgqda-helm-tags--set-comp-list)
+                :candidates 'orgqda-helm-tags--comp-list)
+              (unless require-match
+                (helm-build-dummy-source "Nonexistent tag:"
+                  :keymap orgqda-helm-tags-map)))
+        :prompt prompt
+        :input initial-input
+        :candidate-number-limit 99999
+        :buffer "*helm orgqda tag*"))
 
 ;;;; Minor mode definition
 ;;;###autoload

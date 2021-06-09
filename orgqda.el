@@ -709,41 +709,40 @@ EV is the mouse event."
 
 (defun orgqda-rename-tag (oldname newname)
   "Rename tag OLDNAME to NEWNAME in current orgqda files."
-  (interactive (let ((complist (orgqda--get-tags-for-completion)))
-                 (list (completing-read "Old tag name: " complist nil nil
-                                        (orgqda--tag-at-point))
-                       (completing-read "New tag name: " (reverse complist)
-                                        nil nil))))
-  (orgqda--delete-or-rename-tag oldname newname))
+  (interactive (list
+                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point) t)
+                (orgqda--completing-read-tag "New tag name: " nil nil t)))
+  (if newname
+      (orgqda--delete-or-rename-tag oldname newname)
+    (user-error "Not renaming! No new tag name!")))
 
 (defun orgqda-delete-tag (tagname)
   "Delete tag TAGNAME in current orgqda files."
-  (interactive (list (completing-read "Tag to delete: "
-                                      (orgqda--get-tags-for-completion)
-                                      nil nil
-                                      (orgqda--tag-at-point))))
+  (interactive (list (orgqda--completing-read-tag
+                      "Tag to delete: "
+                      (orgqda--tag-at-point)
+                      t)))
   (orgqda--delete-or-rename-tag tagname nil))
-
 
 (defun orgqda-prefix-tag (oldname prefix)
   "Add a prefix PREFIX to existing tag OLDNAME.
 Works on all current orgqda files."
-  (interactive (let* ((complist (orgqda--get-tags-for-completion))
-                      (preflist (orgqda--get-prefixes-for-completion complist)))
-                 (list
-                  (completing-read "Old tag name: " complist nil nil (orgqda--tag-at-point))
-                  (completing-read "Prefix:"  preflist nil nil))))
+  (interactive (list
+                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point) t)
+                (orgqda--completing-read-prefix
+                 "Prefix: "
+                 nil nil
+                 ;; if we completed tags with helm we need to fetch a clean list
+                 (unless (bound-and-true-p orgqda-helm-tags-mode)))))
   (orgqda-rename-tag oldname (concat prefix orgqda-hierarchy-delimiter oldname)))
 
 (defun orgqda-rename-prefix (oldprefix newprefix &optional taglist)
   "Rename OLDPREFIX to NEWPREFIX for all tags using it in current orgqda files.
 TAGLIST can be passed as the list of tags to replace on."
-  (interactive (let* ((tl (orgqda--get-tags-for-completion))
-                      (pl (orgqda--get-prefixes-for-completion tl)))
-                 (list
-                  (completing-read "Old prefix: " pl nil nil)
-                  (completing-read "New prefix:" pl nil nil)
-                  tl)))
+  (interactive (list
+                (orgqda--completing-read-prefix "Old prefix: " nil t)
+                (orgqda--completing-read-prefix "New prefix: " nil nil t)
+                (orgqda--get-tags-for-completion t)))
   (cl-loop for tag in taglist
            when (string-prefix-p oldprefix tag)
            do (orgqda-rename-tag
@@ -1554,20 +1553,44 @@ Return number of replacements done."
 
 ;;;;; Completion
 
-(defun orgqda--get-tags-for-completion ()
-  "Return current list of tags in orgqda (possibly many files)."
-  (hash-table-keys
-   (orgqda--with-current-buffer-if
-       orgqda--originating-buffer
-     (orgqda--get-tags-hash))))
+(defvar orgqda--tag-completion-list nil
+  "Tags offered for completion.")
 
-(defun orgqda--get-prefixes-for-completion (&optional taglist)
+(defun orgqda--completing-read-tag (prompt &optional initial-input require-match no-reload)
+  "Fetch a tag-name via helm or ‘completing-read’.
+PROMPT, INITIAL-INPUT, REQUIRE-MATCH as in ‘completing-read’.
+NO-RELOAD reuses already initalized completion list (in
+‘orgqda--tag-completion-list’ or ‘orgqda-helm-tags-comp-list’)."
+  (if (bound-and-true-p orgqda-helm-tags-mode)
+      (orgqda-helm-tags-get-tag prompt initial-input require-match no-reload)
+    (completing-read prompt (orgqda--get-tags-for-completion no-reload) require-match initial-input)))
+
+(defun orgqda--completing-read-prefix (prompt &optional initial-input require-match no-reload)
+  "Fetch a tag prefix via ‘completing-read’.
+PROMPT, INITIAL-INPUT, REQUIRE-MATCH as in ‘completing-read’.
+NO-RELOAD reuses already initalized tag completion list (in
+‘orgqda--tag-completion-list’ or ‘orgqda-helm-tags-comp-list’)."
+  ;; FIXME: We don’t have special helm completion (in orgqda-helm-tags.el)
+  ;; here yet. Complex to implement cleanly.
+  (completing-read prompt (orgqda--get-prefixes-for-completion no-reload) nil require-match initial-input))
+
+(defun orgqda--get-tags-for-completion (&optional no-reload)
+  "Return current list of tags in orgqda (possibly many files).
+NO-RELOAD means just use previously initialized list."
+  (if no-reload
+      orgqda--tag-completion-list
+    (setq
+     orgqda--tag-completion-list
+     (hash-table-keys
+      (orgqda--with-current-buffer-if
+          orgqda--originating-buffer
+        (orgqda--get-tags-hash))))))
+
+(defun orgqda--get-prefixes-for-completion (&optional no-reload)
   "Return the current list of tag prefixes for tags in orgqda.
 Prefixes are those delimited with ‘orgqda-hierarchy-delimiter’.
-
-TAGLIST can be passed or else will be fetched with
-‘orgqda--get-tags-for-completion’"
-  (let ((taglist (or taglist (orgqda--get-tags-for-completion)))
+NO-RELOAD reuses previously initialized taglist."
+  (let ((taglist (orgqda--get-tags-for-completion no-reload))
         prefixes)
     (dolist (tag taglist)
       (let* ((splittag (split-string tag orgqda-hierarchy-delimiter t))
