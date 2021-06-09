@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-06-07
+;; Modified: 2021-06-09
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1264,7 +1264,7 @@ ITEM represents the item and FILENAME where it is from."
   (let ((count (gethash tag (orgqda--htl-counts orgqda--current-htl) nil)))
     (if orgqda-tagcount-show-files
         (cl-loop for (file . c) in
-                 (cl-sort count #'string-lessp :key #'car)
+                 (cl-sort count #'string-version-lessp :key #'car)
                  unless (equal file 'found)
                  collect
                  (if (equal "" file)
