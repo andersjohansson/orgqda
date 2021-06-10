@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-06-09
+;; Modified: 2021-06-10
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1367,7 +1367,7 @@ FORCE-SIMPLE."
   (let* ((fln (split-string otag ":"))
          (tagfile (unless (string-blank-p (car fln))
                     (car fln)))
-         (buf (or (when (file-readable-p tagfile)
+         (buf (or (when (and tagfile (file-readable-p tagfile))
                     (find-file-noselect tagfile))
                   (when (buffer-live-p orgqda--originating-buffer)
                     orgqda--originating-buffer)
