@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2021-06-09
+;; Modified: 2021-06-11
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (orgqda "0.2") (helm "3.6"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -408,11 +408,8 @@ Coding info is the first line of the matching line for the tag in
 
 (defun orgqda-helm-tags--get-tag-info ()
   "Get tag info for current entry in codebook file."
-  (when (and (search-forward-regexp
-              org-link-bracket-re (point-at-eol) t)
-             (save-match-data (string-match "^otag:" (match-string 1))))
-    (let ((tag (nth 2 (split-string (match-string-no-properties 1) ":")))
-          (text (substring-no-properties
+  (when-let ((tag (orgqda--otag-at-this-headline)))
+    (let ((text (substring-no-properties
                  (org-agenda-get-some-entry-text (point-marker) 1))))
       (when (and tag (not (eq ?{ (string-to-char tag))))
         (list tag 0 text)))))
