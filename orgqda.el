@@ -250,6 +250,9 @@ The order is the order used when cycling sorting in
   "Non-nil if ARG is in ‘orgqda-sort-args’."
   (cl-member arg orgqda-sort-args :key #'car))
 
+(defconst orgqda-tag-allowed-chars-re "[[:alnum:]_@#%:]"
+  "Regexp for allowed characters in a tag.")
+
 ;;;; KEYBINDINGS
 ;;;###autoload
 (defvar orgqda-mode-map nil
@@ -1349,7 +1352,7 @@ FORCE-SIMPLE."
     (cond
      ((symbolp match)) ;; no more conditions (usually when counting)
      ((or force-simple
-          (string-match-p "^[[:alnum:]_@#%:]+$" match))
+          (string-match-p (concat "^" orgqda-tag-allowed-chars-re "+$") match))
       (push `(member ,match tags-list) conds))
      (t (push (nth 2 (cdr (org-make-tags-matcher match))) conds)))
     (cons match `(lambda (todo tags-list level)
@@ -1381,7 +1384,8 @@ FORCE-SIMPLE."
 (defun orgqda-otag-store-link ()
   "Store a link to a org mode file and tag."
   (when (equal major-mode 'org-mode)
-    (when-let ((oir (org-in-regexp "\\(:[[:alnum:]_@#%:]+\\):[ \t]*$")))
+    (when-let ((oir (org-in-regexp
+                     (concat "\\(:" orgqda-tag-allowed-chars-re "+\\):[ \t]*$"))))
       (let* ((fn (buffer-file-name))
              (tagpos (org-between-regexps-p ":" ":" (car oir) (cdr oir)))
              (tag (buffer-substring-no-properties (1+ (car tagpos)) (1- (cdr tagpos))))
