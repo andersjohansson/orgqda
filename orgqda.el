@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-06-10
+;; Modified: 2021-06-11
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -286,6 +286,7 @@ The order is the order used when cycling sorting in
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "<drag-mouse-1>") #'orgqda-drag-merge-tags)
     (define-key map (kbd "C-c (") orgqda-list-mode-map)
+    (define-key map [remap org-refile] #'orgqda-refile-and-merge-tags)
     (setq orgqda-codebook-mode-map map)))
 
 ;;;; Macros
@@ -696,19 +697,33 @@ One csv-file per tag is generated in ‘orgqda-csv-dir’."
 
 
 ;;;;; Commands for renaming tags
-;;;###autoload
 (defun orgqda-drag-merge-tags (ev)
   "Merge tags via dragging in tag listing buffer.
 EV is the mouse event."
   (interactive "e")
   (let* ((start (event-start ev))
          (end (event-end ev))
-         (stag (orgqda--tag-at-point (posn-point start)))
-         (etag (orgqda--tag-at-point (posn-point end))))
-    (when (and stag etag
-               (eq (posn-window start) (posn-window end))
-               (y-or-n-p (format "Merge tags %s → %s? " stag etag)))
-      (orgqda-rename-tag stag etag))))
+         (s (posn-point start))
+         (e (posn-point end))
+         (s-tag (orgqda--tag-at-point s))
+         (e-tag (orgqda--tag-at-point e)))
+    (when (and s-tag e-tag
+               (eq (posn-window start) (posn-window end)))
+      (with-selected-window (posn-window start)
+        (orgqda--refile-and-merge s e s-tag e-tag)))))
+
+(defun orgqda-refile-and-merge-tags ()
+  "Merge tags via refile selection (in codebook)."
+  (interactive)
+  (when-let* ((s (point))
+              (s-tag (orgqda--otag-at-this-headline))
+              (org-refile-targets '((nil :maxlevel . 4)))
+              (newloc (org-refile-get-location "Refile and merge tags to: "))
+              (e (nth 3 newloc))
+              (e-tag (org-with-wide-buffer
+                      (goto-char e)
+                      (orgqda--otag-at-this-headline))))
+    (orgqda--refile-and-merge s e s-tag e-tag)))
 
 (defun orgqda-rename-tag (oldname newname)
   "Rename tag OLDNAME to NEWNAME in current orgqda files."
@@ -738,6 +753,20 @@ Works on all current orgqda files."
                  ;; if we completed tags with helm we need to fetch a clean list
                  (unless (bound-and-true-p orgqda-helm-tags-mode)))))
   (orgqda-rename-tag oldname (concat prefix orgqda-hierarchy-delimiter oldname)))
+
+(defun orgqda-rename-prefix-on-one-tag (oldname newprefix)
+  "Rename the prefix(es) of tag OLDNAME to NEWPREFIX."
+  (interactive (list
+                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point) t)
+                (orgqda--completing-read-prefix
+                 "New prefix: "
+                 nil nil
+                 ;; if we completed tags with helm we need to fetch a clean list
+                 (unless (bound-and-true-p orgqda-helm-tags-mode)))))
+  (when-let ((tagleaf
+              (car-safe
+               (last (split-string oldname orgqda-hierarchy-delimiter)))))
+    (orgqda-rename-tag oldname (concat newprefix orgqda-hierarchy-delimiter tagleaf))))
 
 (defun orgqda-rename-prefix (oldprefix newprefix &optional taglist)
   "Rename OLDPREFIX to NEWPREFIX for all tags using it in current orgqda files.
@@ -1556,6 +1585,65 @@ Return number of replacements done."
                             (replace-match ""))
                           t))))
 
+(defmacro orgqda--move-subtree-then (start end body)
+  "Move subtree at START to subtree at END (if in a file). Then execute BODY."
+  (declare (indent 2))
+  `(progn
+     (when (buffer-file-name)
+       (save-excursion
+         (when (and (save-excursion (goto-char ,start)
+                                    (org-at-heading-p))
+                    (save-excursion (goto-char ,end)
+                                    (org-at-heading-p)))
+           (goto-char ,start)
+           (org-refile nil nil (list "end" (buffer-file-name) nil ,end)))))
+     ,body))
+
+(defun orgqda--format-bold-strings (format &rest args)
+  "Put face property bold on all strings in ARGS and ‘format’ with FORMAT."
+  (apply #'format format (cl-loop for a in args
+                                  collect (propertize a 'face 'bold))))
+
+(defun orgqda--refile-and-merge (start end s-tag e-tag)
+  "Refile and merge tags S-TAG to E-TAG from points START to END."
+  (let* ((prefre (concat "^{\\(" orgqda-tag-allowed-chars-re "+\\)_}$"))
+         (s-pref (when (string-match prefre s-tag)
+                   (match-string 1 s-tag)))
+         (e-pref (when (string-match prefre e-tag)
+                   (match-string 1 e-tag))))
+    (cond ((and s-pref e-pref)
+           (when-let* ((subsume (concat e-pref orgqda-hierarchy-delimiter s-pref))
+                       (newpref
+                        (cl-case
+                            (read-char-choice
+                             (orgqda--format-bold-strings
+                              "a. Rename prefix “%s” → “%s” in all tags.
+b. Rename prefix “%s” → “%s” in all tags. "
+                              s-pref subsume s-pref e-pref)
+                             '(?a ?b ?q))
+                          (?a subsume)
+                          (?b e-pref))))
+             (orgqda--move-subtree-then start end
+               (orgqda-rename-prefix s-pref newpref (orgqda--get-tags-for-completion t)))))
+          (e-pref
+           (cl-case (read-char-choice
+                     (orgqda--format-bold-strings
+                      "a. Replace prefixes of tag “%s” with ”%s”.
+b. Subsume tag ”%s” under prefix ”%s”. "
+                      s-tag e-pref s-tag e-pref)
+                     '(?a ?b ?q))
+             (?a (orgqda--move-subtree-then start end
+                   (orgqda-rename-prefix-on-one-tag s-tag e-pref)))
+             (?b (orgqda--move-subtree-then start end
+                   (orgqda-prefix-tag s-tag e-pref)))))
+          (s-pref
+           (user-error (orgqda--format-bold-strings
+                        "Moving prefix “%s” to tag “%s” not supported"
+                        s-pref e-tag)))
+          ((y-or-n-p (format "Merge tags %s → %s? " s-tag e-tag))
+           (orgqda--move-subtree-then start end
+             (orgqda-rename-tag s-tag e-tag))))))
+
 ;;;;; Completion
 
 (defvar orgqda--tag-completion-list nil
@@ -1620,7 +1708,7 @@ PREFLIST is the remaining list. PREF the current prefix."
     (when pos (goto-char pos))
     (let* ((context (org-element-lineage
                      (org-element-context)
-                     '(link headline inline-src-block inlinetask)
+                     '(link headline inlinetask)
                      t))
            (type (org-element-type context)))
       (cond ((and (eq type 'link)
@@ -1630,12 +1718,23 @@ PREFLIST is the remaining list. PREF the current prefix."
                   (org-match-line org-complex-heading-regexp))
              (let ((tags-beg (match-beginning 5))
 	               (tags-end (match-end 5)))
-               (when (and tags-beg (>= (point) tags-beg) (< (point) tags-end))
-	             ;; On tags.
-                 (let* ((beg-tag (or (search-backward ":" tags-beg t) (point)))
-			            (end-tag (search-forward ":" tags-end nil 2)))
-		           (buffer-substring (1+ beg-tag) (1- end-tag))))))))))
+               (if (and tags-beg (>= (point) tags-beg) (< (point) tags-end))
+	               ;; On tags.
+                   (let* ((beg-tag (or (search-backward ":" tags-beg t) (point)))
+			              (end-tag (search-forward ":" tags-end nil 2)))
+		             (buffer-substring (1+ beg-tag) (1- end-tag)))
+                 ;; last attempt: an otag-link in this headline
+                 (orgqda--otag-at-this-headline))))))))
 
+(defun orgqda--otag-at-this-headline ()
+  "Return tag in first otag-link in current headline.
+Assumes point is on a headline."
+  (save-excursion
+    (save-match-data
+      (beginning-of-line)
+      (and (search-forward-regexp org-link-bracket-re (point-at-eol) t)
+           (save-match-data (string-match "^otag:" (match-string 1)))
+           (nth 2 (split-string (match-string-no-properties 1) ":"))))))
 
 ;;;;; Various functions
 (defun orgqda-tag-files ()
