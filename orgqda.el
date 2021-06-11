@@ -1414,7 +1414,7 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
     (setq orgqda--pending-tag-count-replacements nil
           orgqda--removed-tags nil)
     ;; update counts
-    (save-excursion
+    (orgqda--temp-work t
       (save-match-data
         (org-element-map (org-element-parse-buffer) 'link #'orgqda--update-tag-count-link)
         ;; do the replacements
@@ -1452,7 +1452,8 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
                      (mapconcat #'identity orgqda--removed-tags "\n- "))))
           (when bf
             (setq-local org-refile-targets
-                        `(((,bf) . (:maxlevel . 4)))))
+                        `(((,bf) . (:maxlevel . 4)))
+                        org-refile-keep t))
           (goto-char (point-min)))))))
 
 (defun orgqda--update-tag-count-link (link)
