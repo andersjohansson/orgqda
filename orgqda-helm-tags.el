@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2021-06-11
+;; Modified: 2021-06-14
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (orgqda "0.2") (helm "3.6"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -379,7 +379,7 @@ Calls ‘orgqda-collect-tagged’."
 
 (defun orgqda-helm-tags--get-tags-list ()
   "Get list of tags with count and (possible) coding info."
-  (let ((info (orgqda-helm-tags--get-codebook-info))
+  (let ((info (orgqda--get-codebook-info))
         (taglist (orgqda--get-tags-alist orgqda-helm-tags-sort
                                          (append
                                           (if orgqda-helm-tags-include-excluded
@@ -389,30 +389,12 @@ Calls ‘orgqda-collect-tagged’."
                                           orgqda-helm-tags-exclude-tags))))
     (append
      (cl-loop for (tag . count) in taglist
-              collect (list tag count (nth 2 (assoc-string tag info))))
+              collect (list tag count (alist-get tag info nil nil #'equal)))
      ;; Tags in codebook with no count
-     (cl-set-difference info taglist :test #'string= :key #'car))))
-
-(defun orgqda-helm-tags--get-codebook-info ()
-  "Return alist of tag names and coding info.
-
-Coding info is the first line of the matching line for the tag in
-‘orgqda-codebook-file’"
-  (when orgqda-codebook-file
-    (cl-delete-if
-     #'null
-     (org-map-entries
-      #'orgqda-helm-tags--get-tag-info
-      t
-      (list orgqda-codebook-file)))))
-
-(defun orgqda-helm-tags--get-tag-info ()
-  "Get tag info for current entry in codebook file."
-  (when-let ((tag (orgqda--otag-at-this-headline)))
-    (let ((text (substring-no-properties
-                 (org-agenda-get-some-entry-text (point-marker) 1))))
-      (when (and tag (not (eq ?{ (string-to-char tag))))
-        (list tag 0 text)))))
+     (cl-loop for (tag . i) in info
+              when (and (not (eq ?{ (string-to-char tag))) ;; no prefixes
+                        (cl-member tag taglist :test #'equal :key #'car))
+              collect (list tag 0 i)))))
 
 (defmacro orgqda-helm-tags-propertize-if (condition string &rest properties)
   "Return STRING with PROPERTIES if CONDITION is non-nil.

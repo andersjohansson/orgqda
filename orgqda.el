@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-06-11
+;; Modified: 2021-06-14
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -467,8 +467,12 @@ ignoring any setting of ‘orgqda-tag-files’."
          (include-filename orgqda-taglink-include-filename)
          (orgqda-tag-files
           (if no-tag-files nil orgqda-tag-files))
-         ;; no need to show origin files if only one
-         (orgqda-tagcount-show-files (if orgqda-tag-files orgqda-tagcount-show-files nil))
+         ;; no need to show origin files if only one, or when
+         ;; displaying full list
+         (orgqda-tagcount-show-files
+          (if (and orgqda-tag-files (not full))
+              orgqda-tagcount-show-files
+            nil))
          tagfiles)
     (unless noupdate
       (orgqda--create-hierarchical-taglist
@@ -1258,20 +1262,26 @@ ORIGBUFFER is the buffer where the search should start.
 FILENAME is the filename of the file where search starts.
 STARTLEVEL is the root-level of the tree.
 STARTTAG is the prefix where the search should start."
-  (let ((labelfn
-         (hierarchy-labelfn-indent
-          (lambda (item indent)
-            (orgqda--insert-taglist-item
-             item filename)
-            (when (and full (not (string=
-                                  orgqda-hierarchy-delimiter
-                                  (substring item -1))))
-              (insert
-               (with-current-buffer origbuffer
-                 (cdr (orgqda--coll-tagged (orgqda--make-tags-matcher item t)
-                                           (+ 2 indent))))
-               "\n")))
-          "*")))
+  (let* ((taginfo (when full
+                    (with-current-buffer origbuffer
+                      (orgqda--get-codebook-info))))
+         (labelfn
+          (hierarchy-labelfn-indent
+           (lambda (item indent)
+             (orgqda--insert-taglist-item
+              item filename)
+             (when full
+               (when-let ((info (alist-get item taginfo nil nil #'equal)))
+                 (insert (format "/%s/\n" info))))
+             (when (and full (not (string=
+                                   orgqda-hierarchy-delimiter
+                                   (substring item -1))))
+               (insert
+                (with-current-buffer origbuffer
+                  (cdr (orgqda--coll-tagged (orgqda--make-tags-matcher item t)
+                                            (+ 2 indent))))
+                "\n")))
+           "*")))
     (if starttag
         (hierarchy-map-item labelfn starttag (orgqda--htl-hierarchy orgqda--current-htl) (or startlevel 0))
       (hierarchy-map labelfn (orgqda--htl-hierarchy orgqda--current-htl) (or startlevel 0)))))
@@ -1781,6 +1791,25 @@ set to ‘orgqda-tag-files’"
   (when (save-excursion (org-goto-first-child))
     (apply #'org-sort-entries orgqda--current-sorting-args)))
 
+;;;;; Retrieve codebook info
+(defun orgqda--get-codebook-info ()
+  "Return alist of tag names and coding info.
+Coding info is the first line of the matching line for the tag in
+‘orgqda-codebook-file’"
+  (when orgqda-codebook-file
+    (cl-delete-if
+     #'null
+     (org-map-entries
+      #'orgqda--get-tag-info
+      t
+      (list orgqda-codebook-file)))))
+
+(defun orgqda--get-tag-info ()
+  "Get tag info for current entry in codebook file."
+  (when-let ((tag (orgqda--otag-at-this-headline)))
+    (let ((text (substring-no-properties
+                 (org-agenda-get-some-entry-text (point-marker) 1))))
+      (cons tag (if (string-blank-p text) nil text)))))
 
 ;;;; Clicking on tags should open a orgqda tag view
 
