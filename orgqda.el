@@ -532,9 +532,8 @@ start from. BUF is passed on to ‘orgqda-list-tags’"
    (equal '(4) sort)
    t buf nil nil
    (when (equal '(16) sort)
-     (concat (completing-read
-              "Prefix to start from: "
-              (orgqda--get-prefixes-for-completion) nil nil)
+     (concat (orgqda--completing-read-prefix
+              "Prefix to start from: ")
              "_"))))
 
 (defun orgqda-revert-taglist ()

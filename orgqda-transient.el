@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
-;; Modified: 2021-06-11
+;; Modified: 2021-06-14
 ;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -91,12 +91,8 @@
   :description "Start prefix"
   :class 'transient-option
   :argument "sp="
-  :reader (lambda (prompt initial-input history)
-            (completing-read prompt
-                             (orgqda--get-prefixes-for-completion)
-                             nil nil
-                             initial-input
-                             history)))
+  :reader (lambda (prompt initial-input _history)
+            (orgqda--completing-read-prefix prompt initial-input)))
 
 (transient-define-suffix orgqda-transient-list-tags-suffix (sort full startprefix notagfiles)
   :description "orgqda-list-tags"
