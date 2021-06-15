@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
-;; Modified: 2021-06-14
+;; Modified: 2021-06-15
 ;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -55,7 +55,7 @@
     ("n" "Rename tag" orgqda-rename-tag)
     ("p" "Prefix tag" orgqda-prefix-tag)
     ("P" "Rename prefix on this tag" orgqda-rename-prefix-on-one-tag)
-    ("l" "Rename prefix on all tags" orgqda-rename-prefix)
+    ("i" "Rename prefix on all tags" orgqda-rename-prefix)
     ("k" "Delete tag" orgqda-delete-tag)]])
 
 
@@ -127,7 +127,7 @@
 ;;;; Transient for orgqda-list-mode and orgqda-codebook-mode
 
 (transient-define-prefix orgqda-transient-list ()
-  "Transient for invoking invoking orgqda commands in list- and codebook-mode."
+  "Transient for invoking orgqda commands in list- and codebook-mode."
   [["Orgqda"
     ("a" "Orgqda actions" orgqda-transient)]
    ["Revert"
@@ -142,7 +142,7 @@
     ("r" "Rename tag" orgqda-rename-tag)
     ("p" "Prefix tag" orgqda-prefix-tag)
     ("P" "Rename prefix on this tag" orgqda-rename-prefix-on-one-tag)
-    ("l" "Rename prefix on all tags" orgqda-rename-prefix)
+    ("i" "Rename prefix on all tags" orgqda-rename-prefix)
     ("k" "Delete tag" orgqda-delete-tag)]])
 
 
