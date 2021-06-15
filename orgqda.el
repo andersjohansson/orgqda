@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2014-10-12
-;; Modified: 2021-06-14
+;; Modified: 2021-06-15
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -775,7 +775,7 @@ Works on all current orgqda files."
   "Rename OLDPREFIX to NEWPREFIX for all tags using it in current orgqda files.
 TAGLIST can be passed as the list of tags to replace on."
   (interactive (list
-                (orgqda--completing-read-prefix "Old prefix: " nil t)
+                (orgqda--completing-read-prefix "Old prefix: " (orgqda--tag-prefix-at-point) t)
                 (orgqda--completing-read-prefix "New prefix: " nil nil t)
                 (orgqda--get-tags-for-completion t)))
   (cl-loop for tag in taglist
@@ -1744,6 +1744,16 @@ Assumes point is on a headline."
       (and (search-forward-regexp org-link-bracket-re (point-at-eol) t)
            (save-match-data (string-match "^otag:" (match-string 1)))
            (nth 2 (split-string (match-string-no-properties 1) ":"))))))
+
+(defun orgqda--tag-prefix-at-point ()
+  "Return prefix of tag at point, or nil if none found."
+  (when-let ((tag (orgqda--tag-at-point)))
+    (when
+        (rx-let ((tagpref (group-n 1 (+ (seq (+ alnum) (literal orgqda-hierarchy-delimiter))))))
+          (string-match (rx (seq bol (or (seq "{" tagpref  "}" eol)
+                                         tagpref)))
+                        tag))
+      (substring (match-string 1 tag) 0 -1))))
 
 ;;;;; Various functions
 (defun orgqda-tag-files ()
