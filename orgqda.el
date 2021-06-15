@@ -250,9 +250,6 @@ The order is the order used when cycling sorting in
   "Non-nil if ARG is in ‘orgqda-sort-args’."
   (cl-member arg orgqda-sort-args :key #'car))
 
-(defconst orgqda-tag-allowed-chars-re "[[:alnum:]_@#%:]"
-  "Regexp for allowed characters in a tag.")
-
 ;;;; KEYBINDINGS
 ;;;###autoload
 (defvar orgqda-mode-map nil
@@ -1390,7 +1387,7 @@ FORCE-SIMPLE."
     (cond
      ((symbolp match)) ;; no more conditions (usually when counting)
      ((or force-simple
-          (string-match-p (concat "^" orgqda-tag-allowed-chars-re "+$") match))
+          (string-match-p (concat "^" org-tag-re "$") match))
       (push `(member ,match tags-list) conds))
      (t (push (nth 2 (cdr (org-make-tags-matcher match))) conds)))
     (cons match `(lambda (todo tags-list level)
@@ -1423,7 +1420,7 @@ FORCE-SIMPLE."
   "Store a link to a org mode file and tag."
   (when (equal major-mode 'org-mode)
     (when-let ((oir (org-in-regexp
-                     (concat "\\(:" orgqda-tag-allowed-chars-re "+\\):[ \t]*$"))))
+                     (concat "\\(:" org-tag-re "\\):[ \t]*$"))))
       (let* ((fn (buffer-file-name))
              (tagpos (org-between-regexps-p ":" ":" (car oir) (cdr oir)))
              (tag (buffer-substring-no-properties (1+ (car tagpos)) (1- (cdr tagpos))))
@@ -1615,7 +1612,7 @@ Return number of replacements done."
 
 (defun orgqda--refile-and-merge (start end s-tag e-tag)
   "Refile and merge tags S-TAG to E-TAG from points START to END."
-  (let* ((prefre (concat "^{\\(" orgqda-tag-allowed-chars-re "+\\)_}$"))
+  (let* ((prefre (concat "^{\\(" org-tag-re "\\)_}$"))
          (s-pref (when (string-match prefre s-tag)
                    (match-string 1 s-tag)))
          (e-pref (when (string-match prefre e-tag)
