@@ -1,9 +1,9 @@
 ;;; orgqda.el --- Qualitative data analysis using org-mode  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2014-2020 Anders Johansson
+;; Copyright (C) 2014-2021 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
-;; Version: 0.2
+;; Version: 0.3
 ;; Created: 2014-10-12
 ;; Modified: 2021-06-15
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
@@ -286,11 +286,11 @@ The order is the order used when cycling sorting in
     (define-key map [remap org-refile] #'orgqda-refile-and-merge-tags)
     (setq orgqda-codebook-mode-map map)))
 
-;;;; Macros
+;;;; Macros and defsubst
 (defmacro orgqda--temp-work (widened? &rest body)
   "Macro for working on BODY temporarily, possibly in WIDENED buffer.
 Shortcut for (‘save-excursion’ (‘save-restriction’ (‘widen’) (‘goto-char’) (‘point-min’)))."
-  (declare (indent 1))
+  (declare (indent 1) (debug t))
   `(save-excursion
      (save-restriction
        (when ,widened? (widen))
@@ -333,6 +333,13 @@ Inhibits hooks for ‘text-mode’, ‘outline-mode’ and ‘org-mode’"
         (with-current-buffer (org-find-base-buffer-visiting file)
           ,@body)))))
 
+(defsubst orgqda--string-or-empty (string &optional prefix suffix)
+  "Return STRING with PREFIX and SUFFIX iff STRING is a non-blank string.
+Else return empty string."
+  (cond ((and (stringp string)
+              (string-match-p "[^[:blank:]]" string))
+         (concat prefix string suffix))
+        (t "")))
 
 ;;;; Minor mode definitions
 ;;;###autoload
@@ -728,7 +735,7 @@ EV is the mouse event."
 (defun orgqda-rename-tag (oldname newname)
   "Rename tag OLDNAME to NEWNAME in current orgqda files."
   (interactive (list
-                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point) t)
+                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point t) t)
                 (orgqda--completing-read-tag "New tag name: " nil nil t)))
   (if newname
       (orgqda--delete-or-rename-tag oldname newname)
@@ -738,7 +745,7 @@ EV is the mouse event."
   "Delete tag TAGNAME in current orgqda files."
   (interactive (list (orgqda--completing-read-tag
                       "Tag to delete: "
-                      (orgqda--tag-at-point)
+                      (orgqda--tag-at-point t)
                       t)))
   (orgqda--delete-or-rename-tag tagname nil))
 
@@ -746,7 +753,7 @@ EV is the mouse event."
   "Add a prefix PREFIX to existing tag OLDNAME.
 Works on all current orgqda files."
   (interactive (list
-                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point) t)
+                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point t) t)
                 (orgqda--completing-read-prefix
                  "Prefix: "
                  nil nil
@@ -757,7 +764,7 @@ Works on all current orgqda files."
 (defun orgqda-rename-prefix-on-one-tag (oldname newprefix)
   "Rename the prefix(es) of tag OLDNAME to NEWPREFIX."
   (interactive (list
-                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point) t)
+                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point t) t)
                 (orgqda--completing-read-prefix
                  "New prefix: "
                  nil nil
@@ -798,7 +805,7 @@ TAGLIST can be passed as the list of tags to replace on."
 Only reports errors if PASS-ERROR is non-nil."
   (widen)
   (goto-char (point-min))
-  (when (search-forward-regexp (concat "\\[\\[otag:[^:]*:" tag "\\]") nil (not pass-error))
+  (when (search-forward-regexp (concat "\\[\\[otag:" tag) nil (not pass-error))
     (beginning-of-line)
     (pulse-momentary-highlight-one-line (point))))
 
@@ -828,11 +835,15 @@ Numeric prefix arg K defines which tuples to count"
                            "\n")
     (cl-loop for (combo . count)
              in (cl-sort (orgqda--hash-to-alist orgqda--tag-relations-hash) #'> :key #'cdr)
-             do (insert (format "** [[otag:%s:%s][%s]] (%d)\n"
-                                origfile combo (replace-regexp-in-string "\\+" " + " combo) count)))
+             do (insert (format "** [[otag:%s%s][%s]] (%d)\n"
+                                combo
+                                (and orgqda-taglink-include-filename
+                                     (concat "::" origfile))
+                                (replace-regexp-in-string "\\+" " + " combo)
+                                count)))
     (goto-char (point-min))
-    (org-mode) (orgqda-list-mode) (flyspell-mode -1)
-    (setq buffer-read-only t)))
+    (org-mode) (view-mode) (orgqda-list-mode) (flyspell-mode -1)
+    (setq orgqda--originating-buffer origbuffer)))
 
 (defun orgqda--collect-tag-relations (k)
   "Collect tag relations between K tuples of tags in all orgqda files."
@@ -1286,13 +1297,13 @@ STARTTAG is the prefix where the search should start."
   "Insert a single item in a taglist.
 ITEM represents the item and FILENAME where it is from."
   (insert
-   (format "* [[otag:%s:%s][%s]] %s\n"
-           filename
+   (format "* [[otag:%s%s][%s]] %s\n"
            (if (string=
                 orgqda-hierarchy-delimiter
                 (substring item -1))
                (concat "{" item "}") ;make regexp-match for prefix
              item)
+           (orgqda--string-or-empty filename "::")
            item
            (orgqda--tagcount-string item))))
 
@@ -1395,6 +1406,14 @@ FORCE-SIMPLE."
                    (and ,@(nreverse conds))))))
 
 ;;;;;; link type for taglist
+
+;; The format of the link string is:
+;; otag:TAG-OR-SEARCH[::FILENAME]
+;; Tag can be an exact tag match, or a tag search as defined in
+;; Info node ‘(org)Matching tags and properties’
+;; ::FILENAME is optional.
+
+
 (org-link-set-parameters "otag"
                          :follow #'orgqda-otag-open
                          :export #'orgqda-link-desc-export
@@ -1402,33 +1421,65 @@ FORCE-SIMPLE."
 
 (defun orgqda-otag-open (otag)
   "Collect extracts tagged with the tag defined in OTAG link."
-  (let* ((fln (split-string otag ":"))
-         (tagfile (unless (string-blank-p (car fln))
-                    (car fln)))
-         (buf (or (when (and tagfile (file-readable-p tagfile))
-                    (find-file-noselect tagfile))
-                  (when (buffer-live-p orgqda--originating-buffer)
-                    orgqda--originating-buffer)
-                  (when orgqda-collect-from-all-files
-                    (when-let ((tf (car-safe (orgqda-tag-files))))
-                      (when (file-readable-p tf)
-                        (find-file-noselect tf)))))))
-    (orgqda--with-current-buffer-if buf
-      (orgqda-collect-tagged (cadr fln)))))
+  (cl-destructuring-bind (tag file) (orgqda--otag-parse otag)
+    (orgqda--with-current-buffer-if
+        (or (when (and file (file-readable-p file))
+              (find-file-noselect file))
+            (when (buffer-live-p orgqda--originating-buffer)
+              orgqda--originating-buffer)
+            (when orgqda-collect-from-all-files
+              (when-let ((tf (car-safe (orgqda-tag-files))))
+                (when (file-readable-p tf)
+                  (find-file-noselect tf)))))
+      (orgqda-collect-tagged tag))))
 
 (defun orgqda-otag-store-link ()
   "Store a link to a org mode file and tag."
   (when (equal major-mode 'org-mode)
     (when-let ((oir (org-in-regexp
                      (concat "\\(:" org-tag-re "\\):[ \t]*$"))))
-      (let* ((fn (buffer-file-name))
+      (let* ((fn (if orgqda-taglink-include-filename
+                     (concat "::" (buffer-file-name))
+                   ""))
              (tagpos (org-between-regexps-p ":" ":" (car oir) (cdr oir)))
              (tag (buffer-substring-no-properties (1+ (car tagpos)) (1- (cdr tagpos))))
-             (link (format "otag:%s:%s" fn tag)))
+             (link (format "otag:%s%s" tag fn)))
         (org-link-store-props
          :type "otag"
          :link link
          :description tag)))))
+
+(defun orgqda--otag-parse (linkstring &optional strict)
+  "Parse LINKSTRING as link part an otag link. Return list (tag filename).
+STRICT non-nil means to only return tag if it is a single tag
+name and not a tag search, as defined in Info node ‘(org)Matching
+tags and properties’. LINKSTRING may be a full “otag: tagname::
+filename” link or just the path part: “tagname:: filename”, with
+the last “::filename” always optional."
+  (let ((tagmatch (if strict
+                      (rx (regex org-tag-re))
+                    (rx (or (+ (seq (regex org-tag-re)
+                                    (? (any ?+ ?- ?| ))))  ; single tag or boolean combinations
+                            (seq "{" (regex org-tag-re) "}") ; tag regex search (used for prefixes)
+                            )))))
+    (when (string-match (rx (seq bos
+	                             (? "otag:")
+                                 (group
+                                  (regex tagmatch))
+                                 (? (seq "::" (group (+ not-newline))))
+                                 eos))
+                        linkstring)
+      (list (match-string 1 linkstring)
+            (match-string 2 linkstring)))))
+
+(defun orgqda--otag-tag (linkstring &optional strict)
+  "Get tag from an otag LINKSTRING.
+STRICT is passed to ‘orgqda--otag-parse’."
+  (car (orgqda--otag-parse linkstring strict)))
+
+(defun orgqda--otag-file (linkstring)
+  "Get filename from an otag LINKSTRING."
+  (cadr (orgqda--otag-parse linkstring)))
 
 ;;;;; Functions for taglist update
 (defvar orgqda--pending-tag-count-replacements nil)
@@ -1584,10 +1635,10 @@ Return number of replacements done."
   "Rename all tag links in buffer with tag name OLD to NEW."
   (orgqda--temp-work t
     (cl-loop while (search-forward-regexp
-                    (format "\\(\\[\\[otag:[^:]*:\\)%s\\]\\[%s\\]\\]"
+                    (format "\\[\\[otag:%s\\(::[^]]+\\)?\\]\\[%s\\]\\]"
                             old old) nil t)
              count (progn (if new
-                              (replace-match (format "\\1%s][%s]]" new new))
+                              (replace-match (format "[[otag:%s\\1][%s]]" new new))
                             (replace-match ""))
                           t))))
 
@@ -1708,8 +1759,9 @@ PREFLIST is the remaining list. PREF the current prefix."
                   (car preflist))))
       (cons curr (orgqda--build-prefixes (cdr preflist) curr)))))
 
-(defun orgqda--tag-at-point (&optional pos)
-  "Get the tag name of the otag-link, or tag in taglist, at point or POS."
+(defun orgqda--tag-at-point (&optional pos strict)
+  "Get the tag name of the otag-link, or tag in taglist, at point or POS.
+STRICT only gets real tag names from otag links."
   (save-excursion
     (when pos (goto-char pos))
     (let* ((context (org-element-lineage
@@ -1719,7 +1771,7 @@ PREFLIST is the remaining list. PREF the current prefix."
            (type (org-element-type context)))
       (cond ((and (eq type 'link)
                   (string= (org-element-property :type context) "otag"))
-             (cadr (split-string (org-element-property :path context) ":")))
+             (orgqda--otag-tag (org-element-property :path context) strict))
             ((and (memq type '(headline inlinetask))
                   (org-match-line org-complex-heading-regexp))
              (let ((tags-beg (match-beginning 5))
@@ -1740,7 +1792,7 @@ Assumes point is on a headline."
       (beginning-of-line)
       (and (search-forward-regexp org-link-bracket-re (point-at-eol) t)
            (save-match-data (string-match "^otag:" (match-string 1)))
-           (nth 2 (split-string (match-string-no-properties 1) ":"))))))
+           (orgqda--otag-tag (match-string-no-properties 1))))))
 
 (defun orgqda--tag-prefix-at-point ()
   "Return prefix of tag at point, or nil if none found."
