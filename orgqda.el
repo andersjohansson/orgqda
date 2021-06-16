@@ -166,9 +166,18 @@ parents’ tags."
   :safe #'booleanp)
 
 (defcustom orgqda-tagcount-show-files nil
-  "When non-nil, show the counts for individual files when listing tags."
-  :type 'boolean
-  :safe #'booleanp)
+  "When non-nil, show the counts for individual files when listing tags.
+If you for example have a group of interview transcripts in
+different files this gives a good overview of which interview
+each tag was used in.
+
+One of ‘all’, for displaying it on all nodes in the tag listing,
+‘not-parents’ for only showing the overall count for parents in a
+hierarchical listing, or nil, for disabling it."
+  :type '(choice (const :tag "For all" all)
+                 (const :tag "Not parents" not-parents)
+                 (const :tag "Disable" nil))
+  :safe #'symbolp)
 
 (defcustom orgqda-tagcount-files-transform-functions '(file-name-base orgqda--file-name-remove-parentheses)
   "List of functions to apply to displayed file names for tagcounts.
@@ -1310,7 +1319,9 @@ ITEM represents the item and FILENAME where it is from."
 (defun orgqda--tagcount-string (tag)
   "Generate string of counts for TAG."
   (let ((count (gethash tag (orgqda--htl-counts orgqda--current-htl) nil)))
-    (if orgqda-tagcount-show-files
+    (if (or (eq 'all orgqda-tagcount-show-files)
+            (and (eq 'not-parents orgqda-tagcount-show-files)
+                 (not (orgqda--tag-prefix-p tag))))
         (cl-loop for (file . c) in
                  (cl-sort count #'string-version-lessp :key #'car)
                  unless (equal file 'found)
@@ -1345,18 +1356,18 @@ ITEM represents the item and FILENAME where it is from."
   (let* ((splittag (split-string tag orgqda-hierarchy-delimiter t)))
     (when (> (safe-length splittag) 1)
       ;; if this is a leaf, update count for all parents
-      (when (not (string= (substring tag -1) orgqda-hierarchy-delimiter))
-        (let* ((count (alist-get ""
-                                 (gethash tag (orgqda--htl-counts orgqda--current-htl))
-                                 0)))
-          (cl-loop for p in (orgqda--build-prefixes (butlast splittag 1)) do
-                   (let* ((p (concat p orgqda-hierarchy-delimiter))
-                          (pc (alist-get
-                               ""
-                               (gethash p (orgqda--htl-counts orgqda--current-htl))
-                               0)))
-                     (puthash p (list (cons "" (+ count pc)))
-                              (orgqda--htl-counts orgqda--current-htl))))))
+      (when (not (orgqda--tag-prefix-p tag))
+        (let ((prefixes (cl-loop for p in
+                                 (orgqda--build-prefixes (butlast splittag 1))
+                                 collect (concat p orgqda-hierarchy-delimiter))))
+          (cl-loop for (file . count) in (gethash tag (orgqda--htl-counts orgqda--current-htl))
+                   do
+                   (cl-loop for p in prefixes do
+                            (cl-incf (alist-get
+                                      file
+                                      (gethash p (orgqda--htl-counts orgqda--current-htl))
+                                      0 nil #'equal)
+                                     count)))))
       ;; return immediate parent:
       (replace-regexp-in-string
        (concat (car (last splittag)) orgqda-hierarchy-delimiter "?$") "" tag))))
@@ -1859,6 +1870,11 @@ set to ‘orgqda-tag-files’"
   "Sort current tree if it has children."
   (when (save-excursion (org-goto-first-child))
     (apply #'org-sort-entries orgqda--current-sorting-args)))
+
+(defun orgqda--tag-prefix-p (tag)
+  "Non-nil if TAG ends in ‘orgqda-hierarchy-delimiter’."
+  (when orgqda-hierarchy-delimiter
+    (string= (substring tag -1) orgqda-hierarchy-delimiter)))
 
 ;;;;; Retrieve codebook info
 (defun orgqda--get-codebook-info ()
