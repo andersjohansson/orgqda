@@ -1415,11 +1415,8 @@ too long with long tag names (‘org-make-tags-matcher’ does some
 expensive stuff, and this is no good when we are collecting
 extracts for all tags). This behaviour can be forced with
 FORCE-SIMPLE."
-  (let* ((match (or match
-                    (completing-read
-                     "Match: "
-                     (orgqda--get-tags-for-completion)
-                     nil nil (orgqda--tag-at-point))))
+  (let* ((match (or match (orgqda--completing-read-tag
+                           "Match: " (orgqda--tag-at-point))))
          conds)
     (when orgqda-only-count-matching
       (push '(cl-intersection orgqda-only-count-matching tags-list :test #'string-match-p) conds))
