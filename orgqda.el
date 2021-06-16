@@ -744,7 +744,7 @@ EV is the mouse event."
 (defun orgqda-rename-tag (oldname newname)
   "Rename tag OLDNAME to NEWNAME in current orgqda files."
   (interactive (list
-                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point t) t)
+                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point nil t) t)
                 (orgqda--completing-read-tag "New tag name: " nil nil t)))
   (if newname
       (orgqda--delete-or-rename-tag oldname newname)
@@ -754,7 +754,7 @@ EV is the mouse event."
   "Delete tag TAGNAME in current orgqda files."
   (interactive (list (orgqda--completing-read-tag
                       "Tag to delete: "
-                      (orgqda--tag-at-point t)
+                      (orgqda--tag-at-point nil t)
                       t)))
   (orgqda--delete-or-rename-tag tagname nil))
 
@@ -762,7 +762,7 @@ EV is the mouse event."
   "Add a prefix PREFIX to existing tag OLDNAME.
 Works on all current orgqda files."
   (interactive (list
-                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point t) t)
+                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point nil t) t)
                 (orgqda--completing-read-prefix
                  "Prefix: "
                  nil nil
@@ -773,7 +773,7 @@ Works on all current orgqda files."
 (defun orgqda-rename-prefix-on-one-tag (oldname newprefix)
   "Rename the prefix(es) of tag OLDNAME to NEWPREFIX."
   (interactive (list
-                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point t) t)
+                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point nil t) t)
                 (orgqda--completing-read-prefix
                  "New prefix: "
                  nil nil
