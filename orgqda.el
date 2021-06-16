@@ -151,7 +151,10 @@ updated when tags are changed in other places than this headline."
 (defcustom orgqda-only-count-matching nil
   "When non-nil, only entries with matching tags are counted and collected.
 Each item in this list is a regex matched against tags with
-‘string-match-p’."
+‘string-match-p’.
+
+This is useful for temporarily working on a subset of the project, defined
+via a certain tag or tag-prefix."
   :type '(repeat string)
   :safe #'orgqda--list-of-strings-p)
 
@@ -189,7 +192,9 @@ the list, otherwise updating codebook tag lists will fail."
 
 (defcustom orgqda-taglink-include-filename t
   "Style for taglinks (otag) when listing tags.
-Non-nil means include the filename for the file where searching started,"
+Non-nil means include the filename for the file where searching
+started. When the filename is included, we can be more sure that
+following the link looks in the right project."
   :type 'boolean
   :safe #'booleanp)
 
@@ -1342,7 +1347,8 @@ ITEM represents the item and FILENAME where it is from."
                                         :test 'equal))
 
 (defun orgqda--tagcount-transform-file-name (filename)
-  "Transform FILENAME according to ‘orgqda-tagcount-files-transform-functions’."
+  "Transform FILENAME according to ‘orgqda-tagcount-files-transform-functions’.
+Cache transformed values in ‘orgqda--tagcount-filename-hash’."
   (or (gethash filename orgqda--tagcount-filename-hash)
       (puthash filename
                (cl-loop with f = filename
