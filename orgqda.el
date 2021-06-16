@@ -198,6 +198,17 @@ following the link looks in the right project."
   :type 'boolean
   :safe #'booleanp)
 
+(defcustom orgqda-tag-action 'collect
+  "Action to invoke on click or \[org-open-at-point] on a tag in a headline.
+Nil gives org mode default, which is to invoke ‘org-tags-view’
+but the orgqda functions are probably more useful in ‘collect’
+collects tags and ‘codebook’ looks up the tag in
+‘orgqda-codebook-file’."
+  :type '(choice (const :tag "Collect all coded instances" collect)
+                 (const :tag "Lookup tag in codebook file" 'codebook)
+                 (const :tag "Fallback to standar org behaviour" nil))
+  :safe #'symbolp)
+
 (defun orgqda--file-name-remove-parentheses (filename)
   "Return FILENAME with parentheses removed."
   (string-replace
@@ -387,7 +398,9 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
           (setq-local org-complete-tags-always-offer-all-agenda-tags t))
         (setq orgqda--old-org-current-tag-alist org-current-tag-alist
               org-current-tag-alist nil)
-        (setq-local org-open-at-point-functions '(orgqda-collect-tags-at-point))
+        (setq-local org-open-at-point-functions
+                    (append '(orgqda-tag-action-at-point)
+                            org-open-at-point-functions))
         (setq-local org-tags-sort-function
                     (or (alist-get orgqda-keep-tags-sorted orgqda-sort-args)
                         org-tags-sort-function)))
@@ -1794,30 +1807,38 @@ STRICT only gets real tag names from otag links."
                      '(link headline inlinetask)
                      t))
            (type (org-element-type context)))
-      (cond ((and (eq type 'link)
-                  (string= (org-element-property :type context) "otag"))
-             (orgqda--otag-tag (org-element-property :path context) strict))
-            ((and (memq type '(headline inlinetask))
-                  (org-match-line org-complex-heading-regexp))
-             (let ((tags-beg (match-beginning 5))
-	               (tags-end (match-end 5)))
-               (if (and tags-beg (>= (point) tags-beg) (< (point) tags-end))
-	               ;; On tags.
-                   (let* ((beg-tag (or (search-backward ":" tags-beg t) (point)))
-			              (end-tag (search-forward ":" tags-end nil 2)))
-		             (buffer-substring (1+ beg-tag) (1- end-tag)))
-                 ;; last attempt: an otag-link in this headline
-                 (orgqda--otag-at-this-headline))))))))
+      (cond
+       ((and (eq type 'link)
+             (string= (org-element-property :type context) "otag"))
+        (orgqda--otag-tag (org-element-property :path context) strict))
+       ((memq type '(headline inlinetask))
+        (or
+         (orgqda--tag-in-taglist-at-point)
+         (orgqda--otag-at-this-headline t)))))))
 
-(defun orgqda--otag-at-this-headline ()
+(defun orgqda--tag-in-taglist-at-point (&optional pos)
+  "Get tag from headline taglist at point or POS."
+  (save-excursion
+    (when pos (goto-char pos))
+    (when (org-match-line org-complex-heading-regexp)
+      (let ((tags-beg (match-beginning 5))
+	        (tags-end (match-end 5)))
+        (when (and tags-beg (>= (point) tags-beg) (< (point) tags-end))
+	      ;; On tags.
+          (let ((beg-tag (or (search-backward ":" tags-beg t) (point)))
+			    (end-tag (search-forward ":" tags-end nil 2)))
+		    (buffer-substring (1+ beg-tag) (1- end-tag))))))))
+
+(defun orgqda--otag-at-this-headline (&optional strict)
   "Return tag in first otag-link in current headline.
-Assumes point is on a headline."
+Assumes point is on a headline.
+STRICT only accepts real tag names."
   (save-excursion
     (save-match-data
       (beginning-of-line)
       (and (search-forward-regexp org-link-bracket-re (point-at-eol) t)
            (save-match-data (string-match "^otag:" (match-string 1)))
-           (orgqda--otag-tag (match-string-no-properties 1))))))
+           (orgqda--otag-tag (match-string-no-properties 1) strict)))))
 
 (defun orgqda--tag-prefix-at-point ()
   "Return prefix of tag at point, or nil if none found."
@@ -1899,20 +1920,19 @@ Coding info is the first line of the matching line for the tag in
                  (org-agenda-get-some-entry-text (point-marker) 1))))
       (cons tag (if (string-blank-p text) nil text)))))
 
-;;;; Clicking on tags should open a orgqda tag view
+;;;; Clicking on tags in headlines should do a suitable orgqda action
 
 ;; we could as well add-to-list this fn to
-;; org-open-at-point-functions, as it checks for orgqda-mode.
+;; org-open-at-point-functions, as it checks for ‘orgqda-mode’, but now
+;; it is added locally when activating ‘orgqda-mode’.
 
-(defun orgqda-collect-tags-at-point ()
-  "In ‘orgqda-mode’ this function call ‘orgqda-collect-tagged’.
-
-Supposed to be run as one of the hooks in
- ‘org-open-at-point-functions’ for the single tag at point."
-  (when orgqda-mode
-    (when-let ((tag (orgqda--tag-at-point)))
-      (orgqda-collect-tagged tag)
-      t)))
+(defun orgqda-tag-action-at-point ()
+  "Invoke suitable action for tag at point in ‘orgqda-mode’."
+  (when (and orgqda-mode orgqda-tag-action)
+    (when-let ((tag (orgqda--tag-in-taglist-at-point)))
+      (cl-case orgqda-tag-action
+        ('codebook (orgqda-find-tag-in-codebook tag))
+        ('collect (orgqda-collect-tagged tag))))))
 
 ;;;; Advice
 
