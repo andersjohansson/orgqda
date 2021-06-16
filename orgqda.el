@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2014-10-12
-;; Modified: 2021-06-15
+;; Modified: 2021-06-16
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -1341,14 +1341,25 @@ ITEM represents the item and FILENAME where it is from."
                orgqda--tagcount-filename-hash)))
 
 (defun orgqda--hierarchy-parentfn (tag)
-  "Return parent of TAG. Also update count of parent."
+  "Return parent of TAG. Also update count of all parents if we are at a leaf."
   (let* ((splittag (split-string tag orgqda-hierarchy-delimiter t)))
     (when (> (safe-length splittag) 1)
-      (let* ((parent (replace-regexp-in-string (concat (car (last splittag)) orgqda-hierarchy-delimiter "?$") "" tag))
-             (c (alist-get "" (gethash tag (orgqda--htl-counts orgqda--current-htl)) 0))
-             (pc (alist-get "" (gethash parent (orgqda--htl-counts orgqda--current-htl)) 0)))
-        (puthash parent (list (cons "" (+ c pc))) (orgqda--htl-counts orgqda--current-htl))
-        parent))))
+      ;; if this is a leaf, update count for all parents
+      (when (not (string= (substring tag -1) orgqda-hierarchy-delimiter))
+        (let* ((count (alist-get ""
+                                 (gethash tag (orgqda--htl-counts orgqda--current-htl))
+                                 0)))
+          (cl-loop for p in (orgqda--build-prefixes (butlast splittag 1)) do
+                   (let* ((p (concat p orgqda-hierarchy-delimiter))
+                          (pc (alist-get
+                               ""
+                               (gethash p (orgqda--htl-counts orgqda--current-htl))
+                               0)))
+                     (puthash p (list (cons "" (+ count pc)))
+                              (orgqda--htl-counts orgqda--current-htl))))))
+      ;; return immediate parent:
+      (replace-regexp-in-string
+       (concat (car (last splittag)) orgqda-hierarchy-delimiter "?$") "" tag))))
 
 (defun orgqda--hierarchy-count-greater-p (x y)
   "Return non-nil if tag X has greater count than Y."
