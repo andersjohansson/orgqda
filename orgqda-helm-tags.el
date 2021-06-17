@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2021-06-14
+;; Modified: 2021-06-17
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (orgqda "0.2") (helm "3.6"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -392,8 +392,8 @@ Calls ‘orgqda-collect-tagged’."
               collect (list tag count (alist-get tag info nil nil #'equal)))
      ;; Tags in codebook with no count
      (cl-loop for (tag . i) in info
-              when (and (not (eq ?{ (string-to-char tag))) ;; no prefixes
-                        (cl-member tag taglist :test #'equal :key #'car))
+              unless (or (eq ?{ (string-to-char tag)) ;; no prefixes
+                         (cl-member tag taglist :test #'equal :key #'car))
               collect (list tag 0 i)))))
 
 (defmacro orgqda-helm-tags-propertize-if (condition string &rest properties)
