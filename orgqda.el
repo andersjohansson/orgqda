@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2014-10-12
-;; Modified: 2021-06-16
+;; Modified: 2021-06-23
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -746,18 +746,21 @@ EV is the mouse event."
       (with-selected-window (posn-window start)
         (orgqda--refile-and-merge s e s-tag e-tag)))))
 
-(defun orgqda-refile-and-merge-tags ()
-  "Merge tags via refile selection (in codebook)."
-  (interactive)
-  (when-let* ((s (point))
-              (s-tag (orgqda--otag-at-this-headline))
-              (org-refile-targets '((nil :maxlevel . 4)))
-              (newloc (org-refile-get-location "Refile and merge tags to: "))
-              (e (nth 3 newloc))
-              (e-tag (org-with-wide-buffer
-                      (goto-char e)
-                      (orgqda--otag-at-this-headline))))
-    (orgqda--refile-and-merge s e s-tag e-tag)))
+(defun orgqda-refile-and-merge-tags (arg)
+  "Merge tags via refile selection (in codebook).
+A prefix ARG does a normal ‘org-refile’."
+  (interactive "P")
+  (if arg
+      (org-refile)
+    (when-let* ((s (point))
+                (s-tag (orgqda--otag-at-this-headline))
+                (org-refile-targets '((nil :maxlevel . 4)))
+                (newloc (org-refile-get-location "Refile and merge tags to: "))
+                (e (nth 3 newloc))
+                (e-tag (org-with-wide-buffer
+                        (goto-char e)
+                        (orgqda--otag-at-this-headline))))
+      (orgqda--refile-and-merge s e s-tag e-tag))))
 
 (defun orgqda-rename-tag (oldname newname)
   "Rename tag OLDNAME to NEWNAME in current orgqda files."
