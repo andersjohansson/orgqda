@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2014-10-12
-;; Modified: 2021-06-23
+;; Modified: 2021-06-28
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -981,7 +981,10 @@ Return cons-cell: (count in buffer count . string of taglist)"
         (let* ((ln (line-number-at-pos))
                (bm (orgqda--get-encoded-bm))
                (link (format "opbm:%s" bm))
-               (desc (orgqda--clean-up-heading-desc (org-get-heading t t t t)))
+               (desc
+                (cl-letf (((symbol-function 'org-before-first-heading-p)
+                           #'ignore))
+                  (orgqda--clean-up-heading-desc (org-get-heading t t t t))))
                (inherited-tags
                 (when orgqda-use-tag-inheritance
                   (cl-loop for tag in org-scanner-tags
