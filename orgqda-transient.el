@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
-;; Modified: 2021-06-15
+;; Modified: 2021-06-28
 ;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -102,11 +102,11 @@
                   (transient-arg-value "full" args)
                   (transient-arg-value "sp=" args)
                   (transient-arg-value "notagfiles" args))))
-  (orgqda-list-tags (intern-soft sort)
-                    full
-                    nil nil nil
-                    (when startprefix (concat startprefix "_"))
-                    notagfiles))
+  (orgqda-list-tags nil
+                    :sort (intern-soft sort)
+                    :full full
+                    :startprefix (when startprefix (concat startprefix "_"))
+                    :no-tag-files notagfiles))
 
 ;;;; Tag relations
 (transient-define-suffix orgqda-transient-tag-relations (k)

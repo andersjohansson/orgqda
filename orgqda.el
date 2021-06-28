@@ -254,10 +254,8 @@ Usually set by the user as a file or dir local variable.")
 
 (defvar-local orgqda--originating-buffer nil
   "Buffer from which the current orgqda list or collection was invoked.")
-(defvar-local orgqda--taglist-sort nil
-  "Sorting of current taglist buffer.")
-(defvar-local orgqda--taglist-full nil
-  "Whether current taglist buffer includes extracts.")
+(defvar-local orgqda--taglist-parameters nil
+  "Parameters used to generate taglist in current buffer.")
 (defvar-local orgqda--old-org-current-tag-alist nil
   "Saved state of ‘org-current-tag-alist’ before enabling ‘orgqda-mode’.")
 
@@ -475,15 +473,15 @@ Prefix ARG is passed through."
 ;;;;; Commands for listing tags
 
 ;;;###autoload
-(defun orgqda-list-tags (&optional sort full buf noupdate roottext startprefix no-tag-files)
+(cl-defun orgqda-list-tags (&optional arg &key sort full buffer noupdate roottext startprefix no-tag-files)
   "List all tags in this buffer and/or ‘orgqda-tag-files’, with counts.
 Sorted by count, or alphabetically if optional (prefix) argument
-SORT is non-nil.
+ARG is non-nil.
 
-For non-interactive calls: PREFIX can be given as a sort
-symbol (see ‘orgqda--create-hierarchical-taglist’). FULL non-nil
+For non-interactive calls, the rest of the arguments are given as keywords
+SORT, as a sort symbol (see ‘orgqda--create-hierarchical-taglist’). FULL non-nil
 means also insert extracted paragraphs for all tags. If a buffer
-is provided in BUF overwrite this buffer with the list instead of
+is provided in BUFFER overwrite this buffer with the list instead of
 creating a new. The taglist is normally updated via
 ‘orgqda--create-hierarchical-taglist’, but this can be prevented
 by giving a non-nil NOUPDATE. Then a special list can be used by
@@ -509,14 +507,14 @@ ignoring any setting of ‘orgqda-tag-files’."
       (orgqda--create-hierarchical-taglist
        (cond
         ((symbolp sort) sort)
-        (sort 'a-z)
+        (arg 'a-z)
         (t orgqda-default-sort-order)))
       ;; have to fetch the list again here for listing below, it is
       ;; done deep in the call of
       ;; ‘orgqda--create-hierarchical-taglist’ above
       (setq tagfiles (when orgqda-tag-files orgqda-collect-from-all-files (orgqda-tag-files))))
-    (if buf
-        (progn (pop-to-buffer buf)
+    (if buffer
+        (progn (pop-to-buffer buffer)
                (setq buffer-read-only nil)
                (erase-buffer))
       (pop-to-buffer
@@ -548,20 +546,26 @@ ignoring any setting of ‘orgqda-tag-files’."
     (org-mode) (view-mode) (orgqda-list-mode) (flyspell-mode -1)
     (setq ;; buffer-read-only t
      orgqda--originating-buffer origbuffer
-     orgqda--taglist-sort sort
-     orgqda--taglist-full full)))
+     orgqda--taglist-parameters
+     `( :sort ,sort
+        :full ,full
+        :startprefix ,startprefix
+        :roottext ,roottext
+        :no-tag-files ,no-tag-files))))
 
 ;;;###autoload
-(defun orgqda-list-tags-full (&optional sort buf)
+(defun orgqda-list-tags-full (&optional sort buffer)
   "List all tags including extracted parahraphs.
 
 Sorted by count or alphabetically if optional (prefix) argument
 SORT is non-nil. Two prefix arguments prompts for a tag prefix to
-start from. BUF is passed on to ‘orgqda-list-tags’"
+start from. BUFFER is passed on to ‘orgqda-list-tags’"
   (interactive "P")
   (orgqda-list-tags
    (equal '(4) sort)
-   t buf nil nil
+   :full t
+   :buffer buffer
+   :startprefix
    (when (equal '(16) sort)
      (concat (orgqda--completing-read-prefix
               "Prefix to start from: ")
@@ -574,12 +578,11 @@ If not in ‘orgqda-list-mode’, calls
   (interactive)
   (if (and orgqda-list-mode orgqda--originating-buffer)
       (let ((cb (current-buffer))
-            (cts orgqda--taglist-sort)
-            (ctf orgqda--taglist-full)
+            (tlp orgqda--taglist-parameters)
             (pos (point)))
         (setq buffer-read-only nil)
         (with-current-buffer orgqda--originating-buffer
-          (orgqda-list-tags cts ctf cb))
+          (apply #'orgqda-list-tags (append '(nil) `(:buffer ,cb) tlp)))
         (goto-char pos))
     (orgqda-update-taglist-general)))
 
@@ -630,9 +633,14 @@ children."
               (orgqda--sort-subtree)
             (org-map-entries #'orgqda--sort-subtree t 'tree))))))
   (when orgqda-list-mode
-    (setq orgqda--taglist-sort
-          (cl-case order
-            (?a 'a-z) (?A 'z-a) (?c 'count-decreasing) (?C 'count-increasing)))))
+    (setq orgqda--taglist-parameters
+          (plist-put
+           orgqda--taglist-parameters :sort
+           (cl-case order
+             (?a 'a-z)
+             (?A 'z-a)
+             (?c 'count-decreasing)
+             (?C 'count-increasing))))))
 
 ;;;###autoload
 (defun orgqda-sort-taglist-buffer (&optional order)
@@ -1571,7 +1579,7 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
 					                (symbol-name var))
                    do (set (make-local-variable var) val)))
         (orgqda--create-hierarchical-taglist nil newtags)
-        (orgqda-list-tags nil nil buf t "Possibly added tags")
+        (orgqda-list-tags nil :buffer buf :noupdate t :roottext "Possibly added tags")
         (with-current-buffer buf
           (goto-char (point-min))
           (org-map-tree (lambda () (end-of-line) (newline) (org-time-stamp '(16) 'inactive)))
