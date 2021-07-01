@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2014-10-12
-;; Modified: 2021-06-28
+;; Modified: 2021-07-01
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -239,18 +239,22 @@ when tags are renamed.
 Usually set by the user as a file or dir local variable.")
 ;;;###autoload
 (put 'orgqda-codebook-file 'safe-local-variable
-     #'stringp)
+     #'orgqda--string-or-nil-p)
 
 ;;;###autoload
 (defun orgqda--string-or-list-of-strings-p (arg)
   "Return t if ARG is a string or a list of strings."
-  (or (stringp arg)
+  (or (orgqda--string-or-nil-p arg)
       (orgqda--list-of-strings-p arg)))
 
 ;;;###autoload
 (defun orgqda--list-of-strings-p (arg)
   "Return t if ARG is a list of strings."
-  (and (listp arg) (cl-every 'stringp arg)))
+  (and (listp arg) (cl-every #'orgqda--string-or-nil-p arg)))
+
+(defun orgqda--string-or-nil-p (arg)
+  "Return t if ARG is a string or nil."
+  (or (stringp arg) (null arg)))
 
 (defvar-local orgqda--originating-buffer nil
   "Buffer from which the current orgqda list or collection was invoked.")
