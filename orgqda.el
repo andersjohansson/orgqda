@@ -68,6 +68,14 @@ buffers with names containing 'fieldnotes':
 '((\"fieldnotes\" . (format \" (from: %s)\" (orgqda-get-parent-hl 4))))"
   :type '(alist :key-type regexp :value-type sexp))
 
+(defcustom orgqda-transform-collected-paragraph-function #'identity
+  "Function for transforming or wrapping extracted paragraphs when collecting.
+A function receving the paragraph as a string, should return a
+string. Could be useful if you for example want extracts to be
+wrapped in org quote blocks. Only applies to extracted
+paragraphs (not subtrees or inlinetasks with END.)"
+  :type 'function)
+
 (defcustom orgqda-collect-from-all-files t
   "Whether to collect tags from all files defined in ‘orgqda-tag-files’.
 This applies to the tag listing and collection commands in orgqda."
@@ -1121,8 +1129,9 @@ each character in the buffer."
      (cond
       ((org-inlinetask-in-task-p)
        (if (orgqda-inlinetask-in-degenerate-task-p)
-           (buffer-substring-no-properties
-            (point) (progn (orgqda--backward-paragraph) (point)))
+           (funcall orgqda-transform-collected-paragraph-function
+                    (buffer-substring-no-properties
+                     (point) (progn (orgqda--backward-paragraph) (point))))
          (buffer-substring-no-properties
           (save-excursion (org-inlinetask-goto-beginning)
                           (end-of-line) (point))
