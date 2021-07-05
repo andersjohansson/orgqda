@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
-;; Modified: 2021-06-28
+;; Modified: 2021-07-05
 ;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -83,8 +83,8 @@
   ;; looked into that yet.
   (oset obj value
         (concat "sort="
-                (if orgqda--taglist-sort
-                    (symbol-name orgqda--taglist-sort)
+                (if-let ((sort (plist-get orgqda--taglist-parameters :sort)))
+                    (symbol-name sort)
                   (symbol-name orgqda-default-sort-order)))))
 
 (transient-define-argument orgqda-transient-startprefix ()
