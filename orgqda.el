@@ -5,12 +5,10 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2014-10-12
-;; Modified: 2021-07-05
+;; Modified: 2021-09-08
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
-;; URL: http://www.github.com/andersjohansson/orgqda
-
-;; This file is NOT part of GNU Emacs.
+;; URL: http://www.gitlab.com/andersjohansson/orgqda
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -1771,6 +1769,8 @@ b. Subsume tag ”%s” under prefix ”%s”. "
 (defvar orgqda--tag-completion-list nil
   "Tags offered for completion.")
 
+(declare-function orgqda-helm-tags-get-tag "orgqda-helm-tags")
+
 (defun orgqda--completing-read-tag (prompt &optional initial-input require-match no-reload)
   "Fetch a tag-name via helm or ‘completing-read’.
 PROMPT, INITIAL-INPUT, REQUIRE-MATCH as in ‘completing-read’.
@@ -1778,7 +1778,7 @@ NO-RELOAD reuses already initalized completion list (in
 ‘orgqda--tag-completion-list’ or ‘orgqda-helm-tags-comp-list’)."
   (if (bound-and-true-p orgqda-helm-tags-mode)
       (orgqda-helm-tags-get-tag prompt initial-input require-match no-reload)
-    (completing-read prompt (orgqda--get-tags-for-completion no-reload) require-match initial-input)))
+    (completing-read prompt (orgqda--get-tags-for-completion no-reload) nil require-match initial-input)))
 
 (defun orgqda--completing-read-prefix (prompt &optional initial-input require-match no-reload)
   "Fetch a tag prefix via ‘completing-read’.
@@ -1972,21 +1972,26 @@ Coding info is the first line of the matching line for the tag in
 
 ;;;; Advice
 
-;; This advice is irrelevant if orgqda-helm-tags.el (which overrides
-;; ‘org-set-tags’) is used
+;; This advice is irrelevant if (now deprecated) orgqda-helm-tags.el
+;; (which overrides ‘org-set-tags’) is used
 
-;;;###autoload
 (advice-add 'org-global-tags-completion-table :around #'orgqda-tags-completion-table-wrap)
-;;;###autoload
+
+(declare-function orgqda-completion-annotations--get-tags-list "orgqda-completion-annotations" nil)
+(defvar orgqda-completion-annotations-mode)
+
 (defun orgqda-tags-completion-table-wrap (oldfun &rest args)
   "Around advice for ‘org-global-tags-completion-table’ (OLDFUN).
 In ‘orgqda-mode’, load tags from ‘orgqda-tag-files’ and inhibits
 org hooks to speed up loading of files. Else just call OLDFUN
 with ARGS."
-  (if orgqda-mode
-      (orgqda--inhibit-org-startups
-       (funcall oldfun (orgqda-tag-files)))
-    (apply oldfun args)))
+  (cond
+   (orgqda-completion-annotations-mode
+    (orgqda-completion-annotations--get-tags-list))
+   (orgqda-mode
+    (orgqda--inhibit-org-startups
+     (funcall oldfun (orgqda-tag-files))))
+   (t (apply oldfun args))))
 
 
 (provide 'orgqda)
