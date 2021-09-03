@@ -989,8 +989,8 @@ Return cons-cell: (count in buffer count . string of taglist)"
         (org-use-tag-inheritance orgqda-use-tag-inheritance))
     (orgqda--temp-work (not unwidened)
       (let* ((orgqda--current-buffer-length (point-max))
-             (tl (org-scan-tags 'orgqda--get-paragraph-or-sub
-                                (cdr matcher) nil)))
+             (tl (orgqda--scan-tags 'orgqda--get-paragraph-or-sub
+                                    (cdr matcher) nil)))
         (cons (length tl)
               (mapconcat 'identity tl "\n"))))))
 
@@ -1056,8 +1056,8 @@ Return cons-cell: (count in buffer count . string of taglist)"
 
   (let ((org-use-tag-inheritance orgqda-use-tag-inheritance))
     (orgqda--temp-work t
-      (let ((tl (org-scan-tags 'orgqda--get-paragraph-or-sub-to-csv
-                               (cdr matcher) nil)))
+      (let ((tl (orgqda--scan-tags 'orgqda--get-paragraph-or-sub-to-csv
+                                   (cdr matcher) nil)))
         (mapconcat 'identity tl "")))))
 
 (defun orgqda--get-paragraph-or-sub-to-csv ()
@@ -1261,7 +1261,7 @@ EXCLUDE-TAGS is non nil, use that instead of
                                                  (buffer-file-name
                                                   (buffer-base-buffer)))))
                                    (list bfn)))
-      (org-scan-tags
+      (orgqda--scan-tags
        #'orgqda--get-tags-with-count
        (cdr (orgqda--make-tags-matcher 'none))
        nil)))
@@ -1926,6 +1926,15 @@ set to ‘orgqda-tag-files’"
   "Non-nil if TAG ends in ‘orgqda-hierarchy-delimiter’."
   (when orgqda-hierarchy-delimiter
     (string= (substring tag -1) orgqda-hierarchy-delimiter)))
+
+(defun orgqda--scan-tags (&rest args)
+  "Wrapper for ‘org-scan-tags’ disabling the expensive category lookup.
+ARGS is passed to ‘org-scan-tags’.
+
+We never use category for our scanning in ‘orgqda’, but many
+other important functions of ‘org-scan-tags’."
+  (cl-letf (((symbol-function 'org-get-category) #'ignore))
+    (apply #'org-scan-tags args)))
 
 ;;;;; Retrieve codebook info
 (defun orgqda--get-codebook-info ()
