@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2021-07-28
-;; Modified: 2021-10-14
+;; Modified: 2021-11-18
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.gitlab.com/andersjohansson/orgqda
@@ -147,7 +147,7 @@ Return alist of tags suitable as completion table in
                     (propertize
                      " "
                      'display
-                     `(space :align-to ,(+ 5 ml)))))
+                     `(space :align-to ,(+ 5 (or ml 0))))))
      ;; Tags in codebook with no count, add to tagshash and last in
      ;; returned list
      ;; FIXME: this does not follow sorting defined above. perhaps
