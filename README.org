@@ -80,6 +80,10 @@ Automatically annotate completions of tags with count and information from codeb
 (add-hook 'orgqda-mode-hook #'orgqda-completion-annotations-mode)
 #+end_src
 
+When completing, tags are sorted according to ~orgqda-completion-annotations-sort~ , but this can be cycled by calling ~orgqda-completion-annotations-cycle-sorting~, which can be bound to a suitable key in a suitable keymap, usually ~minibuffer-mode-map~ (With my Swedish keyboard and using vertico for completion I do: ~(bind-key "C-å" #'orgqda-completion-annotations-cycle-sorting 'vertico-map)~).
+
+Additionally, if tag hierachy is used, tags can be grouped up to the level given by ~orgqda-completion-annotations-group~.
+
 *** orgqda-helm-tags.el (Deprecated)
 *NOTE:* I won’t be updating [[file:orgqda-helm-tags.el][orgqda-helm-tags.el]] since I’m moving away from helm.
 

@@ -47,6 +47,12 @@
                  (const :tag "Z-A" z-a))
   :safe #'orgqda-sort-arg-p)
 
+(defcustom orgqda-completion-annotations-group nil
+  "Whether to group tags in completion by orgqda hierarchy."
+  :group 'orgqda
+  :type '(choice (const :tag "Don’t group" nil)
+                 (integer :tag "Group up to level")))
+
 (defcustom orgqda-completion-annotations-include-excluded nil
   "If non-nil, include tags listed in ‘orgqda-exclude-tags’ for completion."
   :group 'orgqda
@@ -80,8 +86,10 @@ Slightly beyond longest tag.")
 Note that activating this (local) minor mode does install some
 persistent changes the first time it is invoked by adding the
 completion category ‘org-tags’ to some commands in
-‘marginalia-command-categories’ (just setting this variable
-locally won’t work)."
+‘marginalia-command-categories’, modifying
+‘marginalia-annotator-registry’, and advising
+‘completion-metadata-get’ (just setting this locally won’t
+work)."
   :keymap (make-sparse-keymap)
   (if orgqda-completion-annotations-mode
       (progn
@@ -94,27 +102,86 @@ locally won’t work)."
         (add-to-list 'marginalia-command-categories '(orgqda-rename-tag . org-tags))
 
         (add-to-list 'marginalia-annotator-registry '(org-tags orgqda-completion-annotations-annotate-count orgqda-completion-annotations-annotate-all none))
+
+        (advice-add 'completion-metadata-get :before-until #'orgqda-completion-annotations--completion-metadata-get)
+
         (setq-local org-complete-tags-always-offer-all-agenda-tags t))
     ;; (setf (alist-get 'org-tags marginalia-annotator-registry nil 'remove) nil)
     (kill-local-variable 'org-complete-tags-always-offer-all-agenda-tags)))
+
+(defun orgqda-completion-annotations--completion-metadata-get (metadata prop)
+  "Meant as around-advice for ‘completion-metadata-get’.
+METADATA is the metadata.
+PROP is the property which is looked up.
+
+Make sure to not sort the already sorted org-tags table by returning ‘identity’ for requests for ‘display-sort-function’."
+  (or (and (eq prop 'display-sort-function)
+           (eq 'org-tags (completion-metadata-get metadata 'category))
+           #'orgqda-completion-annotations--sort)
+      (and orgqda-completion-annotations-group (< 0 orgqda-completion-annotations-group)
+           (eq prop 'group-function)
+           (eq 'org-tags (completion-metadata-get metadata 'category))
+           #'orgqda-completion-annotations--group)))
+
+
+(defun orgqda-completion-annotations--group (tag transform)
+  "Group function to use for completion on TAG.
+TRANSFORM flag as described in Info node ‘(elisp)Programmed Completion’"
+  (let* ((pos  (cl-loop with p = -1
+                        repeat orgqda-completion-annotations-group
+                        do (if-let ((np (string-search orgqda-hierarchy-delimiter tag (1+ p))))
+                               (setq p np)
+                             (cl-return p))
+                        finally return p))
+         (pos (if (< pos 0) nil pos)))
+    (if transform
+        ;; return transformed tag
+        (if pos
+            (substring tag (1+ pos))
+          tag)
+      ;; return group
+      (when pos
+        (substring tag 0 pos)))))
+
+(defun orgqda-completion-annotations--sort (taglist)
+  "Sort TAGLIST."
+  (cl-case orgqda-completion-annotations-sort
+    (count-decreasing (cl-sort taglist '> :key 'orgqda-completion-annotations--get-count))
+    (count-increasing (cl-sort taglist '< :key 'orgqda-completion-annotations--get-count))
+    (a-z (sort taglist #'orgqda--string-lessp))
+    (z-a (sort taglist #'orgqda--string-greaterp))
+    (t taglist)))
+
+(defun orgqda-completion-annotations-cycle-sorting ()
+  "Cycle sorting method for tag completion with orgqda."
+  (interactive)
+  (setq orgqda-completion-annotations-sort
+        (car (nth (mod (1+ (cl-position orgqda-completion-annotations-sort orgqda-sort-args :key #'car))
+                       (length orgqda-sort-args))
+                  orgqda-sort-args)))
+  ;; Hacky way of making sure completion display for vertico,
+  ;; selectrum etc. is updated.
+  (insert "a")
+  (run-hooks 'post-command-hook)
+  (delete-char -1))
 
 (defun orgqda-completion-annotations-annotate-count (tag)
   "Annotate TAG with count."
   (concat orgqda-completion-annotations--align-space
           (propertize
-           (orgqda-completion-annotations--get-count tag)
+           (format "%5d" (orgqda-completion-annotations--get-count tag))
            'face 'shadow)))
 
 (defun orgqda-completion-annotations-annotate-all (tag)
   "Annotate TAG with count and codebook info."
   (concat orgqda-completion-annotations--align-space
-          (propertize (orgqda-completion-annotations--get-count tag) 'face 'bold)
+          (propertize (format "%5d" (orgqda-completion-annotations--get-count tag)) 'face 'bold)
           " "
           (propertize (orgqda-completion-annotations--get-info tag) 'face 'shadow)))
 
 (defun orgqda-completion-annotations--get-count (tag)
   "Retrieve tag-count for TAG."
-  (or (get-text-property 0 'orgqda-count tag) ""))
+  (or (get-text-property 0 'orgqda-count tag) 0))
 
 (defun orgqda-completion-annotations--get-info (tag)
   "Retrieve codebook info for TAG."
@@ -124,7 +191,7 @@ locally won’t work)."
 "Get list of tags, initialize auxilary variables.
 Return alist of tags suitable as completion table in
 ‘org-set-tags-command’."
-(let ((taglist (orgqda--get-tags-alist orgqda-completion-annotations-sort
+(let ((taglist (orgqda--get-tags-alist nil
                                        (append
                                         (if orgqda-completion-annotations-include-excluded
                                             ;; non-nil for overriding the default
@@ -140,7 +207,7 @@ Return alist of tags suitable as completion table in
                          (propertize
                           tag
                           'orgqda-count
-                          (format "%5d" count)
+                          count
                           'orgqda-info
                           (concat (alist-get tag codebook-info "" nil #'equal))))
             finally do
@@ -163,7 +230,7 @@ Return alist of tags suitable as completion table in
                      (propertize
                       tag
                       'orgqda-count
-                      "     0"
+                      0
                       'orgqda-info (concat i)))))))
 
 
