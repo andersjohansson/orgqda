@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2021-07-28
-;; Modified: 2021-11-18
+;; Modified: 2022-01-03
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.3"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.gitlab.com/andersjohansson/orgqda
@@ -69,9 +69,6 @@ should not clutter the completion, apart from
   :type '(repeat string)
   :safe #'orgqda--list-of-strings-p)
 
-(defvar orgqda-completion-annotations--codebook-info nil
-  "Cached alist of coding info.")
-
 (defvar orgqda-completion-annotations--align-space " "
   "String with displayed space property suitable for aligning annotations.
 Slightly beyond longest tag.")
@@ -101,7 +98,6 @@ locally won’t work)."
     ;; (setf (alist-get 'org-tags marginalia-annotator-registry nil 'remove) nil)
     (kill-local-variable 'org-complete-tags-always-offer-all-agenda-tags)))
 
-
 (defun orgqda-completion-annotations-annotate-count (tag)
   "Annotate TAG with count."
   (concat orgqda-completion-annotations--align-space
@@ -118,48 +114,57 @@ locally won’t work)."
 
 (defun orgqda-completion-annotations--get-count (tag)
   "Retrieve tag-count for TAG."
-  (format "%5s" (alist-get "" (gethash tag orgqda--current-tagscount nil) "")))
+  (or (get-text-property 0 'orgqda-count tag) ""))
 
 (defun orgqda-completion-annotations--get-info (tag)
   "Retrieve codebook info for TAG."
-  (concat (alist-get tag orgqda-completion-annotations--codebook-info "" nil #'equal)))
-
+  (or (get-text-property 0 'orgqda-info tag) ""))
 
 (defun orgqda-completion-annotations--get-tags-list ()
-  "Get list of tags, initialize auxilary variables.
+"Get list of tags, initialize auxilary variables.
 Return alist of tags suitable as completion table in
 ‘org-set-tags-command’."
-  (let ((taglist (orgqda--get-tags-alist orgqda-completion-annotations-sort
-                                         (append
-                                          (if orgqda-completion-annotations-include-excluded
-                                              ;; non-nil for overriding the default
-                                              '("")
-                                            orgqda-exclude-tags)
-                                          orgqda-completion-annotations-exclude-tags))))
-    (setq orgqda-completion-annotations--codebook-info (orgqda--get-codebook-info))
-    (append
-     (cl-loop for (tag . count) in taglist
-              ;; format of org tag completion table
-              maximize (length tag) into ml
-              and collect (list tag)
-              finally do
-              (setq orgqda-completion-annotations--align-space
-                    (propertize
-                     " "
-                     'display
-                     `(space :align-to ,(+ 5 (or ml 0))))))
-     ;; Tags in codebook with no count, add to tagshash and last in
-     ;; returned list
-     ;; FIXME: this does not follow sorting defined above. perhaps
-     ;; more reasonable to lift that sort from orgqda--get-tags-alist
-     ;; and do it correctly below.
-     ;; But when using for example prescient, this sorting is ignored anyway.
-     (cl-loop for (tag . i) in orgqda-completion-annotations--codebook-info
-              ;; no prefixes or tags existing in hash
-              unless (or (eq ?{ (string-to-char tag))
-                         (gethash tag orgqda--current-tagscount nil))
-              do (puthash tag '(("" . 0)) orgqda--current-tagscount)
-              and collect (list tag)))))
+(let ((taglist (orgqda--get-tags-alist orgqda-completion-annotations-sort
+                                       (append
+                                        (if orgqda-completion-annotations-include-excluded
+                                            ;; non-nil for overriding the default
+                                            '("")
+                                          orgqda-exclude-tags)
+                                        orgqda-completion-annotations-exclude-tags)))
+      (codebook-info (orgqda--get-codebook-info)))
+  (append
+   (cl-loop for (tag . count) in taglist
+            ;; format of org tag completion table
+            maximize (length tag) into ml
+            and collect (list
+                         (propertize
+                          tag
+                          'orgqda-count
+                          (format "%5d" count)
+                          'orgqda-info
+                          (concat (alist-get tag codebook-info "" nil #'equal))))
+            finally do
+            (setq orgqda-completion-annotations--align-space
+                  (propertize
+                   " "
+                   'display
+                   `(space :align-to ,(+ 5 (or ml 0))))))
+   ;; Tags in codebook with no count, add to returned taglist
+
+   ;; FIXME: this does not follow sorting defined above. perhaps more
+   ;; reasonable to lift that sort from orgqda--get-tags-alist and do
+   ;; it correctly below. But when using for example prescient, this
+   ;; sorting is ignored anyway.
+   (cl-loop for (tag . i) in codebook-info
+            ;; no prefixes or tags existing in hash
+            unless (or (eq ?{ (string-to-char tag))
+                       (gethash tag orgqda--current-tagscount nil))
+            collect (list
+                     (propertize
+                      tag
+                      'orgqda-count
+                      "     0"
+                      'orgqda-info (concat i)))))))
 
 
 (provide 'orgqda-completion-annotations)
