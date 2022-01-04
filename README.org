@@ -73,16 +73,15 @@ orgqda-taglink-include-filename t
 ** Auxilary libraries
 The repository includes some extra libraries that can be useful for coding and interacting with orgqda and qualitative text data in general.
 
-
-*** orgqda-completion-annotations.el
-Automatically annotate completions of tags with count and information from codebook if defined. Activating the mode ~orgqda-completion-annotations-mode~ will enable annotations with the help of the ~marginalia~ library. Additionally it redefines completion to include tags from all files defined in ~orgqda-tag-files~. I recommend activating it with orgqda:
+*** orgqda-completion.el
+Automatically annotate completions of tags with count and information from codebook if defined. Activating the minor mode ~orgqda-completion-mode~ will enable annotations, sorting and grouping, with some help from the ~marginalia~ library. Additionally it redefines completion to include tags from all files defined in ~orgqda-tag-files~. I recommend activating it with orgqda:
 #+begin_src emacs-lisp
-(add-hook 'orgqda-mode-hook #'orgqda-completion-annotations-mode)
+(add-hook 'orgqda-mode-hook #'orgqda-completion-mode)
 #+end_src
 
-When completing, tags are sorted according to ~orgqda-completion-annotations-sort~ , but this can be cycled by calling ~orgqda-completion-annotations-cycle-sorting~, which can be bound to a suitable key in a suitable keymap, usually ~minibuffer-mode-map~ (With my Swedish keyboard and using vertico for completion I do: ~(bind-key "C-å" #'orgqda-completion-annotations-cycle-sorting 'vertico-map)~).
+When completing, tags are sorted according to ~orgqda-completion-sort~ , but this can be cycled by calling ~orgqda-completion-cycle-sorting~, which can be bound to a suitable key in a suitable keymap, usually ~minibuffer-mode-map~ (With my Swedish keyboard and using vertico for completion I do: ~(bind-key "C-å" #'orgqda-completion-cycle-sorting 'vertico-map)~).
 
-Additionally, if tag hierachy is used, tags can be grouped up to the level given by ~orgqda-completion-annotations-group~.
+Additionally, if tag hierachy is used, tags can be grouped up to the level given by ~orgqda-completion-group~.
 
 *** orgqda-helm-tags.el (Deprecated)
 *NOTE:* I won’t be updating [[file:orgqda-helm-tags.el][orgqda-helm-tags.el]] since I’m moving away from helm.

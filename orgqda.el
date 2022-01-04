@@ -1,14 +1,14 @@
 ;;; orgqda.el --- Qualitative data analysis using org-mode  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2014-2021 Anders Johansson
+;; Copyright (C) 2014-2022 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2014-10-12
-;; Modified: 2021-09-08
+;; Modified: 2022-01-04
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
-;; URL: http://www.gitlab.com/andersjohansson/orgqda
+;; URL: https://www.gitlab.com/andersjohansson/orgqda
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -21,7 +21,7 @@
 ;; General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.
+;; along with GNU Emacs.  If not, see <https://www.gnu.org/licenses/>.
 
 ;;; Commentary:
 ;; orgqda defines a minor mode and several commands for making coding
@@ -1977,17 +1977,18 @@ Coding info is the first line of the matching line for the tag in
 
 (advice-add 'org-global-tags-completion-table :around #'orgqda-tags-completion-table-wrap)
 
-(declare-function orgqda-completion-annotations--get-tags-list "orgqda-completion-annotations" nil)
-(defvar orgqda-completion-annotations-mode)
+(declare-function orgqda-completion--get-tags-list "orgqda-completion" nil)
+(defvar orgqda-completion-mode)
 
 (defun orgqda-tags-completion-table-wrap (oldfun &rest args)
   "Around advice for ‘org-global-tags-completion-table’ (OLDFUN).
-In ‘orgqda-mode’, load tags from ‘orgqda-tag-files’ and inhibits
-org hooks to speed up loading of files. Else just call OLDFUN
-with ARGS."
+In ‘orgqda-completion-mode’, use custom function for retrieving
+tags. In ‘orgqda-mode’, load tags from ‘orgqda-tag-files’ and
+inhibit org hooks to speed up loading of files. Else just call
+OLDFUN with ARGS."
   (cond
-   (orgqda-completion-annotations-mode
-    (orgqda-completion-annotations--get-tags-list))
+   (orgqda-completion-mode
+    (orgqda-completion--get-tags-list))
    (orgqda-mode
     (orgqda--inhibit-org-startups
      (funcall oldfun (orgqda-tag-files))))
