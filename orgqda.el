@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2014-10-12
-;; Modified: 2022-01-20
+;; Modified: 2022-02-05
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -127,9 +127,60 @@ One of: _@#%, or nil to disable hierarchical grouping."
   "When non-nil, excludes listing files without matches for current tag."
   :type 'boolean)
 
+(defcustom orgqda-sort-parameters
+  '((count-decreasing
+     (:description . "By count, decreasing")
+     (:data-get . orgqda--get-tag-count)
+     (:buffer-get . orgqda--hl-get-count)
+     (:alist-get . cdr)
+     (:completion-get . orgqda-completion--get-count)
+     (:compare . >))
+    (a-z
+     (:description . "A-Z")
+     (:compare . orgqda--string-lessp)
+     (:char . ?a))
+    (z-a
+     (:description . "Z-A")
+     (:compare . orgqda--string-greaterp)
+     (:char . ?A))
+    (count-increasing
+     (:description . "By count, increasing")
+     (:data-get . orgqda--get-tag-count)
+     (:buffer-get . orgqda--hl-get-count)
+     (:alist-get . cdr)
+     (:completion-get . orgqda-completion--get-count)
+     (:compare . <)))
+  "Alist mapping character keys for sorting to relevant functions.
+Various functions are used for getting keys and comparing in different contexts.
+Ordinarily
+
+"
+  :type '(repeat (list (symbol :tag "Name")
+                       (set :inline t
+                            (cons :tag "Description, mandatory" (const :format "" :description) string)
+                            (cons :tag "Function for comparing two values, mandatory" (const :format "" :compare) function)
+                            (cons :tag "Character matching a sort character for ‘org-sort-entries’." (const :char) character)
+                            (cons :tag "Function for fetching value in data." (const :format "" :data-get) function)
+                            (cons :tag "Function for fetching value in buffer." (const :format "" :buffer-get) function)
+                            (cons :tag "Function for fetching value in alist." (const :format "" :alist-get) function)
+                            (cons :tag "Function for fetching value in completion list." (const :format "" :completion-get) function)
+                            ))))
+
+(defun orgqda--sort-parameter-get (key parameter &optional default)
+  "Get sort PARAMETER for KEY or nil or DEFAULT if not found.
+See ‘orgqda-sort-parameters’."
+  (if-let ((a (alist-get key orgqda-sort-parameters))
+           (p (alist-get parameter a)))
+      p
+    default))
+
+(defun orgqda--read-sort-choice ()
+  (intern-soft (completing-read "Sort by: " (mapcar #'car orgqda-sort-parameters) nil t)))
+
 (defcustom orgqda-keep-tags-sorted nil
   "If non-nil, keep the taglist in the entry sorted in ‘orgqda-mode’.
-If non-nil, should be a sorting scheme from ‘orgqda-sort-args’.
+If non-nil, should be a sorting scheme from
+‘orgqda-sort-parameters’, or optionally a comparison function.
 
 You could directly set ‘org-tags-sort-function’, but this is for
 using it locally when using ‘orgqda-mode’ and with simple options
@@ -139,20 +190,14 @@ Most stable and useful is probably to sort alphabetically, using
 ‘a-z’ or ‘z-a’. Sorting by count means sorting by the current
 “popularity” of tags across the orgqda collection and won’t be
 updated when tags are changed in other places than this headline."
-  :type '(choice (const :tag "Don’t sort" nil)
-                 (const :tag "By count, decreasing" count-decreasing)
-                 (const :tag "By count, increasing" count-increasing)
-                 (const :tag "A-Z" a-z)
-                 (const :tag "Z-A" z-a))
-  :safe (lambda (x) (or (null x) (orgqda-sort-arg-p x))))
+  :type 'symbol
+  :safe #'symbolp)
 
 (defcustom orgqda-default-sort-order 'count-decreasing
-  "Default order for sorting when listing tags."
-  :type '(choice (const :tag "By count, decreasing" count-decreasing)
-                 (const :tag "By count, increasing" count-increasing)
-                 (const :tag "A-Z" a-z)
-                 (const :tag "Z-A" z-a))
-  :safe #'orgqda-sort-arg-p)
+  "Default order for sorting when listing tags.
+See ‘orgqda-sort-parameters’ for options."
+  :type 'character
+  :safe #'characterp)
 
 (defcustom orgqda-only-count-matching nil
   "When non-nil, only entries with matching tags are counted and collected.
@@ -207,12 +252,12 @@ following the link looks in the right project."
 (defcustom orgqda-tag-action 'collect
   "Action to invoke on click or \[org-open-at-point] on a tag in a headline.
 Nil gives org mode default, which is to invoke ‘org-tags-view’
-but the orgqda functions are probably more useful in ‘collect’
+but the orgqda functions are probably more useful. ‘collect’
 collects tags and ‘codebook’ looks up the tag in
 ‘orgqda-codebook-file’."
   :type '(choice (const :tag "Collect all coded instances" collect)
                  (const :tag "Lookup tag in codebook file" 'codebook)
-                 (const :tag "Fallback to standar org behaviour" nil))
+                 (const :tag "Fallback to standard org behaviour" nil))
   :safe #'symbolp)
 
 (defun orgqda--file-name-remove-parentheses (filename)
@@ -268,20 +313,6 @@ Usually set by the user as a file or dir local variable.")
   "Parameters used to generate taglist in current buffer.")
 (defvar-local orgqda--old-org-current-tag-alist nil
   "Saved state of ‘org-current-tag-alist’ before enabling ‘orgqda-mode’.")
-
-(defconst orgqda-sort-args
-  '((count-decreasing . orgqda--hierarchy-count-greater-p)
-    (a-z . orgqda--string-lessp)
-    (z-a . orgqda--string-greaterp)
-    (count-increasing . orgqda--hierarchy-count-less-p))
-  "Alist mapping symbol keys for sorting to comparison functions.
-The order is the order used when cycling sorting in
-‘orgqda-helm-tags-set-tags’.")
-
-;;;###autoload
-(defun orgqda-sort-arg-p (arg)
-  "Non-nil if ARG is in ‘orgqda-sort-args’."
-  (cl-member arg orgqda-sort-args :key #'car))
 
 ;;;; KEYBINDINGS
 ;;;###autoload
@@ -410,7 +441,8 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
                     (append '(orgqda-tag-action-at-point)
                             org-open-at-point-functions))
         (setq-local org-tags-sort-function
-                    (or (alist-get orgqda-keep-tags-sorted orgqda-sort-args)
+                    (or (when (functionp orgqda-keep-tags-sorted) orgqda-keep-tags-sorted)
+                        (orgqda--sort-parameter-get orgqda-keep-tags-sorted :compare)
                         org-tags-sort-function)))
     (kill-local-variable 'org-complete-tags-always-offer-all-agenda-tags)
     (kill-local-variable 'org-open-at-point-functions)
@@ -488,11 +520,12 @@ Prefix ARG is passed through."
 Sorted by count, or alphabetically if optional (prefix) argument
 ARG is non-nil.
 
-For non-interactive calls, the rest of the arguments are given as keywords
-SORT, as a sort symbol (see ‘orgqda--create-hierarchical-taglist’). FULL non-nil
-means also insert extracted paragraphs for all tags. If a buffer
-is provided in BUFFER overwrite this buffer with the list instead of
-creating a new. The taglist is normally updated via
+For non-interactive calls, the rest of the arguments are given as
+keywords SORT, as a sort character (see
+‘orgqda--create-hierarchical-taglist’). FULL non-nil means also
+insert extracted paragraphs for all tags. If a buffer is provided
+in BUFFER overwrite this buffer with the list instead of creating
+a new. The taglist is normally updated via
 ‘orgqda--create-hierarchical-taglist’, but this can be prevented
 by giving a non-nil NOUPDATE. Then a special list can be used by
 setting ‘orgqda--current-htl’ suitably. ROOTTEXT specifies the
@@ -516,7 +549,7 @@ ignoring any setting of ‘orgqda-tag-files’."
     (unless noupdate
       (orgqda--create-hierarchical-taglist
        (cond
-        ((symbolp sort) sort)
+        ((characterp sort) sort)
         (arg 'a-z)
         (t orgqda-default-sort-order)))
       ;; have to fetch the list again here for listing below, it is
@@ -596,40 +629,28 @@ If not in ‘orgqda-list-mode’, calls
         (goto-char pos))
     (orgqda-update-taglist-general)))
 
-
 (defvar orgqda--current-sorting-args nil)
 
 ;;;###autoload
-(defun orgqda-sort-taglist (&optional order non-recursive)
+(defun orgqda-sort-taglist (&optional sort non-recursive)
   "Sort current taglist using ‘org-sort-entries’.
 
 Sorts current subtree and children, active region, or children of
 first headline if before that.
 
-Sorting is determined via ORDER which can be a/A/c/C for
-alphabetical, alphabetical reversed, count decreasing, count
-increasing, respectively.
-With NON-RECURSIVE non-nil, only sorts
+Sorting is determined via symbol SORT given by
+‘orgqda-sort-parameters’. With NON-RECURSIVE non-nil, only sorts
 the direct descendants of current headline, and not their
 children."
-  (interactive "cSort order: a[lpha] c[count], A/C means reversed.")
+  (interactive (list (orgqda--read-sort-choice)))
   (let* ((inhibit-read-only t)
          (inhibit-message t)
-         (order (or order ?c))
+         (sort (or sort orgqda-default-sort-order))
          (sortlist
           (list
-           (cl-case order
-             ((?a ?A a-z z-a)
-              '(nil ?f orgqda--hl-get-count >))
-             ((?c ?C count-decreasing count-increasing)
-              '(nil ?a))
-             (t (user-error "No correct order specified")))
-           (cl-case order
-             ((?a a-z) '(nil ?a))
-             ((?A z-a) '(nil ?A))
-             ((?c count-decreasing) '(nil ?f orgqda--hl-get-count >))
-             ((?C count-increasing) '(nil ?f orgqda--hl-get-count <))
-             (t (user-error "No correct order specified"))))))
+           (when (not (member sort '(a-z z-a)))
+             (orgqda--org-sort-params 'a-z))
+           (orgqda--org-sort-params sort))))
     (if (region-active-p)
         ;; don’t do double sort here, too difficult keeping region
         (apply #'org-sort-entries (cadr sortlist))
@@ -638,33 +659,27 @@ children."
       (unless (org-at-heading-p)
         (org-back-to-heading t))
       (dolist (so sortlist)
-        (let ((orgqda--current-sorting-args so))
+        (when-let ((orgqda--current-sorting-args so))
           (if non-recursive
               (orgqda--sort-subtree)
             (org-map-entries #'orgqda--sort-subtree t 'tree))))))
   (when orgqda-list-mode
     (setq orgqda--taglist-parameters
-          (plist-put
-           orgqda--taglist-parameters :sort
-           (cl-case order
-             (?a 'a-z)
-             (?A 'z-a)
-             (?c 'count-decreasing)
-             (?C 'count-increasing))))))
+          (plist-put orgqda--taglist-parameters :sort sort))))
 
 ;;;###autoload
-(defun orgqda-sort-taglist-buffer (&optional order)
+(defun orgqda-sort-taglist-buffer (&optional sort)
   "Sort the current taglist buffer.
 calls ‘orgqda-sort-taglist’ for whole buffer.
-Sort by ORDER."
-  (interactive "cSort order: a[lpha] c[count], A/C means reversed.")
+Sort by SORT."
+  (interactive (list (orgqda--read-sort-choice)))
   (save-mark-and-excursion
     (while (org-up-heading-safe))
     (when (or (org-goto-sibling)
               (org-goto-sibling t))
       (goto-char (point-min))
       (set-mark (point-max)))
-    (funcall #'orgqda-sort-taglist order)))
+    (funcall #'orgqda-sort-taglist sort)))
 
 
 ;;;;; Commands for collecting
@@ -1268,16 +1283,14 @@ EXCLUDE-TAGS is non nil, use that instead of
 
 (defun orgqda--get-tags-alist (&optional sort exclude-tags)
   "Return an alist of all tags with counts.
-In this buffer or in all files in ‘orgqda-tag-files’.
-Optional SORT can be symbols: count-decreasing, count-increasing,
-a-z, or z-a. EXCLUDE-TAGS overrides ‘orgqda-exclude-tags’."
+In this buffer or in all files in ‘orgqda-tag-files’. Optional
+SORT is a character from ‘orgqda-sort-parameters’. EXCLUDE-TAGS
+overrides ‘orgqda-exclude-tags’."
   (let ((tl (orgqda--tags-hash-to-alist (orgqda--get-tags-hash exclude-tags))))
-    (cl-case sort
-      (count-decreasing (cl-sort tl '> :key 'cdr))
-      (count-increasing (cl-sort tl '< :key 'cdr))
-      (a-z (cl-sort tl #'orgqda--string-lessp :key 'car))
-      (z-a (cl-sort tl #'orgqda--string-greaterp :key 'car))
-      (t tl))))
+    (if-let ((get (orgqda--sort-parameter-get sort :alist-get #'car))
+             (compare (orgqda--sort-parameter-get sort :compare)))
+        (cl-sort tl compare :key get)
+      tl)))
 
 (cl-defstruct (orgqda--hierarchical-taglist
                (:constructor orgqda--make-htl)
@@ -1290,10 +1303,11 @@ a-z, or z-a. EXCLUDE-TAGS overrides ‘orgqda-exclude-tags’."
 
 (defun orgqda--create-hierarchical-taglist (&optional sort taghash)
   "Store a hierarchical taglist in ‘orgqda--current-htl’.
-Optional SORT can be symbols: count-decreasing (default),
-count-increasing, a-z, or z-a. TAGHASH specifies a custom taghash
+Optional SORT is a character from ‘orgqda-sort-parameters’.
+TAGHASH specifies a custom taghash
 not loaded with ‘orgqda--get-tags-hash’."
-  (let ((taghash (or taghash (orgqda--get-tags-hash))))
+  (let ((taghash (or taghash (orgqda--get-tags-hash)))
+        (sort (or sort orgqda-default-sort-order)))
     (setq orgqda--current-htl
           (orgqda--make-htl
            :counts taghash))
@@ -1302,14 +1316,17 @@ not loaded with ‘orgqda--get-tags-hash’."
                          (if orgqda-hierarchy-delimiter
                              #'orgqda--hierarchy-parentfn
                            (lambda (_) nil)))
-    ;; Possibly sort in two passes for a stable order
-    ;; Initial sort (if primarily sorting by count, sort those with equal counts a-z)
-    (when (not (member sort '(a-z z-a)))
-      (hierarchy-sort (orgqda--htl-hierarchy orgqda--current-htl) #'orgqda--string-lessp))
-    ;; The primary sorting
-    (hierarchy-sort
-     (orgqda--htl-hierarchy orgqda--current-htl)
-     (alist-get sort orgqda-sort-args #'orgqda--hierarchy-count-greater-p))))
+    (when-let ((compare (orgqda--sort-parameter-get sort :compare))
+               (get (orgqda--sort-parameter-get sort :data-get #'identity))
+               (sortfn (lambda (a b) (funcall compare (funcall get a) (funcall get b)))))
+      ;; Possibly sort in two passes for a stable order
+      ;; Initial sort (if primarily sorting by count, sort those with equal counts a-z)
+      (when (not (member sort '(?a ?A)))
+        (hierarchy-sort (orgqda--htl-hierarchy orgqda--current-htl) #'orgqda--string-lessp))
+      ;; The primary sorting
+      (hierarchy-sort
+       (orgqda--htl-hierarchy orgqda--current-htl)
+       sortfn))))
 
 (defun orgqda--insert-hierarchical-taglist (full origbuffer filename &optional startlevel starttag)
   "Insert a hierarchical taglist.
@@ -1415,14 +1432,19 @@ Cache transformed values in ‘orgqda--tagcount-filename-hash’."
       (replace-regexp-in-string
        (concat (car (last splittag)) orgqda-hierarchy-delimiter "?$") "" tag))))
 
-(defun orgqda--hierarchy-count-greater-p (x y)
-  "Return non-nil if tag X has greater count than Y."
-  (> (alist-get "" (gethash x (orgqda--htl-counts orgqda--current-htl)) -1)
-     (alist-get "" (gethash y (orgqda--htl-counts orgqda--current-htl)) -2)))
-(defun orgqda--hierarchy-count-less-p (x y)
-  "Return non-nil if tag X has smaller count than Y."
-  (< (alist-get "" (gethash x (orgqda--htl-counts orgqda--current-htl)) -2)
-     (alist-get "" (gethash y (orgqda--htl-counts orgqda--current-htl)) -1)))
+(defun orgqda--get-tag-count (tag)
+  "Get stored global value of count for TAG.
+Returns 0 if not found."
+  (alist-get "" (gethash tag (orgqda--htl-counts orgqda--current-htl)) 0))
+
+;; (defun orgqda--hierarchy-count-greater-p (x y)
+;;   "Return non-nil if tag X has greater count than Y."
+;;   (> (alist-get "" (gethash x (orgqda--htl-counts orgqda--current-htl)) -1)
+;;      (alist-get "" (gethash y (orgqda--htl-counts orgqda--current-htl)) -2)))
+;; (defun orgqda--hierarchy-count-less-p (x y)
+;;   "Return non-nil if tag X has smaller count than Y."
+;;   (< (alist-get "" (gethash x (orgqda--htl-counts orgqda--current-htl)) -2)
+;;      (alist-get "" (gethash y (orgqda--htl-counts orgqda--current-htl)) -1)))
 
 (defun orgqda--string-lessp (s1 s2)
   "Return non-nil if S1 is less than S2 in collation order.
@@ -1784,8 +1806,6 @@ NO-RELOAD reuses already initalized completion list (in
 PROMPT, INITIAL-INPUT, REQUIRE-MATCH as in ‘completing-read’.
 NO-RELOAD reuses already initalized tag completion list (in
 ‘orgqda--tag-completion-list’ or ‘orgqda-helm-tags-comp-list’)."
-  ;; FIXME: We don’t have special helm completion (in orgqda-helm-tags.el)
-  ;; here yet. Complex to implement cleanly.
   (completing-read prompt (orgqda--get-prefixes-for-completion no-reload) nil require-match initial-input))
 
 (defun orgqda--get-tags-for-completion (&optional no-reload)
@@ -1920,6 +1940,15 @@ set to ‘orgqda-tag-files’"
   "Sort current tree if it has children."
   (when (save-excursion (org-goto-first-child))
     (apply #'org-sort-entries orgqda--current-sorting-args)))
+
+(defun orgqda--org-sort-params (sortkey)
+  "Get parameteter list for ‘org-sort’ from SORT-KEY."
+  (if-let ((get (orgqda--sort-parameter-get
+                 sortkey :buffer-get
+                 (lambda () (org-sort-remove-invisible (org-get-heading t t t t)))))
+           (compare (orgqda--sort-parameter-get sortkey :compare)))
+      `(nil ?f ,get ,compare)
+    `(nil ,(orgqda--sort-parameter-get :key sortkey))))
 
 (defun orgqda--tag-prefix-p (tag)
   "Non-nil if TAG ends in ‘orgqda-hierarchy-delimiter’."

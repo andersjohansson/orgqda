@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2021-07-28
-;; Modified: 2022-01-11
+;; Modified: 2022-01-21
 ;; Package-Requires: ((emacs "28.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.3"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -39,12 +39,10 @@
   :group 'orgqda)
 
 (defcustom orgqda-completion-sort orgqda-default-sort-order
-  "Sorting scheme used for tag completion in ‘orgqda-completion-mode’."
-  :type '(choice (const :tag "By count, decreasing" count-decreasing)
-                 (const :tag "By count, increasing" count-increasing)
-                 (const :tag "A-Z" a-z)
-                 (const :tag "Z-A" z-a))
-  :safe #'orgqda-sort-arg-p)
+  "Sorting scheme used for tag completion in ‘orgqda-completion-mode’.
+ A symbol from ‘orgqda-sort-parameters’."
+  :type 'symbol
+  :safe #'symbolp)
 
 (defcustom orgqda-completion-group nil
   "Whether to group tags in completion by orgqda hierarchy."
@@ -113,9 +111,9 @@ work)."
   "Cycle sorting method for tag completion with orgqda."
   (interactive)
   (setq orgqda-completion-sort
-        (car (nth (mod (1+ (cl-position orgqda-completion-sort orgqda-sort-args :key #'car))
-                       (length orgqda-sort-args))
-                  orgqda-sort-args)))
+        (car (nth (mod (1+ (cl-position orgqda-completion-sort orgqda-sort-parameters :key #'car))
+                       (length orgqda-sort-parameters))
+                  orgqda-sort-parameters)))
   ;; Hacky way of making sure completion display for vertico,
   ;; selectrum etc. is updated.
   (insert "a")
@@ -157,12 +155,10 @@ TRANSFORM is used as described in Info node ‘(elisp)Programmed Completion’"
 
 (defun orgqda-completion--sort (taglist)
   "Sort TAGLIST according to ‘orgqda-completion-sort’."
-  (cl-case orgqda-completion-sort
-    (count-decreasing (cl-sort taglist '> :key 'orgqda-completion--get-count))
-    (count-increasing (cl-sort taglist '< :key 'orgqda-completion--get-count))
-    (a-z (sort taglist #'orgqda--string-lessp))
-    (z-a (sort taglist #'orgqda--string-greaterp))
-    (t taglist)))
+  (if-let ((get (orgqda--sort-parameter-get orgqda-completion-sort :completion-get #'identity))
+           (compare (orgqda--sort-parameter-get orgqda-completion-sort :compare)))
+      (cl-sort taglist compare :key get)
+    taglist))
 
 (defun orgqda-completion-annotate-count (tag)
   "Annotate TAG with count."

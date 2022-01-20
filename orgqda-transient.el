@@ -1,11 +1,11 @@
 ;;; orgqda-transient.el --- Transients for invoking orgqda commands  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2021  Anders Johansson
+;; Copyright (C) 2021-2022  Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Keywords: convenience, wp
 ;; Created: 2021-04-12
-;; Modified: 2021-07-05
+;; Modified: 2022-02-05
 ;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -35,129 +35,159 @@
 
 (transient-define-prefix orgqda-transient ()
   "Transient for invoking orgqda commands"
-  [["Toggle"
-    ("m" "Toggle mode" orgqda-mode)]
-   ["List"
-    ("l" "List tags" orgqda-list-tags)
-    ("L" "List and extract" orgqda-list-tags-full)
-    ("o" "List with options" orgqda-transient-list-tags)]
-   ["Collect"
+  [["List tags"
+    :pad-keys t
+    ("-s" orgqda-transient-sort)
+    ("-e" orgqda-transient-full)
+    ("-f" orgqda-transient-notagfiles)
+    ("-p" orgqda-transient-startprefix)
+    ("l" "List tags" orgqda-transient-list-tags-suffix)]
+   ["Taglist buffer"
+    :if (lambda () (or orgqda-list-mode orgqda-codebook-mode))
+    ("g" "Revert list (update buffer)" orgqda-revert-taglist)
+    ;; ("o" orgqda-transient-sort)
+    ("-n" "Non-recursive" orgqda-transient-buffer-non-recursive)
+    ("s" "Sort taglist at point or region" orgqda-transient-sort-taglist)
+    ("S" "Sort taglists in whole buffer" orgqda-transient-sort-taglist-buffer)]]
+  [["Collect"
     ("c" "Collect tagged" orgqda-collect-tagged)]
    ["Relations"
+    :pad-keys t
     ("r" "Tag relations" orgqda-transient-tag-relations)
-    ("R" orgqda-transient-tag-relations-k)]
+    ("-k" orgqda-transient-tag-relations-k)]
    ["Csv"
     ("v" "Collect csv" orgqda-collect-tagged-csv)
     ("V" "Collect csv save" orgqda-collect-tagged-csv-save)
-    ("b" "Save all as csv" orgqda-collect-tagged-csv-save-all)]
-   ["Actions"
+    ("B" "Save all tag collections as csv" orgqda-collect-tagged-csv-save-all)]
+   ["Tag Actions"
     ("m" "Refile and merge" orgqda-refile-and-merge-tags)
     ("n" "Rename tag" orgqda-rename-tag)
     ("p" "Prefix tag" orgqda-prefix-tag)
     ("P" "Rename prefix on this tag" orgqda-rename-prefix-on-one-tag)
     ("i" "Rename prefix on all tags" orgqda-rename-prefix)
-    ("k" "Delete tag" orgqda-delete-tag)]])
+    ("k" "Delete tag" orgqda-delete-tag)]
+   ["Toggle"
+    ("m" "Toggle mode" orgqda-mode)]])
 
 
-;;;; List-tags
-(transient-define-prefix orgqda-transient-list-tags ()
-  "Transient for ‘orgqda-list-tags’"
-  [["Options"
-    ("s" orgqda-transient-sort)
-    ("e" "Include extracts" "full")
-    ("f" "No tag files" "notagfiles")
-    ("p" orgqda-transient-startprefix)]]
-  [("RET" orgqda-transient-list-tags-suffix)])
+(defvar-local orgqda-transient--options nil)
 
-(transient-define-argument orgqda-transient-sort ()
-  :description "Sort"
-  :class 'transient-switches
-  :argument-format "sort=%s"
-  :argument-regexp "\\(count-decreasing\\|a-z\\|z-a\\|count-increasing\\)"
-  :choices '("count-decreasing" "a-z" "z-a" "count-increasing")
-  :init-value #'orgqda-transient--set-sort-init)
+;;;; Listing and options
+(defclass orgqda-transient-option (transient-infix)
+  ((argument :initform "")
+   (var :initform 'orgqda-transient--options :allocation :class)
+   (param :initarg :param)
+   (format :initform " %k %d %v"))
 
-(defun orgqda-transient--set-sort-init (obj)
-  "Set initial value of sort OBJ."
-  ;; CHECK: does this interfere with transient value saving? Haven’t
-  ;; looked into that yet.
+  "Class for storing orgqda options in local lisp variables.
+Uses slots var and param for determining variable and plist key
+to store in.")
+
+(defclass orgqda-transient-switch (orgqda-transient-option)
+  ())
+
+(cl-defmethod transient-init-value ((obj orgqda-transient-option))
   (oset obj value
-        (concat "sort="
-                (if-let ((sort (plist-get orgqda--taglist-parameters :sort)))
-                    (symbol-name sort)
-                  (symbol-name orgqda-default-sort-order)))))
+        (plist-get (symbol-value (oref obj var)) (oref obj param))))
 
-(transient-define-argument orgqda-transient-startprefix ()
+(cl-defmethod transient-format-value ((obj orgqda-transient-option))
+  (propertize (pcase (oref obj value)
+                ;; (plist-get (oref obj var) (oref obj param))
+
+                ((pred (eq t)) "Yes")
+                ((pred (eq nil)) "")
+                ((and (pred symbolp) symb)
+                 (symbol-name symb))
+                ((and (pred stringp) str)
+                 str)
+                ((and (pred numberp) num)
+                 (number-to-string num))
+                (_ ""))
+              'face 'transient-argument))
+
+(defclass orgqda-transient-taglist-parameter (orgqda-transient-option)
+  ((var :initform 'orgqda--taglist-parameters)))
+
+(defclass orgqda-transient-taglist-parameter-switch (orgqda-transient-taglist-parameter orgqda-transient-switch)
+  ())
+
+(cl-defmethod transient-infix-read ((obj orgqda-transient-switch))
+  "Toggle the switch on or off."
+  (if (oref obj value) nil t))
+
+(cl-defmethod transient-infix-set ((obj orgqda-transient-option) val)
+  "Set orgqda list option defined by OBJ to VALUE."
+  (oset obj value val)
+  (setf (plist-get (symbol-value (oref obj var)) (oref obj param)) val))
+
+(transient-define-infix orgqda-transient-full ()
+  :class 'orgqda-transient-taglist-parameter-switch
+  :param :full
+  :description "Include extracts")
+
+(transient-define-infix orgqda-transient-notagfiles ()
+  :class 'orgqda-transient-taglist-parameter-switch
+  :param :no-tag-files
+  :description "Ignore ‘orgqda-tag-files’")
+
+(transient-define-infix orgqda-transient-sort ()
+  :class 'orgqda-transient-taglist-parameter
+  :param :sort
+  :always-read t
+  :description "Sort"
+  :reader (lambda (_p ii hist)
+            (intern (completing-read
+                     "Sort: "
+                     (mapcar #'car orgqda-sort-parameters)
+                     nil t ii hist))))
+
+(transient-define-infix orgqda-transient-startprefix ()
+  :class 'orgqda-transient-taglist-parameter
+  :param :startprefix
   :description "Start prefix"
-  :class 'transient-option
-  :argument "sp="
-  :reader (lambda (prompt initial-input _history)
-            (orgqda--completing-read-prefix prompt initial-input)))
+  :reader (lambda (_p ii hist)
+            (concat (completing-read
+                     "Start prefix: "
+                     (orgqda--get-prefixes-for-completion)
+                     nil nil ii hist)
+                    orgqda-hierarchy-delimiter)))
 
-(transient-define-suffix orgqda-transient-list-tags-suffix (sort full startprefix notagfiles)
-  :description "orgqda-list-tags"
-  (interactive (let ((args (transient-args transient-current-command)))
-                 (list
-                  (transient-arg-value "sort=" args)
-                  (transient-arg-value "full" args)
-                  (transient-arg-value "sp=" args)
-                  (transient-arg-value "notagfiles" args))))
-  (orgqda-list-tags nil
-                    :sort (intern-soft sort)
-                    :full full
-                    :startprefix (when startprefix (concat startprefix "_"))
-                    :no-tag-files notagfiles))
+(transient-define-suffix orgqda-transient-list-tags-suffix ()
+  :description "Run orgqda-list-tags with given options."
+  (interactive)
+  (apply #'orgqda-list-tags nil orgqda--taglist-parameters))
+
 
 ;;;; Tag relations
 (transient-define-suffix orgqda-transient-tag-relations (k)
   :description "Tag relations"
-  (interactive (list
-                (transient-arg-value "tr=" (transient-args transient-current-command))))
+  (interactive (list (plist-get orgqda-transient--options :tag-relations-k)))
+  (orgqda-view-tag-relations (or k 2)))
 
-  (orgqda-view-tag-relations (if k (string-to-number k) 2)))
+(transient-define-infix orgqda-transient-tag-relations-k ()
+  :description "K-tuples"
+  :class 'orgqda-transient-option
+  :param :tag-relations-k
+  :reader (lambda (_p ii hist)
+            (string-to-number (transient-read-number-N+ "k-tuple: " ii hist))))
 
-(transient-define-argument orgqda-transient-tag-relations-k ()
-  :description "k-tuples"
-  :class 'transient-option
-  :argument "k="
-  :reader #'transient-read-number-N+)
-
-
-
-;;;; Transient for orgqda-list-mode and orgqda-codebook-mode
-
-(transient-define-prefix orgqda-transient-list ()
-  "Transient for invoking orgqda commands in list- and codebook-mode."
-  [["Orgqda"
-    ("a" "Orgqda actions" orgqda-transient)]
-   ["Revert"
-    ("g" "Revert list (update buffer)" orgqda-revert-taglist)]
-   ["Sorting"
-    ("o" orgqda-transient-sort)
-    ("n" "Non-recursive" "non-recursive")
-    ("s" "Sort taglist" orgqda-transient-sort-taglist)
-    ("S" "Sort taglist, whole buffer" orgqda-transient-sort-taglist-buffer)]
-   ["Actions"
-    ("m" "Refile and merge" orgqda-refile-and-merge-tags)
-    ("r" "Rename tag" orgqda-rename-tag)
-    ("p" "Prefix tag" orgqda-prefix-tag)
-    ("P" "Rename prefix on this tag" orgqda-rename-prefix-on-one-tag)
-    ("i" "Rename prefix on all tags" orgqda-rename-prefix)
-    ("k" "Delete tag" orgqda-delete-tag)]])
-
-
-(transient-define-suffix orgqda-transient-sort-taglist (sort non-recursive)
-  :description "orgqda-sort-taglist"
-  (interactive (let ((args (transient-args transient-current-command)))
-                 (list (transient-arg-value "sort=" args)
-                       (transient-arg-value "non-recursive" args))))
-  (orgqda-sort-taglist (intern-soft sort)
-                       non-recursive))
+;;;; taglist-buffer sorting
+(transient-define-infix orgqda-transient-buffer-non-recursive ()
+  :description "Non-recursive"
+  :class 'orgqda-transient-switch
+  :param :buffer-non-recursive)
 
 (transient-define-suffix orgqda-transient-sort-taglist-buffer (sort)
   :description "orgqda-sort-taglist-buffer"
-  (interactive (list (transient-arg-value "sort=" (transient-args transient-current-command))))
-  (orgqda-sort-taglist-buffer (intern-soft sort)))
+  (interactive (list (plist-get orgqda--taglist-parameters :sort)))
+  (orgqda-sort-taglist-buffer sort))
+
+(transient-define-suffix orgqda-transient-sort-taglist (sort non-recursive)
+  :description "orgqda-sort-taglist"
+  (interactive (list (plist-get orgqda--taglist-parameters :sort)
+                     (plist-get orgqda-transient--options :buffer-non-recursive)))
+  (orgqda-sort-taglist sort non-recursive))
+
 
 
 (provide 'orgqda-transient)
