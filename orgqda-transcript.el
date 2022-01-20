@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2021-04-12
+;; Modified: 2021-11-26
 ;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1") (org "9.3") (orgqda "0.2"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -42,6 +42,12 @@
 (defgroup orggqda-transcript nil
   "Settings for ‘orgqda-transcript-mode’."
   :group 'text)
+
+(defcustom orgqda-transcript-encode-filename-in-links t
+  "Whether to insert filename to mplayer file in timestamp links."
+  :type 'boolean
+  :safe #'booleanp)
+
 (defcustom orgqda-transcript-bind-fn-keys nil
   "Whether to bind the F1,F2,... keys to useful commands ‘orgqda-transcript-mode’."
   :type 'boolean
@@ -387,17 +393,18 @@ Else, move to indentation position of this line."
 FILETIME is the file name and time encoded in the link."
   (let* ((ft (split-string filetime ":"))
          (pos (car ft))
-         (file (cadr ft))
+         (file (cadr ft)) ;; may be nil, if only timestamp stored
          (mp (process-live-p mplayer--process)))
-    (if file
-        (if mp
-            (unless (string= file (mplayer--get-filename))
-              (mplayer-quit-mplayer)
-              (sleep-for 0.1)
-              (mplayer-find-file file))
+    ;; maybe start or switch mplayer depending on mp and file,
+    (if mp
+        (when (and file (not (string= file (mplayer--get-filename))))
+          (mplayer-quit-mplayer)
+          (sleep-for 0.1)
           (mplayer-find-file file))
-      (unless mp
-        (error "No file in link and no mplayer--process")))
+      (if file
+          (mplayer-find-file file)
+        (mplayer-resume-session)))
+    ;; after these operations, attempt to seek
     (mplayer-seek-position (string-to-number pos) t)))
 
 ;;;###autoload
@@ -424,14 +431,15 @@ active"
     (cl-loop with time = nil with file = nil ;; with iter = 0
              repeat 3 do
              (setq time (mplayer--get-time)
-                   file (mplayer--get-filename)
+                   file (when orgqda-transcript-encode-filename-in-links
+                          (mplayer--get-filename))
                    ;; iter (1+ iter)
                    )
-             if (and time file)
+             if (and time (if orgqda-transcript-encode-filename-in-links file t))
              ;;do  (message "On try %d" iter) and
              return (list
                      :type "oqdats"
-                     :link (format "oqdats:%s:%s" time file)
+                     :link (format "oqdats:%s%s" time (if file (concat ":" file) ""))
                      :description (mplayer--format-time time "%H:%M:%S"))
              else do (sit-for 0.05))))
 
