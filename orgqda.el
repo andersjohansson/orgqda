@@ -1001,7 +1001,7 @@ Return cons-cell: (count in buffer count . string of taglist)"
                (link (format "opbm:%s" bm))
                (desc
                 (cl-letf (((symbol-function 'org-before-first-heading-p)
-                           #'ignore))
+                           #'ignore)) ;; slow search and we know we are at a heading
                   (orgqda--clean-up-heading-desc (org-get-heading t t t t))))
                (inherited-tags
                 (when orgqda-use-tag-inheritance
@@ -1260,7 +1260,7 @@ EXCLUDE-TAGS is non nil, use that instead of
                                    (list bfn)))
       (orgqda--scan-tags
        #'orgqda--get-tags-with-count
-       (cdr (orgqda--make-tags-matcher 'none))
+       (cdr (orgqda--make-tags-matcher 'matchall))
        nil)))
   (dolist (ex (or exclude-tags orgqda-exclude-tags))
     (remhash ex orgqda--current-tagscount))
