@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2014-10-12
-;; Modified: 2022-01-04
+;; Modified: 2022-01-20
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -1189,8 +1189,7 @@ each character in the buffer."
 
 (org-link-set-parameters "opbm"
                          :follow #'orgqda-opbm-open
-                         :export #'orgqda-link-desc-export
-                         :store #'orgqda-opbm-store-link)
+                         :export #'orgqda-link-desc-export)
 
 (defun orgqda-opbm-store-link ()
   "Store a bookmark-link to a position in an org-mode-buffer."
