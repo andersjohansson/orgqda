@@ -3,10 +3,10 @@
 ;; Copyright (C) 2021-2022  Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
-;; Version: 0.2
+;; Version: 0.3
 ;; Created: 2021-07-28
-;; Modified: 2022-01-21
-;; Package-Requires: ((emacs "28.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.3"))
+;; Modified: 2022-02-05
+;; Package-Requires: ((emacs "28.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.5") (marginalia "0.11"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
 
@@ -25,7 +25,22 @@
 
 ;;; Commentary:
 
+;; Automatically annotate completions of tags with count and
+;; information from codebook if defined. Activating the minor mode
+;; ‘orgqda-completion-mode’ will enable annotations, sorting and
+;; grouping, with some help from the ‘marginalia’ library.
+;; Additionally it redefines completion to include tags from all files
+;; defined in ‘orgqda-tag-files’. I recommend activating it with
+;; orgqda: (add-hook 'orgqda-mode-hook #'orgqda-completion-mode)
 ;;
+;; When completing, tags are sorted according to
+;; ‘orgqda-completion-sort’ , but this can be cycled by calling
+;; ‘orgqda-completion-cycle-sorting’, which can be bound to a suitable
+;; key in a suitable keymap, usually ‘minibuffer-mode-map’.
+;;
+;; Additionally, if tag hierachy is used, tags can be grouped up to
+;; the level given by ‘orgqda-completion-group’.
+
 
 ;;; Code:
 

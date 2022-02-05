@@ -3,10 +3,12 @@
 ;; Copyright (C) 2021-2022  Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
-;; Keywords: convenience, wp
+;; Version: 0.2
 ;; Created: 2021-04-12
 ;; Modified: 2022-02-05
-;; Package-Requires: ((orgqda "0.2") (transient "0.3.0"))
+;; Package-Requires: ((orgqda "0.5") (transient "0.3.0"))
+;; Keywords: convenience, wp
+;; URL: https://www.gitlab.com/andersjohansson/orgqda
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
