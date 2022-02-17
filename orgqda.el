@@ -438,6 +438,13 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
             ([remap org-refile] . orgqda-refile-and-merge-tags))
   :lighter "QDAc")
 
+(define-minor-mode orgqda-view-mode
+  "Mode for viewing collected extracts from ‘orgqda-collect-tagged’.
+
+\\{orgqda-view-mode-map}"
+  :keymap (make-sparse-keymap)
+  :lighter "QDAv")
+
 ;;;; Interactive commands
 ;;;;; Commands for inserting
 (autoload 'org-inlinetask-in-task-p "org-inlinetask")
@@ -672,8 +679,9 @@ Sort by SORT."
 ;;;###autoload
 (defun orgqda-collect-tagged (&optional match deeper-view buffer noswitch)
   "Collect all segments marked with tags matching MATCH.
-Display them in custom buffer in other window.
-In an interactive call, MATCH is prompted for.
+Display them in custom buffer in other window, and enable
+‘orgqda-view-mode’ and ‘view-mode’. In an interactive call, MATCH is
+prompted for.
 
 For non-interactive use: DEEPER-VIEW (integer) adds visible
 levels to folding with ‘org-content’. BUFFER specifies a buffer
@@ -695,7 +703,9 @@ switching is done and view buffer just returned."
                                (format "* Tagged: %s, (%d) " mname (car cont)) "\n")
         (insert (cdr cont))
         (goto-char (point-min))
-        (org-mode) (flyspell-mode -1) (view-mode)
+        (org-mode)
+        (orgqda-view-mode)
+        (view-mode)
         (org-content oclevel))
       (if noswitch
           buffer
