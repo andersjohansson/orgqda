@@ -75,7 +75,7 @@ paragraphs (not subtrees or inlinetasks with END.)"
   :type 'function)
 
 (defcustom orgqda-collect-from-all-files t
-  "Whether to collect tags from all files defined in ‘orgqda-tag-files’.
+  "Whether to collect tags from all files in variable ‘orgqda-tag-files’.
 This applies to the tag listing and collection commands in orgqda."
   :type 'boolean)
 
@@ -317,7 +317,7 @@ Usually set by the user as a file or dir local variable.")
 ;;;; KEYBINDINGS
 ;;;###autoload
 (defvar orgqda-mode-map nil
-  "Local keymap for orgqda-mode.")
+  "Local keymap for ‘orgqda-mode’.")
 ;;;###autoload
 (unless orgqda-mode-map
   (let ((map (make-sparse-keymap)))
@@ -470,9 +470,9 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
 (declare-function orgqda-helm-tags-set-tags "orgqda-helm-tags")
 
 ;;;###autoload
-(defun orgqda-insert-inlinetask (&optional arg title coding)
+(defun orgqda-insert-inlinetask (&optional after-line title coding)
   "Insert a degenerate inlinetask after current paragraph.
-With prefix ARG, after current line.
+With prefix arg AFTER-LINE, after current line.
 TITLE is a string defining a title for the inlinetask and CODING
 if non-nil additionally calls `org-set-tags-command`."
   (interactive "P")
@@ -482,10 +482,10 @@ if non-nil additionally calls `org-set-tags-command`."
     (activate-change-group cg)
     (unless (org-inlinetask-in-task-p) ; add nothing if already in task
       (unless (and (bolp) (eolp)) ; only move if inside a line of text
-        (if arg (forward-line) (forward-paragraph)))
+        (if after-line (forward-line) (forward-paragraph)))
       (unless (org-inlinetask-in-task-p) ; create inlinetask if not present
         (unless (and (bolp) (eolp)) (newline)) ;newline at e.g. eof
-        (unless (and arg (bolp) (eolp)) (open-line 1)) ; open-line if at newline
+        (unless (and after-line (bolp) (eolp)) (open-line 1)) ; open-line if at newline
         (insert (concat (make-string
                          (1+ org-inlinetask-min-level) 42) " " title))))
     (when (and coding (org-inlinetask-in-task-p))
@@ -1954,7 +1954,7 @@ set to ‘orgqda-tag-files’"
     (apply #'org-sort-entries orgqda--current-sorting-args)))
 
 (defun orgqda--org-sort-params (sortkey)
-  "Get parameteter list for ‘org-sort’ from SORT-KEY."
+  "Get parameteter list for ‘org-sort’ from SORTKEY."
   (if-let ((get (orgqda--sort-parameter-get
                  sortkey :buffer-get
                  (lambda () (org-sort-remove-invisible (org-get-heading t t t t)))))
