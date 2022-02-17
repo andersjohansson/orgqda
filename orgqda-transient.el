@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2021-04-12
-;; Modified: 2022-02-05
+;; Modified: 2022-02-14
 ;; Package-Requires: ((orgqda "0.5") (transient "0.3.0"))
 ;; Keywords: convenience, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -36,7 +36,7 @@
 ;;;; Starting point
 
 (transient-define-prefix orgqda-transient ()
-  "Transient for invoking orgqda commands"
+  "Transient for invoking orgqda commands."
   [["List tags"
     :pad-keys t
     ("-s" orgqda-transient-sort)
@@ -50,10 +50,12 @@
     ;; ("o" orgqda-transient-sort)
     ("-n" "Non-recursive" orgqda-transient-buffer-non-recursive)
     ("s" "Sort taglist at point or region" orgqda-transient-sort-taglist)
-    ("S" "Sort taglists in whole buffer" orgqda-transient-sort-taglist-buffer)]]
-  [["Collect"
+    ("S" "Sort taglists in whole buffer" orgqda-transient-sort-taglist-buffer)]
+   ["Collect"
     ("c" "Collect tagged" orgqda-collect-tagged)]
-   ["Relations"
+   ["Toggle"
+    ("m" "Toggle mode" orgqda-mode)]]
+  [["Relations"
     :pad-keys t
     ("r" "Tag relations" orgqda-transient-tag-relations)
     ("-k" orgqda-transient-tag-relations-k)]
@@ -67,9 +69,7 @@
     ("p" "Prefix tag" orgqda-prefix-tag)
     ("P" "Rename prefix on this tag" orgqda-rename-prefix-on-one-tag)
     ("i" "Rename prefix on all tags" orgqda-rename-prefix)
-    ("k" "Delete tag" orgqda-delete-tag)]
-   ["Toggle"
-    ("m" "Toggle mode" orgqda-mode)]])
+    ("k" "Delete tag" orgqda-delete-tag)]])
 
 
 (defvar-local orgqda-transient--options nil)
@@ -118,7 +118,7 @@ to store in.")
   (if (oref obj value) nil t))
 
 (cl-defmethod transient-infix-set ((obj orgqda-transient-option) val)
-  "Set orgqda list option defined by OBJ to VALUE."
+  "Set orgqda list option defined by OBJ to VAL."
   (oset obj value val)
   (setf (plist-get (symbol-value (oref obj var)) (oref obj param)) val))
 
