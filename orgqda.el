@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-02-10
+;; Modified: 2022-02-17
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -314,41 +314,6 @@ Usually set by the user as a file or dir local variable.")
 (defvar-local orgqda--old-org-current-tag-alist nil
   "Saved state of ‘org-current-tag-alist’ before enabling ‘orgqda-mode’.")
 
-;;;; KEYBINDINGS
-;;;###autoload
-(defvar orgqda-mode-map nil
-  "Local keymap for ‘orgqda-mode’.")
-;;;###autoload
-(unless orgqda-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-x m") #'orgqda-insert-inlinetask)
-    (define-key map (kbd "C-c C-x n") #'orgqda-insert-inlinetask-coding)
-    (setq orgqda-mode-map map)))
-
-;;;###autoload
-(defvar orgqda-list-mode-map nil
-  "Local keymap for ‘orgqda-list-mode’.")
-;;;###autoload
-(unless orgqda-list-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "<drag-mouse-1>") #'orgqda-drag-merge-tags)
-    (define-key map (kbd "R") #'orgqda-rename-tag)
-    (define-key map (kbd "P") #'orgqda-prefix-tag)
-    (define-key map (kbd "s") #'orgqda-sort-taglist)
-    (define-key map (kbd "S") #'orgqda-sort-taglist-buffer)
-    (define-key map (kbd "g") #'orgqda-revert-taglist)
-    (define-key map (kbd "q") #'quit-window)
-    (setq orgqda-list-mode-map map)))
-
-(defvar orgqda-codebook-mode-map nil
-  "Local keymap for ‘orgqda-codebook-mode’.")
-
-(unless orgqda-codebook-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "<drag-mouse-1>") #'orgqda-drag-merge-tags)
-    (define-key map (kbd "C-c (") orgqda-list-mode-map)
-    (define-key map [remap org-refile] #'orgqda-refile-and-merge-tags)
-    (setq orgqda-codebook-mode-map map)))
 
 ;;;; Macros and defsubst
 (defmacro orgqda--temp-work (widened? &rest body)
@@ -429,7 +394,8 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
 
 \\{orgqda-mode-map}"
   :lighter " QDA"
-  :keymap orgqda-mode-map
+  :keymap `((,(kbd "C-c C-x m") . orgqda-insert-inlinetask)
+            (,(kbd "C-c C-x n") . orgqda-insert-inlinetask-coding))
   :group 'orgqda
   (if orgqda-mode
       (progn
@@ -454,14 +420,22 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
   "Mode for displaying lists of tags in orgqda.
 
 \\{orgqda-list-mode-map}"
-  :keymap orgqda-list-mode-map
+  :keymap `((,(kbd "<drag-mouse-1>") . orgqda-drag-merge-tags)
+            (,(kbd "R") . orgqda-rename-tag)
+            (,(kbd "P") . orgqda-prefix-tag)
+            (,(kbd "s") . orgqda-sort-taglist)
+            (,(kbd "S") . orgqda-sort-taglist-buffer)
+            (,(kbd "g") . orgqda-revert-taglist)
+            (,(kbd "q") . quit-window))
   :lighter " QDAl")
 
 (define-minor-mode orgqda-codebook-mode
   "Mode for updating and sorting lists of tags in a codebook file.
 
 \\{orgqda-codebook-mode-map}"
-  :keymap orgqda-codebook-mode-map
+  :keymap `((,(kbd "<drag-mouse-1>") . orgqda-drag-merge-tags)
+            (,(kbd "C-c (") . orgqda-list-mode-map)
+            ([remap org-refile] . orgqda-refile-and-merge-tags))
   :lighter "QDAc")
 
 ;;;; Interactive commands
