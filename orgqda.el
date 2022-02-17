@@ -580,6 +580,7 @@ ignoring any setting of ‘orgqda-tag-files’."
     (orgqda--insert-hierarchical-taglist full origbuffer (if include-filename origfile "") 1 startprefix)
     (goto-char (point-min))
     (org-mode) (view-mode) (orgqda-list-mode) (flyspell-mode -1)
+    (orgqda--clone-local-variables origbuffer)
     (setq ;; buffer-read-only t
      orgqda--originating-buffer origbuffer
      orgqda--taglist-parameters
@@ -694,6 +695,7 @@ switching is done and view buffer just returned."
          (oclevel
           (+ (if (and orgqda-collect-from-all-files orgqda-tag-files) 2 1)
              (or deeper-view 0)))
+         (origbuf (current-buffer))
          (buffer (or buffer (generate-new-buffer
                              (format "*tags:%s*" mname)))))
     (if (equal cont '(0))
@@ -706,6 +708,7 @@ switching is done and view buffer just returned."
         (org-mode)
         (orgqda-view-mode)
         (view-mode)
+        (orgqda--clone-local-variables origbuf)
         (org-content oclevel))
       (if noswitch
           buffer
@@ -1959,6 +1962,15 @@ We never use category for our scanning in ‘orgqda’, but many
 other important functions of ‘org-scan-tags’."
   (cl-letf (((symbol-function 'org-get-category) #'ignore))
     (apply #'org-scan-tags args)))
+
+(defun orgqda--clone-local-variables (buffer)
+  "Clone local variables prefixed with orgqda from BUFFER to current buffer."
+  (dolist (entry (buffer-local-variables buffer))
+    (when (consp entry)
+	  (let ((var (car entry))
+		    (val (cdr entry)))
+	    (when (string-match "^orgqda-" (symbol-name var))
+          (set (make-local-variable var) val))))))
 
 ;;;;; Retrieve codebook info
 (defun orgqda--get-codebook-info ()
