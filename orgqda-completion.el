@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2021-07-28
-;; Modified: 2022-02-05
+;; Modified: 2022-02-08
 ;; Package-Requires: ((emacs "28.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.5") (marginalia "0.11"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -102,6 +102,8 @@ work)."
   (if orgqda-completion-mode
       (progn
         (add-to-list 'marginalia-command-categories '(org-set-tags-command . org-tags))
+        (add-to-list 'marginalia-command-categories '(orgqda-insert-inlinetask . org-tags))
+        (add-to-list 'marginalia-command-categories '(orgqda-tag-or-code . org-tags))
 
         ;; FIXME, should probably be using better completion
         ;; functions, but they are so tedious to create compared to

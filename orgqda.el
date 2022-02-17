@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-02-05
+;; Modified: 2022-02-10
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -511,6 +511,18 @@ if non-nil additionally calls `org-set-tags-command`."
 Prefix ARG is passed through."
   (interactive "P")
   (orgqda-insert-inlinetask arg "∈" t))
+
+;;;###autoload
+(defun orgqda-tag-or-code (after-line)
+  "Insert inlinetask and tag, except if on headline, then add tag.
+Prefix arg AFTER-LINE is passed through to ‘orgqda-insert-inlinetask’.
+Suitable for remapping like this:
+(define-key orgqda-mode-map [remap org-set-tags-command] #'orgqda-tag-or-code)."
+  (interactive "P")
+  (let ((inhibit-read-only t))
+    (if (org-at-heading-p)
+        (org-set-tags-command)
+      (orgqda-insert-inlinetask-coding after-line))))
 
 ;;;;; Commands for listing tags
 
