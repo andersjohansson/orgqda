@@ -1,25 +1,58 @@
-* orgqda: Qualitative Data Analysis for Emacs org-mode addicts
+* orgqda: Qualitative Data Analysis for Emacs org mode addicts
 
-~orgqda~ defines a minor mode and several commands for making [[https://en.wikipedia.org/wiki/Coding_%2528social_sciences%2529#Qualitative_approach][coding]] and collection of coded snippets possible in text written in org-mode. I created it for coding field notes and interview transcripts in my PhD project.
+~orgqda~ defines a minor mode and several commands for making [[https://en.wikipedia.org/wiki/Coding_%2528social_sciences%2529#Qualitative_approach][coding]], listing of codes, and collection of coded extracts possible in text written in org mode. I created it for coding field notes and interview transcripts in my PhD project.
 
-It works in a simple (and perhaps stupid) way by viewing org-mode tags added to degenerate inlinetasks as applying to the preceding paragraph. Like this:
+The idea is to re-use and extend the tagging machinery of org mode, and to keep all information in the source files. For achieving this, headlines can be tagged as usual which is interpreted as “coding” the text below that headline with the tags used. In addition, paragraphs (but not smaller extracts) can be coded by appending a degenerate inlinetask (that is, an inlinetask without a closing line) with tags. Like this:
 
-#+BEGIN_EXAMPLE
-Some text that should be given some codes. We make this text reasonably long so that it appears to be some kind of paragraph and not only a few sentences. This is a third sentence. And this a fourth.
-*************** ∈ :stupidSentences:anotherCode:
-#+END_EXAMPLE
+#+begin_example
+A paragraph to be coded. It contains several sentences, but the full paragraph
+will be considered as coded with the tags below. This is of course a limitation
+compared to other QDA systems which usually allow marking sentences and words
+easily. I usually use codes for “access” to the relevant section, so this
+somewhat coarse coding works ok for me. I also often split up paragraphs into
+smaller parts while coding.
+​*************** ∈ :codeOne:codeTwo:
+#+end_example
 
-Additionally, when tags are applied to ordinary headings or inlinetasks with content, the subtree or inlinetask is extracted instead of the preceding paragraph.
+** Installation
+~orgqda~ is not available from any package repository. For installing: download, put it in your load path and load as needed.
 
-** Minor mode
-A minor mode, ~orgqda-mode~, is defined which, when enabled, gathers tags for listing and completion from all files defined via ~orgqda-tag-files~. This is helpful for instance when keeping different field journals and transcripts in different files but still using a common coding scheme for all of them.
+If you use use-package, a starting point for making sure the minor mode is autoloaded would be this:
+#+begin_src emacs-lisp
+(use-package orgqda-mode
+  :commands orgqda-mode)
+#+end_src
 
-** Listing codes
-"Codes" can be listed with ~orgqda-list-tags~ and all regions for a specific code extracted with ~orgqda-collect-tagged~ (or by clicking on a tag or =C-c C-o= on it). Both these functions creates a custom org-mode buffer (with the minor mode ~orgqda-list-mode~) with links to the original regions . The command ~orgqda-revert-taglist~ updates a tag list buffer (key: ~g~), and alternatively updates counts for tag lists in any file with ~otag~-links (this can be useful for writing and updating a codebook, an index with descriptions of used tags).
+With package managers like [[https://github.com/raxod502/straight.el][straight]], the installation can be done automatically:
+#+begin_src emacs-lisp
+(use-package orgqda
+  :straight (:host github :repo "andersjohansson/orgqda"))
+#+end_src
 
-Codes can also be renamed with ~orgqda-rename-tag~ (~R~ in ~orgqda-list-mode~), given a prefix ~orgqda-prefix-tag~ (~P~), and merged via drag and drop in the code-listing buffer created by ~orgqda-list-tags~. These operations find and replace tags across all files defined in ~orgqda-tag-files~, so undoing can be messy, make sure to use version control.
+** Getting started with coding
+For getting started with coding, an example directory of a text corpus is given in the [[file:examples/][/examples]] directory.
 
-When using a file based on a tag list (with otag-links), as a code book, set (dir- or file-locally) ~orgqda-codebook-file~ to the path to this file and tag links there will be updated when the rename-functions are called. Such a file can also benefit from the bindings defined in ~orgqda-codebook-mode~ which binds the keys of ~orgqda-list-mode~ to the prefix ~C-c (~.
+Let’s start with a single file, [[file:examples/file1.org][file1.org]], containing text (notes or transcripts or whatever) that we want to code. This file doesn’t have a headline structure and we rather want to code paragraphs.
+
+Open the file and while reading through it, with the cursor on a paragraph that you want to code, either call ~orgqda-insert-inlinetask-coding~ (~C-c C-x n~ if you activate ~orgqda-mode~) or ~orgqda-code-headline-or-paragraph~ (which is a great remapping for ~org-set-tags-command~). This will insert an inlinetask below the paragraph and prompt for tags (codes). Repeat throughout file.
+
+When the file is coded, we can list and count all tags with ~orgqda-list-tags~, and collect extracts for given tags with ~orgqda-collect-tagged~ (further details in [[#listing-codes-and-collecting-extracts][Listing codes and collecting extracts]]). A good way for accessing all relevant commands is [[#orgqda-transient.el][orgqda-transient]].
+
+The most important next step could be to keep data in several files, for which you would want to set ~orgqda-tag-files~ which behaves similarly to ~org-agenda-files~ and activate ~orgqda-mode~. The best way to to this is usually through a ~.dir-locals~ file. See [[file:examples/.dir-locals.el][examples/.dir-locals.el]] for an example. When you have done this tags for listing and completion from are gathered from all files defined via ~orgqda-tag-files~. This is helpful for instance when keeping different field journals and transcripts in different files but still using a common coding scheme for all of them. It could also be good to use a [[#codebook-file][codebook file]] for describing the codes used.
+
+** Listing codes and collecting extracts
+:PROPERTIES:
+:CUSTOM_ID: listing-codes-and-collecting-extracts
+:END:
+"Codes" can be listed with ~orgqda-list-tags~ and all coded text for a specific code extracted with ~orgqda-collect-tagged~ (or by clicking on a tag or =C-c C-o= on it). Both these functions create a custom org-mode buffer with links to the original regions . The command ~orgqda-revert-taglist~ updates a tag list buffer (key: ~g~), and can also update counts for tag lists in any file with ~otag~-links (this can be useful for writing and updating a codebook, an index with descriptions of used tags).
+
+Codes can also be renamed with ~orgqda-rename-tag~ (~R~ in ~orgqda-list-mode~), given a prefix ~orgqda-prefix-tag~ (~P~) (see Hierarchy below), and merged via drag and drop in the code-listing buffer created by ~orgqda-list-tags~. These operations find and replace tags across all files defined in ~orgqda-tag-files~, which means undoing can be messy, make sure to use version control.
+
+** Codebook file
+:PROPERTIES:
+:CUSTOM_ID: codebook-file
+:END:
+When using a file based on a tag list (with otag-links), as a code book, set (dir- or file-locally) ~orgqda-codebook-file~ to the path to this file and tag links there will be updated when the rename-functions are called. Such a file can also benefit from the bindings defined in ~orgqda-codebook-mode~ which binds the keys of ~orgqda-list-mode~ to the prefix ~C-c (~. However, ~orgqda-transient~ in [[file:orgqda-transient.el][orgqda-transient.el]] also provides a convenient entry point for all relevant commands.
 
 ** Hierarchy
 Codes can be put in a hierarchy if using a delimiter inside tag names (default ~_~, customizable via ~orgqda-hierarchy-delimiter~). The listing of tags is then done according to this implicit hierarchy (unless ~orgqda-use-tag-hierarchy~ is set to ~nil~).
@@ -28,52 +61,15 @@ Codes can be put in a hierarchy if using a delimiter inside tag names (default ~
 A simple command for displaying code relations is available as ~orgqda-view-tag-relations~. It counts the number of times a pair (or k-tuple with a numeric prefix argument) of tags occur together.
 
 ** csv-export of coded regions
-I have been using the concept mapping software [[http://vue.tufts.edu/][VUE]] for sorting through coded regions graphically. The csv-export functions is a way of importing regions into VUE, or other programs.
-The csv-export code is currently not so generalized and may be changed.
+I have been using the concept mapping software [[http://vue.tufts.edu/][VUE]] for sorting through coded regions graphically. The csv-export functions is a way of importing regions into VUE, or other programs. The csv-export code is currently not as well-maintained and polished as other parts.
 
-** List of commands
-See docstrings for further info
-#+BEGIN_EXAMPLE
-orgqda-insert-inlinetask
-orgqda-insert-inlinetask-coding
-orgqda-list-tags
-orgqda-list-tags-full
-orgqda-revert-taglist
-orgqda-sort-taglist
-orgqda-sort-taglist-buffer
-orgqda-collect-tagged
-orgqda-rename-tag
-orgqda-prefix-tag
-orgqda-collect-tagged-csv
-orgqda-collect-tagged-csv-save
-orgqda-collect-tagged-csv-save-all
-#+END_EXAMPLE
-
-** List of customizable variables with default values
-#+BEGIN_EXAMPLE
-orgqda-csv-dir "~"
-orgqda-collect-coverage nil
-orgqda-tag-collect-extra-info nil
-orgqda-transform-collected-paragraph-function #'identity
-orgqda-collect-from-all-files t
-orgqda-respect-restriction-for-single-file t
-orgqda-tag-collect-extra-info-csv nil
-orgqda-tag-collect-extra-info2-csv nil
-orgqda-convert-csv-to-encoding nil
-orgqda-exclude-tags nil
-orgqda-hierarchy-delimiter ?_
-orgqda-exclude-empty-file-trees t
-orgqda-keep-tags-sorted nil
-orgqda-default-sort-order count-decreasing
-orgqda-tagcount-show-files nil
-orgqda-tagcount-files-transform-functions '(file-name-base orgqda--file-name-remove-parentheses)
-orgqda-taglink-include-filename t
-#+END_EXAMPLE
+** Customizing
+Be sure to check out all custom variables in the ~orgqda~ group: `M-x customize-group` enter `orgqda`.
 
 ** Auxilary libraries
 The repository includes some extra libraries that can be useful for coding and interacting with orgqda and qualitative text data in general.
 
-*** orgqda-completion.el
+*** [[file:orgqda-completion.el][orgqda-completion.el]]
 Automatically annotate completions of tags with count and information from codebook if defined. Activating the minor mode ~orgqda-completion-mode~ will enable annotations, sorting and grouping, with some help from the ~marginalia~ library. Additionally it redefines completion to include tags from all files defined in ~orgqda-tag-files~. I recommend activating it with orgqda:
 #+begin_src emacs-lisp
 (add-hook 'orgqda-mode-hook #'orgqda-completion-mode)
@@ -83,31 +79,34 @@ When completing, tags are sorted according to ~orgqda-completion-sort~ , but thi
 
 Additionally, if tag hierachy is used, tags can be grouped up to the level given by ~orgqda-completion-group~.
 
-*** orgqda-helm-tags.el (Deprecated)
+*** [[file:orgqda-transient.el][orgqda-transient.el]]
+:PROPERTIES:
+:CUSTOM_ID: orgqda-transient.el
+:END:
+Defines convenient transient keymaps (using the [[https://github.com/magit/transient/][transient]] library) for accesing the ~orgqda~ commands.
+Bind ~orgqda-transient~ to a suitable key in ~orgqda-mode-map~.
+
+*** [[file:orgqda-transcript.el][orgqda-transcript.el]]
+A library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with orgqda). It uses ~mplayer-mode~, although it currently and unfortunately depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things: [[https://github.com/andersjohansson/mplayer-mode/tree/org-sessions][org-sessions branch of mplayer-mode]] (see also [[https://github.com/markhepburn/mplayer-mode/issues/10][a discussion about the future of mplayer-mode]]).
+
+~orgqda-transcript-mode~ defines a few functions and variables for defining a list of speakers, inserting timestamps, speaker names, switching speakers (if something was misattributed), measuring speaking time, etc. Take a look at the commands and custom variables if you are interested. As everything here, it is of course kind of idiosyncratic and aligned with my current workflow, and also more or less a work in progress.
+
+*** [[file:orgqda-helm-tags.el][orgqda-helm-tags.el]] (Deprecated)
 *NOTE:* I won’t be updating [[file:orgqda-helm-tags.el][orgqda-helm-tags.el]] since I’m moving away from helm.
 
 A library which overrides ~org-set-tags~ with a custom function that uses [[https://github.com/emacs-helm/helm][helm]] and displays the tags sorted by use. If you use helm this is recommended! It also allows for quick adding of multiple tags as it calls helm repeatedly until exited with either ~C-RET~ or ~C-g~. Tags can also be removed with a secondary action or tagged extracts viewed with a persistent action. If a codebook file is defined, the display fetches the first line (which should be a short description/definition of the code/tag) from this for each tag, to ease correct tagging. Sorting of the completion list can be defined in ~orgqda-helm-tags-sort~, and cycled in the helm session with ~C-c C-s~.
 
 The library defines a minor mode, ~orgqda-helm-tags-mode~, that overrides the ~C-c C-q~ binding and that is enabled with ~orgqda-mode~ if ~orgqda-helm-tags-completion~ is non-nil. This minor mode can be used outside ~orgqda~ as well (although it depends on some functionality from ~orgqda.el~).
 
-*** orgqda-transient.el
-Defines convenient transient keymaps (using the [[https://github.com/magit/transient/][transient]] library) for accesing the ~orgqda~ commands.
-Bind ~orgqda-transient~ to a suitable key in ~orgqda-mode-map~.
-
-*** orgqda-transcript.el
-A library with some functions for helping in transcribing interviews to structured org files (which can easily be coded with orgqda). It uses ~mplayer-mode~, although it currently and unfortunately depends on my branch with some (kind of incompatible) changes for aligning it with org-mode and other things: [[https://github.com/andersjohansson/mplayer-mode/tree/org-sessions][org-sessions branch of mplayer-mode]] (see also [[https://github.com/markhepburn/mplayer-mode/issues/10][a discussion about the future of mplayer-mode]]).
-
-~orgqda-transcript-mode~ defines a few functions and variables for defining a list of speakers, inserting timestamps, speaker names, switching speakers (if something was misattributed), measuring speaking time, etc. Take a look at the commands and custom variables if you are interested. As everything here, it is of course kind of idiosyncratic and aligned with my current workflow, and also more or less a work in progress.
-
-** Notes on configuration
+** Note on configuration
 I often load ~orgqda-mode~ through file or dir local variables, and as activation of the mode can depend on other variables being defined locally (most importantly ~orgqda-tag-files~) loading order is important (i.e. that ~orgqda-mode~ gets activated after local variables are set). A solution is to activate it in a locally defined ~hack-local-variables-hook~. So adding this to a ~.dir-locals.el~ file is one way of making it work:
 
-#+BEGIN_EXAMPLE
+#+begin_src emacs-lisp
 ((org-mode
    (eval add-hook 'hack-local-variables-hook 'orgqda-mode nil t)))
-#+END_EXAMPLE
+#+end_src
 
-** A technical note on tag-completion
+** Note on some possible problems with org mode’s tag-completion
 When adding tags and giving completion, ~org-mode~ has several mechanisms that determines which tags this should be. Tags that should be available for completion in all buffers can be added to ~org-persistent-tags-alist~, and tags that should be available for a single buffer can be added with the ~#+TAGS:~ keyword, but all this interferes with ~orgqda-mode~.
 If any of these mechanisms (which are activated when ~org-mode~ loads) sets ~org-current-tag-alist~, the dynamic fetching of tags that we most certainly want for ~orgqda-mode~ is prevented.
 

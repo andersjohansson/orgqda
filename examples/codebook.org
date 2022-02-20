@@ -1,0 +1,34 @@
+* Orgqda taglist generated from [[file:/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][file2.org]] at [2022-02-08 tis 19:05]
+:ORGQDA_TAG_FILES:
+- [[/home/aj/.emacs.d/straight/repos/orgqda/examples/file1.org][file1]]
+- [[/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][file2]]
+:END:
+** [[otag:randomcode18n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode18n]] (*6*)
+For things related to 18
+** [[otag:randomcode19n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode19n]] (*5*)
+For things related to 19
+** [[otag:randomcode10n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode10n]] (*3*)
+For things related to 10
+** [[otag:randomcode29n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode29n]] (*3*)
+** [[otag:randomcode26n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode26n]] (*3*)
+** [[otag:randomcode1n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode1n]] (*3*)
+** [[otag:randomcode7n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode7n]] (*3*)
+** [[otag:randomcode13n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode13n]] (*3*)
+** [[otag:randomcode25n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode25n]] (*3*)
+** [[otag:randomcode9n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode9n]] (*3*)
+** [[otag:randomcode3n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode3n]] (*3*)
+** [[otag:randomcode15n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode15n]] (*3*)
+** [[otag:randomcode4n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode4n]] (*2*)
+** [[otag:randomcode14n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode14n]] (*2*)
+** [[otag:randomcode28n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode28n]] (*2*)
+** [[otag:randomcode12n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode12n]] (*2*)
+** [[otag:randomcode30n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode30n]] (*2*)
+** [[otag:randomcode20n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode20n]] (*2*)
+** [[otag:randomcode8n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode8n]] (*2*)
+** [[otag:randomcode11n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode11n]] (*1*)
+** [[otag:randomcode22n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode22n]] (*1*)
+** [[otag:randomcode27n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode27n]] (*1*)
+** [[otag:randomcode5n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode5n]] (*1*)
+** [[otag:randomcode2n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode2n]] (*1*)
+** [[otag:randomcode24n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode24n]] (*1*)
+** [[otag:randomcode16n::/home/aj/.emacs.d/straight/repos/orgqda/examples/file2.org][randomcode16n]] (*1*)
