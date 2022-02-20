@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-02-17
+;; Modified: 2022-02-20
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -43,7 +43,7 @@
 
 ;;;; Variables
 (defgroup orgqda nil
-  "Customizations for orgqda-mode."
+  "Customizations for ‘orgqda-mode’."
   :group 'org)
 
 ;;;###autoload
@@ -75,7 +75,7 @@ paragraphs (not subtrees or inlinetasks with END.)"
   :type 'function)
 
 (defcustom orgqda-collect-from-all-files t
-  "Whether to collect tags from all files in variable ‘orgqda-tag-files’.
+  "Non-nil to work across files in variable ‘orgqda-tag-files’.
 This applies to the tag listing and collection commands in orgqda."
   :type 'boolean)
 
@@ -150,21 +150,37 @@ One of: _@#%, or nil to disable hierarchical grouping."
      (:alist-get . cdr)
      (:completion-get . orgqda-completion--get-count)
      (:compare . <)))
-  "Alist mapping character keys for sorting to relevant functions.
-Various functions are used for getting keys and comparing in different contexts.
-Ordinarily
+  "Alist of sorting names (symbols) and associated functions.
+cdr of each key is plist with functions, used for getting sort keys
+and comparing in different contexts.
 
-"
-  :type '(repeat (list (symbol :tag "Name")
-                       (set :inline t
-                            (cons :tag "Description, mandatory" (const :format "" :description) string)
-                            (cons :tag "Function for comparing two values, mandatory" (const :format "" :compare) function)
-                            (cons :tag "Character matching a sort character for ‘org-sort-entries’." (const :char) character)
-                            (cons :tag "Function for fetching value in data." (const :format "" :data-get) function)
-                            (cons :tag "Function for fetching value in buffer." (const :format "" :buffer-get) function)
-                            (cons :tag "Function for fetching value in alist." (const :format "" :alist-get) function)
-                            (cons :tag "Function for fetching value in completion list." (const :format "" :completion-get) function)
-                            ))))
+When just acting on the text of the tag, it is sufficient to give
+a :compare function.
+
+When fetching other data (mainly count), functions :data-get (for
+the internal data store when populating tag lists), :buffer-get
+\(for sorting in listing buffers), :alist-get (for
+‘orgqda--get-tags-alist’), and :completion-get (for orgqda-completion.el)
+are needed."
+
+  :type '(repeat
+          (list
+           (symbol :tag "Name")
+           (set :inline t
+                (cons :tag "Description, mandatory"
+                      (const :format "" :description) string)
+                (cons :tag "Function for comparing two values, mandatory"
+                      (const :format "" :compare) function)
+                (cons :tag "Character matching a sort character for ‘org-sort-entries’."
+                      (const :char) character)
+                (cons :tag "Function for fetching value in data."
+                      (const :format "" :data-get) function)
+                (cons :tag "Function for fetching value in buffer."
+                      (const :format "" :buffer-get) function)
+                (cons :tag "Function for fetching value in alist."
+                      (const :format "" :alist-get) function)
+                (cons :tag "Function for fetching value in completion list."
+                      (const :format "" :completion-get) function)))))
 
 (defun orgqda--sort-parameter-get (key parameter &optional default)
   "Get sort PARAMETER for KEY or nil or DEFAULT if not found.
@@ -175,6 +191,7 @@ See ‘orgqda-sort-parameters’."
     default))
 
 (defun orgqda--read-sort-choice ()
+  "Completing read for sorting options from ‘orgqda-sort-parameters’."
   (intern-soft (completing-read "Sort by: " (mapcar #'car orgqda-sort-parameters) nil t)))
 
 (defcustom orgqda-keep-tags-sorted nil
@@ -318,7 +335,10 @@ Usually set by the user as a file or dir local variable.")
 ;;;; Macros and defsubst
 (defmacro orgqda--temp-work (widened? &rest body)
   "Macro for working on BODY temporarily, possibly in WIDENED buffer.
-Shortcut for (‘save-excursion’ (‘save-restriction’ (‘widen’) (‘goto-char’) (‘point-min’)))."
+Shortcut for:
+\(‘save-excursion’
+  (‘save-restriction’
+    (‘widen’) (‘goto-char’) (‘point-min’)))."
   (declare (indent 1) (debug t))
   `(save-excursion
      (save-restriction
@@ -373,19 +393,15 @@ Else return empty string."
 ;;;; Minor mode definitions
 ;;;###autoload
 (define-minor-mode orgqda-mode
-  "Toggle orgqda mode.
-Interactively with no argument, this command toggles the mode. A
-positive prefix argument enables the mode, any other prefix
-argument disables it. From Lisp, argument omitted or nil enables
-the mode, ‘toggle’ toggles the state.
+  "Minor mode for qualitative coding of text material.
 
-Minor mode for qualitative coding of text material and extraction
-of codes.
+Enables tag completion with tags from all files defined in
+variable ‘orgqda-tag-files’ (if ‘orgqda-collect-from-all-files’ is non-nil).
 
-Enables tag completion with tags from all files defined in ‘orgqda-tag-files’
-
-Relevant commands not bound to any keys are:
-‘orgqda-list-tags’, ‘orgqda-list-tags-full’ and ‘orgqda-collect-tagged’.
+Relevant commands not bound to any keys are: ‘orgqda-list-tags’,
+‘orgqda-list-tags-full’ and ‘orgqda-collect-tagged’, but see also
+‘orgqda-transient’ in library orgqda-transient.el for convenient access to
+these functions.
 
 CSV files can be exported as well with
 ‘orgqda-collect-tagged-csv’, ‘orgqda-collect-tagged-csv-save’,
@@ -430,7 +446,7 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
   :lighter " QDAl")
 
 (define-minor-mode orgqda-codebook-mode
-  "Mode for updating and sorting lists of tags in a codebook file.
+  "Minor mode for updating and sorting lists of tags in a codebook file.
 
 \\{orgqda-codebook-mode-map}"
   :keymap `((,(kbd "<drag-mouse-1>") . orgqda-drag-merge-tags)
@@ -439,7 +455,7 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
   :lighter "QDAc")
 
 (define-minor-mode orgqda-view-mode
-  "Mode for viewing collected extracts from ‘orgqda-collect-tagged’.
+  "Minor mode for viewing collected extracts from ‘orgqda-collect-tagged’.
 
 \\{orgqda-view-mode-map}"
   :keymap (make-sparse-keymap)
@@ -494,11 +510,12 @@ Prefix ARG is passed through."
   (orgqda-insert-inlinetask arg "∈" t))
 
 ;;;###autoload
-(defun orgqda-tag-or-code (after-line)
-  "Insert inlinetask and tag, except if on headline, then add tag.
+(defun orgqda-code-headline-or-paragraph (after-line)
+  "Insert tags if on a headline, or insert inlinetask and tags.
 Prefix arg AFTER-LINE is passed through to ‘orgqda-insert-inlinetask’.
-Suitable for remapping like this:
-(define-key orgqda-mode-map [remap org-set-tags-command] #'orgqda-tag-or-code)."
+Suitable for remapping ‘org-set-tags-command’ like this:
+‘(define-key orgqda-mode-map [remap org-set-tags-command]
+ #'orgqda-code-headline-or-paragraph)’."
   (interactive "P")
   (let ((inhibit-read-only t))
     (if (org-at-heading-p)
@@ -509,7 +526,7 @@ Suitable for remapping like this:
 
 ;;;###autoload
 (cl-defun orgqda-list-tags (&optional arg &key sort full buffer noupdate roottext startprefix no-tag-files)
-  "List all tags in this buffer and/or ‘orgqda-tag-files’, with counts.
+  "List all tags in this buffer and/or variable ‘orgqda-tag-files’, with counts.
 Sorted by count, or alphabetically if optional (prefix) argument
 ARG is non-nil.
 
@@ -1260,9 +1277,9 @@ slightly different formatting depending on FORMAT."
 
 (defun orgqda--get-tags-hash (&optional exclude-tags)
   "Return a hash of all tags with counts.
-In this buffer or in all files in ‘orgqda-tag-files’. If
-EXCLUDE-TAGS is non nil, use that instead of
-‘orgqda-exclude-tags’ for tags to exclude."
+In this buffer or in all files in variable ‘orgqda-tag-files’. If
+EXCLUDE-TAGS is non nil, use that instead of ‘orgqda-exclude-tags’ for
+tags to exclude."
   (clrhash orgqda--current-tagscount)
   (let ((org-use-tag-inheritance orgqda-use-tag-inheritance))
     (orgqda--with-many-files (or (and orgqda-collect-from-all-files
@@ -1282,8 +1299,8 @@ EXCLUDE-TAGS is non nil, use that instead of
 
 (defun orgqda--get-tags-alist (&optional sort exclude-tags)
   "Return an alist of all tags with counts.
-In this buffer or in all files in ‘orgqda-tag-files’. Optional
-SORT is a character from ‘orgqda-sort-parameters’. EXCLUDE-TAGS
+In this buffer or in all files in variable ‘orgqda-tag-files’. Optional
+SORT is a symbol from ‘orgqda-sort-parameters’. EXCLUDE-TAGS
 overrides ‘orgqda-exclude-tags’."
   (let ((tl (orgqda--tags-hash-to-alist (orgqda--get-tags-hash exclude-tags))))
     (if-let ((get (orgqda--sort-parameter-get sort :alist-get #'car))
@@ -1436,15 +1453,6 @@ Cache transformed values in ‘orgqda--tagcount-filename-hash’."
 Returns 0 if not found."
   (alist-get "" (gethash tag (orgqda--htl-counts orgqda--current-htl)) 0))
 
-;; (defun orgqda--hierarchy-count-greater-p (x y)
-;;   "Return non-nil if tag X has greater count than Y."
-;;   (> (alist-get "" (gethash x (orgqda--htl-counts orgqda--current-htl)) -1)
-;;      (alist-get "" (gethash y (orgqda--htl-counts orgqda--current-htl)) -2)))
-;; (defun orgqda--hierarchy-count-less-p (x y)
-;;   "Return non-nil if tag X has smaller count than Y."
-;;   (< (alist-get "" (gethash x (orgqda--htl-counts orgqda--current-htl)) -2)
-;;      (alist-get "" (gethash y (orgqda--htl-counts orgqda--current-htl)) -1)))
-
 (defun orgqda--string-lessp (s1 s2)
   "Return non-nil if S1 is less than S2 in collation order.
 Ignore case and collate depending on current locale."
@@ -1571,9 +1579,9 @@ STRICT is passed to ‘orgqda--otag-parse’."
 (defun orgqda-update-taglist-general ()
   "Update taglists in any org buffer.
 Expects to find otag-links and updates any count number following
-them. If ‘orgqda--originating-buffer’ is set, uses that,
-otherwise assumes tags can be found in this buffer or the ones
-defined by ‘orgqda-tag-files’.
+them. If ‘orgqda--originating-buffer’ is set, uses that, otherwise
+assumes tags can be found in this buffer or the ones defined by
+variable ‘orgqda-tag-files’.
 
 Generates a list of \"new\" tags, tags not linked to in this buffer."
   (let ((newtags (make-hash-table :test 'equal)))
@@ -2016,19 +2024,19 @@ Coding info is the first line of the matching line for the tag in
 (declare-function orgqda-completion--get-tags-list "orgqda-completion" nil)
 (defvar orgqda-completion-mode)
 
-(defun orgqda-tags-completion-table-wrap (oldfun &rest args)
-  "Around advice for ‘org-global-tags-completion-table’ (OLDFUN).
-In ‘orgqda-completion-mode’, use custom function for retrieving
-tags. In ‘orgqda-mode’, load tags from ‘orgqda-tag-files’ and
-inhibit org hooks to speed up loading of files. Else just call
-OLDFUN with ARGS."
+(defun orgqda-tags-completion-table-wrap (function &rest args)
+  "Around advice for FUNCTION ‘org-global-tags-completion-table’.
+In ‘orgqda-completion-mode’, use custom function for retrieving tags.
+In ‘orgqda-mode’, load tags from variable ‘orgqda-tag-files’ and inhibit org
+hooks to speed up loading of files. Else just call OLDFUN with
+ARGS."
   (cond
    (orgqda-completion-mode
     (orgqda-completion--get-tags-list))
    (orgqda-mode
     (orgqda--inhibit-org-startups
-     (funcall oldfun (orgqda-tag-files))))
-   (t (apply oldfun args))))
+     (funcall function (orgqda-tag-files))))
+   (t (apply function args))))
 
 
 (provide 'orgqda)
