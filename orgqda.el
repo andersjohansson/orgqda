@@ -1609,17 +1609,13 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
     (when (or orgqda--removed-tags
               (not (hash-table-empty-p newtags)))
       (let ((buf (generate-new-buffer "*Tag changes*"))
-            (inhibit-read-only t)
-            (localvars (buffer-local-variables))
-            (bf (buffer-file-name)))
-        (with-current-buffer buf
-          (cl-loop for (var . val) in localvars
-                   if (string-match "^orgqda"
-					                (symbol-name var))
-                   do (set (make-local-variable var) val)))
+            (oldbuf (current-buffer))
+            (bf (buffer-file-name))
+            (inhibit-read-only t))
         (orgqda--create-hierarchical-taglist nil newtags)
         (orgqda-list-tags nil :buffer buf :noupdate t :roottext "Possibly added tags")
         (with-current-buffer buf
+          (orgqda--clone-local-variables oldbuf)
           (goto-char (point-min))
           (org-map-tree (lambda () (end-of-line) (newline) (org-time-stamp '(16) 'inactive)))
           (when orgqda--removed-tags
