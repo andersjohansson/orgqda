@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-02-20
+;; Modified: 2022-02-22
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -1385,7 +1385,7 @@ ITEM represents the item and FILENAME where it is from."
            (if (string=
                 orgqda-hierarchy-delimiter
                 (substring item -1))
-               (concat "{" item "}") ;make regexp-match for prefix
+               (concat "{^" item "}") ;make regexp-match for prefix
              item)
            (orgqda--string-or-empty filename "::")
            item
@@ -1551,7 +1551,7 @@ the last “::filename” always optional."
                       (rx (regex org-tag-re))
                     (rx (or (+ (seq (regex org-tag-re)
                                     (? (any ?+ ?- ?| ))))  ; single tag or boolean combinations
-                            (seq "{" (regex org-tag-re) "}") ; tag regex search (used for prefixes)
+                            (seq "{" (? "^") (regex org-tag-re) "}") ; tag regex search (used for prefixes)
                             )))))
     (when (string-match (rx (seq bos
 	                             (? "otag:")
@@ -1636,11 +1636,8 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
 (defun orgqda--update-tag-count-link (link)
   "Update displayed tag count for tag linked to by LINK."
   (when (string= "otag" (org-element-property :type link))
-    (let* ((sp (split-string (org-element-property :path link) ":"))
-           (tag (or (cadr sp) (car sp)))
-           (tag (if (string-match-p "^{[^{}]+}$" tag)
-                    (substring tag 1 -1)
-                  tag))
+    (let* ((tag (orgqda--otag-tag (org-element-property :path link)))
+           (tag (string-trim tag  "{^?" "}"))
            (count (gethash tag (orgqda--htl-counts orgqda--current-htl))))
       (when (and count (not (assq 'found count)))
         ;;mark the ones found by adding found to the count alist
