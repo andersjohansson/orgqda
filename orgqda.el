@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-02-22
+;; Modified: 2022-03-11
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -476,31 +476,34 @@ if non-nil additionally calls `org-set-tags-command`."
   (let ((cg (prepare-change-group))
         (oldpoint (point))
         (inhibit-read-only t))
-    (activate-change-group cg)
-    (unless (org-inlinetask-in-task-p) ; add nothing if already in task
-      (unless (and (bolp) (eolp)) ; only move if inside a line of text
-        (if after-line (forward-line) (forward-paragraph)))
-      (unless (org-inlinetask-in-task-p) ; create inlinetask if not present
-        (unless (and (bolp) (eolp)) (newline)) ;newline at e.g. eof
-        (unless (and after-line (bolp) (eolp)) (open-line 1)) ; open-line if at newline
-        (insert (concat (make-string
-                         (1+ org-inlinetask-min-level) 42) " " title))))
-    (when (and coding (org-inlinetask-in-task-p))
-      (if (bound-and-true-p orgqda-helm-tags-mode)
-          (orgqda-helm-tags-set-tags)
-        (org-set-tags-command)))
-    ;; possibly cancel coding command
-    (if (and coding
-             (save-excursion
-               (beginning-of-line)
-               (and
-                (looking-at org-complex-heading-regexp)
-                (not (match-string 5)))))
+    (unwind-protect
         (progn
-          (cancel-change-group cg)
-          (goto-char oldpoint))
-      (accept-change-group cg)
-      (move-end-of-line nil))))
+          (activate-change-group cg)
+          (unless (org-inlinetask-in-task-p) ; add nothing if already in task
+            (unless (and (bolp) (eolp)) ; only move if inside a line of text
+              (if after-line (forward-line) (forward-paragraph)))
+            (unless (org-inlinetask-in-task-p) ; create inlinetask if not present
+              (unless (and (bolp) (eolp)) (newline)) ;newline at e.g. eof
+              (unless (and after-line (bolp) (eolp)) (open-line 1)) ; open-line if at newline
+              (insert (concat (make-string
+                               (1+ org-inlinetask-min-level) 42)
+                              " " title))))
+          (when (and coding (org-inlinetask-in-task-p))
+            (if (bound-and-true-p orgqda-helm-tags-mode)
+                (orgqda-helm-tags-set-tags)
+              (org-set-tags-command))))
+      ;; If no tags were actually added, undo.
+      (if (and coding
+               (save-excursion
+                 (beginning-of-line)
+                 (and
+                  (looking-at org-complex-heading-regexp)
+                  (not (match-string 5)))))
+          (progn
+            (cancel-change-group cg)
+            (goto-char oldpoint))
+        (accept-change-group cg)
+        (move-end-of-line nil)))))
 
 ;;;###autoload
 (defun orgqda-insert-inlinetask-coding (arg)
