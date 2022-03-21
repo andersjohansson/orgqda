@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-03-11
+;; Modified: 2022-03-21
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -1478,12 +1478,14 @@ Ignore case and collate depending on current locale."
 
 Match string is passed in MATCH or prompted for.
 
-The matcher is constructed by bypassing ‘org-make-tags-matcher’ if
-the match is for a single tag, since generation otherwise takes
-too long with long tag names (‘org-make-tags-matcher’ does some
-expensive stuff, and this is no good when we are collecting
-extracts for all tags). This behaviour can be forced with
-FORCE-SIMPLE."
+Takes ‘orgqda-only-count-matching’ into account.
+
+The matcher is constructed by bypassing ‘org-make-tags-matcher’
+if the match is for a single tag, or simple combinations of + and
+| , since generation otherwise takes too long with long tag
+names (‘org-make-tags-matcher’ does some expensive regexp stuff,
+and this is no good when we are collecting extracts for all
+tags). Checking if MATCH is a tag can be forced with FORCE-SIMPLE."
   (let* ((match (or match (orgqda--completing-read-tag
                            "Match: " (orgqda--tag-at-point))))
          conds)
@@ -1494,6 +1496,14 @@ FORCE-SIMPLE."
      ((or force-simple
           (string-match-p (concat "^" org-tag-re "$") match))
       (push `(member ,match tags-list) conds))
+     ;; simple or: tag1|tag2
+     ((string-match-p (rx (seq string-start (1+ (seq (regexp org-tag-re) (* "|"))) string-end))
+                      match)
+      (push `(cl-intersection ',(split-string match "|") tags-list :test #'equal) conds))
+     ;; simple and: tag1+tag2
+     ((string-match-p (rx (seq string-start (1+ (seq (regexp org-tag-re) (* "+"))) string-end))
+                      match)
+      (push `(cl-subsetp ',(split-string match "\\+") tags-list :test #'equal) conds))
      (t (push (nth 2 (cdr (org-make-tags-matcher match))) conds)))
     (cons match `(lambda (todo tags-list level)
                    (setq org-cached-props nil)
