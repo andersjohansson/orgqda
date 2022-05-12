@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-03-21
+;; Modified: 2022-05-12
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -330,6 +330,8 @@ Usually set by the user as a file or dir local variable.")
   "Parameters used to generate taglist in current buffer.")
 (defvar-local orgqda--old-org-current-tag-alist nil
   "Saved state of ‘org-current-tag-alist’ before enabling ‘orgqda-mode’.")
+(defvar-local orgqda--current-search nil
+  "The tag search string for current ‘orgqda-view-mode’ buffer.")
 
 
 ;;;; Macros and defsubst
@@ -458,7 +460,7 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
   "Minor mode for viewing collected extracts from ‘orgqda-collect-tagged’.
 
 \\{orgqda-view-mode-map}"
-  :keymap (make-sparse-keymap)
+  :keymap `((,(kbd "g") . orgqda-revert-collected-tags))
   :lighter "QDAv")
 
 ;;;; Interactive commands
@@ -715,7 +717,9 @@ switching is done and view buffer just returned."
          (oclevel
           (+ (if (and orgqda-collect-from-all-files orgqda-tag-files) 2 1)
              (or deeper-view 0)))
-         (origbuf (current-buffer))
+         (origbuf (or (when (buffer-live-p orgqda--originating-buffer)
+                        orgqda--originating-buffer)
+                      (current-buffer)))
          (buffer (or buffer (generate-new-buffer
                              (format "*tags:%s*" mname)))))
     (if (equal cont '(0))
@@ -729,10 +733,25 @@ switching is done and view buffer just returned."
         (orgqda-view-mode)
         (view-mode)
         (orgqda--clone-local-variables origbuf)
+        (setq orgqda--current-search match
+              orgqda--originating-buffer origbuf)
         (org-content oclevel))
       (if noswitch
           buffer
         (pop-to-buffer buffer)))))
+
+(defun orgqda-revert-collected-tags ()
+  "Revert current tag collection buffer by redoing search."
+  (interactive)
+  (when orgqda--current-search
+    (let ((inhibit-read-only t)
+          (cb (current-buffer))
+          (cs orgqda--current-search))
+      (widen)
+      (delete-region (point-min) (point-max))
+      (orgqda--with-current-buffer-if orgqda--originating-buffer
+        (orgqda-collect-tagged cs nil cb t)))))
+
 
 (defvar orgqda--csv-curr-mname nil)
 
