@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.2
 ;; Created: 2021-04-12
-;; Modified: 2022-02-14
+;; Modified: 2022-02-23
 ;; Package-Requires: ((orgqda "0.5") (transient "0.3.0"))
 ;; Keywords: convenience, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -32,19 +32,25 @@
 ;;; Code:
 (require 'orgqda)
 (require 'transient)
+(require 'validate)
 
 ;;;; Starting point
 
 (transient-define-prefix orgqda-transient ()
   "Transient for invoking orgqda commands."
-  [["List tags"
+  [["Listing options"
+    ("-m" orgqda-transient-only-count-matching)
+    ("-i" orgqda-transient-use-tag-inheritance)
+    ("-x" orgqda-transient-exclude-tags)]
+
+   ["List tags"
     :pad-keys t
     ("-s" orgqda-transient-sort)
     ("-e" orgqda-transient-full)
     ("-f" orgqda-transient-notagfiles)
     ("-p" orgqda-transient-startprefix)
-    ("l" "List tags" orgqda-transient-list-tags-suffix)]
-   ["Taglist buffer"
+    ("l" "List tags" orgqda-transient-list-tags-suffix)]]
+  [["Taglist buffer"
     :if (lambda () (or orgqda-list-mode orgqda-codebook-mode))
     ("g" "Revert list (update buffer)" orgqda-revert-taglist)
     ;; ("o" orgqda-transient-sort)
@@ -80,7 +86,6 @@
    (var :initform 'orgqda-transient--options :allocation :class)
    (param :initarg :param)
    (format :initform " %k %d %v"))
-
   "Class for storing orgqda options in local lisp variables.
 Uses slots var and param for determining variable and plist key
 to store in.")
@@ -190,6 +195,48 @@ to store in.")
                      (plist-get orgqda-transient--options :buffer-non-recursive)))
   (orgqda-sort-taglist sort non-recursive))
 
+
+;;; variables
+(defclass orgqda-transient-lisp-variable (transient-lisp-variable)
+  ((set-value :initarg :set-value :initform #'orgqda-transient--variable-set-local)
+   (reader :initform #'orgqda-transient--variable-reader)))
+
+(defun orgqda-transient--variable-reader (prompt initial-input _history)
+  (validate (read--expression prompt initial-input)))
+
+(defun orgqda-transient--variable-set-local (var val)
+  (set-variable
+   (make-local-variable var)
+   (validate-value val (custom-variable-type var))))
+
+(cl-defmethod transient-format-value ((obj orgqda-transient-lisp-variable))
+  (concat (when (with-current-buffer transient--original-buffer
+                  (local-variable-p (oref obj variable)))
+            (propertize "local: " 'face 'shadow))
+          (propertize (prin1-to-string (oref obj value))
+                      'face 'transient-value)))
+
+(cl-defmethod transient-infix-set ((obj orgqda-transient-lisp-variable) value)
+  (funcall (oref obj set-value)
+           (oref obj variable)
+           (oset obj value value)))
+
+(cl-defmethod transient-format-value ((obj orgqda-transient-lisp-variable))
+  (let ((print-length 3))
+    (propertize (prin1-to-string (oref obj value))
+                'face 'transient-value)))
+
+(transient-define-infix orgqda-transient-only-count-matching ()
+  :class 'orgqda-transient-lisp-variable
+  :variable 'orgqda-only-count-matching)
+
+(transient-define-infix orgqda-transient-use-tag-inheritance ()
+  :class 'orgqda-transient-lisp-variable
+  :variable 'orgqda-use-tag-inheritance)
+
+(transient-define-infix orgqda-transient-exclude-tags ()
+  :class 'orgqda-transient-lisp-variable
+  :variable 'orgqda-exclude-tags)
 
 
 (provide 'orgqda-transient)
