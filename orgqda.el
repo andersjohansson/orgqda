@@ -525,7 +525,9 @@ Suitable for remapping ‘org-set-tags-command’ like this:
   (let ((inhibit-read-only t))
     (if (org-at-heading-p)
         (org-set-tags-command)
-      (orgqda-insert-inlinetask-coding after-line))))
+      (if (orgqda--codeable-paragraph-p)
+          (orgqda-insert-inlinetask-coding after-line)
+        (org-set-tags-command)))))
 
 ;;;;; Commands for listing tags
 
@@ -2004,6 +2006,26 @@ other important functions of ‘org-scan-tags’."
 		    (val (cdr entry)))
 	    (when (string-match "^orgqda-" (symbol-name var))
           (set (make-local-variable var) val))))))
+
+(defun orgqda--codeable-paragraph-p ()
+  "Return t if point is in or after a codeable paragraph."
+  (let ((eap (org-element-at-point)))
+    (or (orgqda--good-paragraph eap)
+        (let ((pp (save-excursion (backward-paragraph 2) (org-element-at-point))))
+          (orgqda--good-paragraph pp)
+          ))))
+
+(defun orgqda--good-paragraph (element)
+  "Return t if ELEMENT is a paragraph not only containing whitespace."
+  (and (eq 'paragraph (org-element-type element))
+       (let ((pt (string-trim (buffer-substring-no-properties
+                               (org-element-property :begin element)
+                               (org-element-property :end element)))))
+         (not (or (string-empty-p pt)
+                  (string-match (rx (seq string-start
+                                         (regexp org-element--timestamp-regexp)
+                                         string-end ))
+                                pt))))))
 
 ;;;;; Retrieve codebook info
 (defun orgqda--get-codebook-info ()
