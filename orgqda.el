@@ -460,7 +460,8 @@ and ‘orgqda-collect-tagged-csv-save-all’. Be sure to customize
   "Minor mode for viewing collected extracts from ‘orgqda-collect-tagged’.
 
 \\{orgqda-view-mode-map}"
-  :keymap `((,(kbd "g") . orgqda-revert-collected-tags))
+  :keymap `((,(kbd "g") . orgqda-revert-collected-tags)
+            ([remap org-set-tags-command] . orgqda-tag-in-collection-buffer))
   :lighter "QDAv")
 
 ;;;; Interactive commands
@@ -748,12 +749,28 @@ switching is done and view buffer just returned."
   (when orgqda--current-search
     (let ((inhibit-read-only t)
           (cb (current-buffer))
+          (pos (point))
           (cs orgqda--current-search))
       (widen)
       (delete-region (point-min) (point-max))
       (orgqda--with-current-buffer-if orgqda--originating-buffer
-        (orgqda-collect-tagged cs nil cb t)))))
+        (orgqda-collect-tagged cs nil cb t))
+      (goto-char pos))))
 
+(defun orgqda-tag-in-collection-buffer ()
+  "Set tags of collected extracts remotely.
+Stand-in for ‘org-set-tags-command’."
+  (interactive)
+  (when orgqda-view-mode
+    (when-let ((opbmlink (save-excursion
+                           (and (org-back-to-heading)
+                                (search-forward "[[opbm:" (point-at-eol) t)
+                                (org-element-context)))))
+      (let ((bm (cons "n" (read (org-link-decode (org-link-unescape (org-element-property :path opbmlink)))))))
+        (with-current-buffer (find-file-noselect (bookmark-get-filename bm))
+          (bookmark-default-handler bm)
+          (org-set-tags-command))
+        (orgqda-revert-collected-tags)))))
 
 (defvar orgqda--csv-curr-mname nil)
 
