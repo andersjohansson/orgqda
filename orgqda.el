@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-05-12
+;; Modified: 2022-05-13
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -1003,6 +1003,31 @@ Numeric prefix arg K defines which tuples to count"
          tl n k (cons (nth tlindex tl) data) (1+ tlindex))
         (orgqda--get-tag-relations-rec tl n k data (1+ tlindex))))))
 
+;;;; Prevalence table
+(defun orgqda-tag-prevalence-table (tags &optional print-0)
+  "Insert prevalence table of each of TAGS in each file in ‘orgqda-tag-files’.
+Zeros are printed as empty cells for increased readability,
+unless prefix arg PRINT-0 is given."
+  (interactive (list (orgqda--completing-read-multiple-tags "Tags: ")
+                     current-prefix-arg))
+  (let* ((th (orgqda--get-tags-hash))
+         (table (concat
+                 "| | " (string-join tags " | ") " |\n"
+                 "|-|\n"
+                 (cl-loop for f in (orgqda-tag-files)
+                          concat (concat
+                                  "| " (orgqda--tagcount-transform-file-name f) " | "
+                                  (cl-loop for tag in tags
+                                           concat
+                                           (concat
+                                            (format "%d" (alist-get f (gethash tag th) 0 nil #'equal))
+                                            " | "))
+                                  "\n")))))
+    (insert
+     (if print-0
+         table
+       (string-replace " 0 " "   " table)))))
+
 
 ;;;; Internal functions
 ;;;;; collection-functions
@@ -1858,6 +1883,12 @@ PROMPT, INITIAL-INPUT, REQUIRE-MATCH as in ‘completing-read’.
 NO-RELOAD reuses already initalized tag completion list (in
 ‘orgqda--tag-completion-list’ or ‘orgqda-helm-tags-comp-list’)."
   (completing-read prompt (orgqda--get-prefixes-for-completion no-reload) nil require-match initial-input))
+
+(defun orgqda--completing-read-multiple-tags (prompt &optional initial-input require-match no-reload)
+  "Fetch a list of tag names with ‘completing-read-multiple’.
+PROMPT, INITIAL-INPUT, REQUIRE-MATCH as in ‘completing-read-multiple’.
+NO-RELOAD reuses already initalized completion list."
+  (completing-read-multiple prompt (orgqda--get-tags-for-completion no-reload)nil require-match initial-input))
 
 (defun orgqda--get-tags-for-completion (&optional no-reload)
   "Return current list of tags in orgqda (possibly many files).
