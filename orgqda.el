@@ -1828,7 +1828,7 @@ Return number of replacements done."
 
 (defun orgqda--refile-and-merge (start end s-tag e-tag)
   "Refile and merge tags S-TAG to E-TAG from points START to END."
-  (let* ((prefre (concat "^{\\(" org-tag-re "\\)_}$"))
+  (let* ((prefre (concat "^{\\^?\\(" org-tag-re "\\)_}$"))
          (s-pref (when (string-match prefre s-tag)
                    (match-string 1 s-tag)))
          (e-pref (when (string-match prefre e-tag)
@@ -1982,7 +1982,7 @@ STRICT only accepts real tag names."
   (when-let ((tag (orgqda--tag-at-point)))
     (when
         (rx-let ((tagpref (group-n 1 (+ (seq (+ alnum) (literal orgqda-hierarchy-delimiter))))))
-          (string-match (rx (seq bol (or (seq "{" tagpref  "}" eol)
+          (string-match (rx (seq bol (or (seq "{" (? "^") tagpref  "}" eol)
                                          tagpref)))
                         tag))
       (substring (match-string 1 tag) 0 -1))))
