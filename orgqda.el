@@ -844,7 +844,7 @@ A prefix ARG does a normal ‘org-refile’."
       (org-refile)
     (when-let* ((s (point))
                 (s-tag (orgqda--otag-at-this-headline))
-                (org-refile-targets '((nil :maxlevel . 4)))
+                (org-refile-targets '((nil :maxlevel . 8)))
                 (newloc (org-refile-get-location "Refile and merge tags to: "))
                 (e (nth 3 newloc))
                 (e-tag (org-with-wide-buffer
