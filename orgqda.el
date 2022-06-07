@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-05-13
+;; Modified: 2022-06-07
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -884,16 +884,21 @@ Works on all current orgqda files."
 (defun orgqda-rename-prefix-on-one-tag (oldname newprefix)
   "Rename the prefix(es) of tag OLDNAME to NEWPREFIX."
   (interactive (list
-                (orgqda--completing-read-tag "Old tag name: " (orgqda--tag-at-point nil t) t)
+                (orgqda--completing-read-tag "Old tag name: "
+                                       (orgqda--tag-at-point nil t) t)
                 (orgqda--completing-read-prefix
                  "New prefix: "
                  nil nil
                  ;; if we completed tags with helm we need to fetch a clean list
                  (unless (bound-and-true-p orgqda-helm-tags-mode)))))
+  (orgqda-rename-tag oldname (orgqda--new-tag-from-new-prefix oldname newprefix)))
+
+(defun orgqda--new-tag-from-new-prefix (oldname newprefix)
+  "Get new tagname when renaming OLDNAME with NEWPREFIX."
   (when-let ((tagleaf
-              (car-safe
-               (last (split-string oldname orgqda-hierarchy-delimiter)))))
-    (orgqda-rename-tag oldname (concat newprefix orgqda-hierarchy-delimiter tagleaf))))
+              (car-safe (last (split-string oldname
+                                            orgqda-hierarchy-delimiter)))))
+    (concat newprefix orgqda-hierarchy-delimiter tagleaf)))
 
 (defun orgqda-rename-prefix (oldprefix newprefix &optional taglist)
   "Rename OLDPREFIX to NEWPREFIX for all tags using it in current orgqda files.
@@ -1845,9 +1850,13 @@ b. Rename prefix “%s” → “%s” in all tags. "
           (e-pref
            (cl-case (read-char-choice
                      (orgqda--format-bold-strings
-                      "a. Replace prefixes of tag “%s” with ”%s”.
+                      "a. Replace prefixes of tag “%s” with ”%s” → “%s”.
 b. Subsume tag ”%s” under prefix ”%s”. "
-                      s-tag e-pref s-tag e-pref)
+                      s-tag
+                      e-pref
+                      (orgqda--new-tag-from-new-prefix s-tag e-pref)
+                      s-tag
+                      e-pref)
                      '(?a ?b ?q))
              (?a (orgqda--move-subtree-then start end
                    (orgqda-rename-prefix-on-one-tag s-tag e-pref)))
