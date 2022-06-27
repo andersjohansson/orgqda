@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-06-07
+;; Modified: 2022-06-27
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -579,7 +579,10 @@ ignoring any setting of ‘orgqda-tag-files’."
                (setq buffer-read-only nil)
                (erase-buffer))
       (pop-to-buffer
-       (generate-new-buffer "*orgqda-taglist*")))
+       (generate-new-buffer (concat "*orgqda-taglist"
+                                    (unless tagfiles
+                                      (concat "-" (buffer-name origbuffer)))
+                                    "*"))))
     (if roottext
         (insert (format "* %s\n" roottext))
       (insert
