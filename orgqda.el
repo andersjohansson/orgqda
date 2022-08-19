@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-06-27
+;; Modified: 2022-08-19
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -62,8 +62,8 @@ An alist where keys are regexps to be matched against ‘buffer-name’
 and values are Lisp forms that are evaluated to get extra info.
 
 An example that adds a possible parent heading on level 4 for
-buffers with names containing 'fieldnotes':
-'((\"fieldnotes\" . (format \" (from: %s)\" (orgqda-get-parent-hl 4))))"
+buffers with names containing \"fieldnotes\":
+\((\"fieldnotes\" . (format \" (from: %s)\" (orgqda-get-parent-hl 4))))"
   :type '(alist :key-type regexp :value-type sexp))
 
 (defcustom orgqda-transform-collected-paragraph-function #'identity
