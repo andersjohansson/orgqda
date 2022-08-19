@@ -1093,7 +1093,7 @@ Return cons-cell: (count in buffer count . string of taglist)"
     (orgqda--temp-work (not unwidened)
       (let* ((orgqda--current-buffer-length (point-max))
              (tl (orgqda--scan-tags 'orgqda--get-paragraph-or-sub
-                                    (cdr matcher) nil)))
+                              (cdr matcher) nil)))
         (cons (length tl)
               (mapconcat 'identity tl "\n"))))))
 
@@ -1160,7 +1160,7 @@ Return cons-cell: (count in buffer count . string of taglist)"
   (let ((org-use-tag-inheritance orgqda-use-tag-inheritance))
     (orgqda--temp-work t
       (let ((tl (orgqda--scan-tags 'orgqda--get-paragraph-or-sub-to-csv
-                                   (cdr matcher) nil)))
+                             (cdr matcher) nil)))
         (mapconcat 'identity tl "")))))
 
 (defun orgqda--get-paragraph-or-sub-to-csv ()
@@ -1340,10 +1340,10 @@ slightly different formatting depending on FORMAT."
 (defun orgqda--clean-up-heading-desc (heading)
   "Clean up a HEADING string used as description for an opbm link."
   (thread-last heading
-    (substring-no-properties)
-    (org-link-display-format)
-    (replace-regexp-in-string "\\[" "")
-    (replace-regexp-in-string "\\]" "")))
+               (substring-no-properties)
+               (org-link-display-format)
+               (replace-regexp-in-string "\\[" "")
+               (replace-regexp-in-string "\\]" "")))
 
 ;;;;; List tags functions
 (defvar orgqda--current-tagscount (make-hash-table :test 'equal)
@@ -1357,12 +1357,12 @@ tags to exclude."
   (clrhash orgqda--current-tagscount)
   (let ((org-use-tag-inheritance orgqda-use-tag-inheritance))
     (orgqda--with-many-files (or (and orgqda-collect-from-all-files
-                                      (orgqda-tag-files))
-                                 (when-let ((bfn
-                                             (or (buffer-file-name)
-                                                 (buffer-file-name
-                                                  (buffer-base-buffer)))))
-                                   (list bfn)))
+                                (orgqda-tag-files))
+                           (when-let ((bfn
+                                       (or (buffer-file-name)
+                                           (buffer-file-name
+                                            (buffer-base-buffer)))))
+                             (list bfn)))
       (orgqda--scan-tags
        #'orgqda--get-tags-with-count
        (cdr (orgqda--make-tags-matcher 'matchall))
@@ -1444,7 +1444,7 @@ STARTTAG is the prefix where the search should start."
                (insert
                 (with-current-buffer origbuffer
                   (cdr (orgqda--coll-tagged (orgqda--make-tags-matcher item t)
-                                            (+ 2 indent))))
+                                      (+ 2 indent))))
                 "\n")))
            "*")))
     (if starttag
