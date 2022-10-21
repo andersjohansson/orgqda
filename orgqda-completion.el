@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2021-07-28
-;; Modified: 2022-03-07
+;; Modified: 2022-09-07
 ;; Package-Requires: ((emacs "28.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.5") (marginalia "0.11"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -179,17 +179,21 @@ TRANSFORM is used as described in Info node ‘(elisp)Programmed Completion’"
 
 (defun orgqda-completion-annotate-count (tag)
   "Annotate TAG with count."
-  (concat orgqda-completion--align-space
-          (propertize
-           (format "%5d" (orgqda-completion--get-count tag))
-           'face 'shadow)))
+  (if orgqda-completion-mode
+      (concat orgqda-completion--align-space
+              (propertize
+               (format "%5d" (orgqda-completion--get-count tag))
+               'face 'shadow))
+    ""))
 
 (defun orgqda-completion-annotate-all (tag)
   "Annotate TAG with count and codebook info."
-  (concat orgqda-completion--align-space
-          (propertize (format "%5d" (orgqda-completion--get-count tag)) 'face 'bold)
-          " "
-          (propertize (orgqda-completion--get-info tag) 'face 'shadow)))
+  (if orgqda-completion-mode
+      (concat orgqda-completion--align-space
+              (propertize (format "%5d" (orgqda-completion--get-count tag)) 'face 'bold)
+              " "
+              (propertize (orgqda-completion--get-info tag) 'face 'shadow))
+    ""))
 
 (defun orgqda-completion--get-count (tag)
   "Retrieve tag-count for TAG."
