@@ -122,6 +122,13 @@ work)."
     ;; (setf (alist-get 'org-tags marginalia-annotator-registry nil 'remove) nil)
     ))
 
+;;;; Cycle sorting when completing
+(defvar orgqda-completion--sort-ov nil)
+(add-hook 'minibuffer-setup-hook #'orgqda-completion--reset-sort-ov)
+(defun orgqda-completion--reset-sort-ov ()
+  "Reset ‘orgqda-completion--sort-ov’."
+  (setq orgqda-completion--sort-ov nil))
+
 (defun orgqda-completion-cycle-sorting ()
   "Cycle sorting method for tag completion with orgqda."
   (interactive)
@@ -129,6 +136,11 @@ work)."
         (car (nth (mod (1+ (cl-position orgqda-completion-sort orgqda-sort-parameters :key #'car))
                        (length orgqda-sort-parameters))
                   orgqda-sort-parameters)))
+  (unless orgqda-completion--sort-ov
+    (setq orgqda-completion--sort-ov
+          (make-overlay (- (minibuffer-prompt-end) 2) (- (minibuffer-prompt-end) 2) nil t t))
+    (overlay-put orgqda-completion--sort-ov 'priority 1))
+  (overlay-put orgqda-completion--sort-ov 'before-string (concat " [" (symbol-name orgqda-completion-sort) "]"))
   ;; Hacky way of making sure completion display for vertico,
   ;; selectrum etc. is updated.
   (insert "a")
