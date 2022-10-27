@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2021-07-28
-;; Modified: 2022-09-07
+;; Modified: 2022-10-27
 ;; Package-Requires: ((emacs "28.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.5") (marginalia "0.11"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -118,11 +118,9 @@ work)."
 
         (add-to-list 'marginalia-annotator-registry '(org-tags orgqda-completion-annotate-count orgqda-completion-annotate-all none))
 
-        (advice-add 'completion-metadata-get :before-until #'orgqda-completion--completion-metadata-get)
-
-        (setq-local org-complete-tags-always-offer-all-agenda-tags t))
+        (advice-add 'completion-metadata-get :before-until #'orgqda-completion--completion-metadata-get))
     ;; (setf (alist-get 'org-tags marginalia-annotator-registry nil 'remove) nil)
-    (kill-local-variable 'org-complete-tags-always-offer-all-agenda-tags)))
+    ))
 
 (defun orgqda-completion-cycle-sorting ()
   "Cycle sorting method for tag completion with orgqda."
@@ -136,6 +134,17 @@ work)."
   (insert "a")
   (run-hooks 'post-command-hook)
   (delete-char -1))
+
+;;;; Central advice for getting tags with extra annotations.
+;; FIXME: Should this be added to more functions than ‘org-set-tags-command’?
+(advice-add 'org-set-tags-command :around #'orgqda-completion--get-tags-advice)
+
+(defun orgqda-completion--get-tags-advice (fun &rest args)
+  "In ‘orgqda-completion-mode’, override ‘org-get-buffer-tags’, call FUN with ARGS."
+  (if orgqda-completion-mode
+      (cl-letf (((symbol-function 'org-get-buffer-tags) #'orgqda-completion--get-tags-list))
+        (funcall fun args))
+    (funcall fun args)))
 
 (defun orgqda-completion--completion-metadata-get (metadata prop)
   "Meant as around-advice for ‘completion-metadata-get’.

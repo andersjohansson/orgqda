@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-08-19
+;; Modified: 2022-10-27
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -2128,7 +2128,6 @@ Coding info is the first line of the matching line for the tag in
 
 (advice-add 'org-global-tags-completion-table :around #'orgqda-tags-completion-table-wrap)
 
-(declare-function orgqda-completion--get-tags-list "orgqda-completion" nil)
 (defvar orgqda-completion-mode)
 
 (defun orgqda-tags-completion-table-wrap (function &rest args)
@@ -2139,7 +2138,9 @@ hooks to speed up loading of files. Else just call OLDFUN with
 ARGS."
   (cond
    (orgqda-completion-mode
-    (orgqda-completion--get-tags-list))
+    ;; This is done by temporarily overriding ‘org-get-buffer-tags’.
+    ;; See advice in  in orgqda-completion.el
+    nil)
    (orgqda-mode
     (orgqda--inhibit-org-startups
      (funcall function (orgqda-tag-files))))
