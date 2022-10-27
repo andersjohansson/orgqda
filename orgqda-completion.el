@@ -55,7 +55,7 @@
 
 (defcustom orgqda-completion-sort orgqda-default-sort-order
   "Sorting scheme used for tag completion in ‘orgqda-completion-mode’.
- A symbol from ‘orgqda-sort-parameters’."
+A symbol from ‘orgqda-sort-parameters’."
   :type 'symbol
   :safe #'symbolp)
 
@@ -87,6 +87,7 @@ should not clutter the completion, apart from
   "String with displayed space property suitable for aligning annotations.
 Slightly beyond longest tag.")
 
+;;;; Minor mode
 ;;;###autoload
 (define-minor-mode orgqda-completion-mode
   "Activate annotations, grouping and sorting for org tag completions.
@@ -158,6 +159,7 @@ work)."
         (funcall fun args))
     (funcall fun args)))
 
+;;;; Functions for completion metadata and annotations
 (defun orgqda-completion--completion-metadata-get (metadata prop)
   "Meant as around-advice for ‘completion-metadata-get’.
 METADATA is the metadata.
