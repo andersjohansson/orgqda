@@ -273,7 +273,7 @@ but the orgqda functions are probably more useful. ‘collect’
 collects tags and ‘codebook’ looks up the tag in
 ‘orgqda-codebook-file’."
   :type '(choice (const :tag "Collect all coded instances" collect)
-                 (const :tag "Lookup tag in codebook file" 'codebook)
+                 (const :tag "Lookup tag in codebook file" codebook)
                  (const :tag "Fallback to standard org behaviour" nil))
   :safe #'symbolp)
 
@@ -520,8 +520,8 @@ Prefix ARG is passed through."
   "Insert tags if on a headline, or insert inlinetask and tags.
 Prefix arg AFTER-LINE is passed through to ‘orgqda-insert-inlinetask’.
 Suitable for remapping ‘org-set-tags-command’ like this:
-‘(define-key orgqda-mode-map [remap org-set-tags-command]
- #'orgqda-code-headline-or-paragraph)’."
+\(define-key orgqda-mode-map [remap org-set-tags-command]
+ #\\='orgqda-code-headline-or-paragraph)."
   (interactive "P")
   (let ((inhibit-read-only t))
     (if (org-at-heading-p)
@@ -767,7 +767,7 @@ Stand-in for ‘org-set-tags-command’."
   (when orgqda-view-mode
     (when-let ((opbmlink (save-excursion
                            (and (org-back-to-heading)
-                                (search-forward "[[opbm:" (point-at-eol) t)
+                                (search-forward "[[opbm:" (line-end-position) t)
                                 (org-element-context)))))
       (let ((bm (cons "n" (read (org-link-decode (org-link-unescape (org-element-property :path opbmlink)))))))
         (with-current-buffer (find-file-noselect (bookmark-get-filename bm))
@@ -1976,7 +1976,7 @@ STRICT only accepts real tag names."
   (save-excursion
     (save-match-data
       (beginning-of-line)
-      (and (search-forward-regexp org-link-bracket-re (point-at-eol) t)
+      (and (search-forward-regexp org-link-bracket-re (line-end-position) t)
            (save-match-data (string-match "^otag:" (match-string 1)))
            (orgqda--otag-tag (match-string-no-properties 1) strict)))))
 
@@ -2026,7 +2026,7 @@ set to ‘orgqda-tag-files’"
     (save-match-data
       (if (search-forward-regexp
            "(\\*\\([0-9]+\\)\\*.*)"
-           (point-at-eol) t)
+           (line-end-position) t)
           (string-to-number (match-string 1))
         0))))
 
@@ -2064,7 +2064,7 @@ other important functions of ‘org-scan-tags’."
     (when (consp entry)
 	  (let ((var (car entry))
 		    (val (cdr entry)))
-	    (when (string-match "^orgqda-" (symbol-name var))
+	    (when (string-match-p "^orgqda-" (symbol-name var))
           (set (make-local-variable var) val))))))
 
 (defun orgqda--codeable-paragraph-p ()
@@ -2118,8 +2118,8 @@ Coding info is the first line of the matching line for the tag in
   (when (and orgqda-mode orgqda-tag-action)
     (when-let ((tag (orgqda--tag-in-taglist-at-point)))
       (cl-case orgqda-tag-action
-        ('codebook (orgqda-find-tag-in-codebook tag))
-        ('collect (orgqda-collect-tagged tag))))))
+        (codebook (orgqda-find-tag-in-codebook tag))
+        (collect (orgqda-collect-tagged tag))))))
 
 ;;;; Advice
 
