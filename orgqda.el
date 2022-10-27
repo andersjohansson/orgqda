@@ -333,6 +333,8 @@ Usually set by the user as a file or dir local variable.")
 (defvar-local orgqda--current-search nil
   "The tag search string for current ‘orgqda-view-mode’ buffer.")
 
+;; from orgqda-completion.el, to silence byte-compiler
+(defvar orgqda-completion-mode)
 
 ;;;; Macros and defsubst
 (defmacro orgqda--temp-work (widened? &rest body)
@@ -1878,6 +1880,7 @@ b. Subsume tag ”%s” under prefix ”%s”. "
 (defvar orgqda--tag-completion-list nil
   "Tags offered for completion.")
 
+;; FIXME: Remove this when finally removing helm-tags
 (declare-function orgqda-helm-tags-get-tag "orgqda-helm-tags")
 
 (defun orgqda--completing-read-tag (prompt &optional initial-input require-match no-reload)
@@ -1900,7 +1903,9 @@ NO-RELOAD reuses already initalized tag completion list (in
   "Fetch a list of tag names with ‘completing-read-multiple’.
 PROMPT, INITIAL-INPUT, REQUIRE-MATCH as in ‘completing-read-multiple’.
 NO-RELOAD reuses already initalized completion list."
-  (completing-read-multiple prompt (orgqda--get-tags-for-completion no-reload)nil require-match initial-input))
+  (completing-read-multiple prompt (orgqda--get-tags-for-completion no-reload) nil require-match initial-input))
+
+(declare-function orgqda-completion--get-tags-list "orgqda-completion")
 
 (defun orgqda--get-tags-for-completion (&optional no-reload)
   "Return current list of tags in orgqda (possibly many files).
@@ -1909,10 +1914,12 @@ NO-RELOAD means just use previously initialized list."
       orgqda--tag-completion-list
     (setq
      orgqda--tag-completion-list
-     (hash-table-keys
-      (orgqda--with-current-buffer-if
-          orgqda--originating-buffer
-        (orgqda--get-tags-hash))))))
+     (if orgqda-completion-mode
+         (orgqda-completion--get-tags-list)
+       (hash-table-keys
+        (orgqda--with-current-buffer-if
+            orgqda--originating-buffer
+          (orgqda--get-tags-hash)))))))
 
 (defun orgqda--get-prefixes-for-completion (&optional no-reload)
   "Return the current list of tag prefixes for tags in orgqda.
@@ -2127,8 +2134,6 @@ Coding info is the first line of the matching line for the tag in
 ;; (which overrides ‘org-set-tags’) is used
 
 (advice-add 'org-global-tags-completion-table :around #'orgqda-tags-completion-table-wrap)
-
-(defvar orgqda-completion-mode)
 
 (defun orgqda-tags-completion-table-wrap (function &rest args)
   "Around advice for FUNCTION ‘org-global-tags-completion-table’.
