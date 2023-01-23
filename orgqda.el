@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2022-10-27
+;; Modified: 2023-01-23
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -1925,15 +1925,11 @@ NO-RELOAD means just use previously initialized list."
   "Return the current list of tag prefixes for tags in orgqda.
 Prefixes are those delimited with ‘orgqda-hierarchy-delimiter’.
 NO-RELOAD reuses previously initialized taglist."
-  (let ((taglist (orgqda--get-tags-for-completion no-reload))
-        prefixes)
-    (dolist (tag taglist)
-      (let* ((splittag (split-string tag orgqda-hierarchy-delimiter t))
-             (cats (butlast splittag)))
-        (when cats
-          (setq prefixes
-                (append prefixes (orgqda--build-prefixes cats))))))
-    (cl-remove-duplicates prefixes :test 'string=)))
+  (cl-loop for (tag) in (orgqda--get-tags-for-completion no-reload)
+           for cats = (butlast (split-string tag orgqda-hierarchy-delimiter t))
+           when cats
+           append (orgqda--build-prefixes cats) into prefixes
+           finally return (cl-remove-duplicates prefixes :test 'string=)))
 
 (defun orgqda--build-prefixes (preflist &optional pref)
   "Recursive function for constructing prefix list for completion.
