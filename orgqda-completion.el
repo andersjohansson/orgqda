@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.3
 ;; Created: 2021-07-28
-;; Modified: 2022-10-27
+;; Modified: 2023-02-23
 ;; Package-Requires: ((emacs "28.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.5") (marginalia "0.11"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -128,6 +128,8 @@ work)."
 (add-hook 'minibuffer-setup-hook #'orgqda-completion--reset-sort-ov)
 (defun orgqda-completion--reset-sort-ov ()
   "Reset ‘orgqda-completion--sort-ov’."
+  (when (overlayp orgqda-completion--sort-ov)
+    (delete-overlay orgqda-completion--sort-ov))
   (setq orgqda-completion--sort-ov nil))
 
 (defun orgqda-completion-cycle-sorting ()
