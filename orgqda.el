@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2023-01-23
+;; Modified: 2024-01-23
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -912,7 +912,7 @@ TAGLIST can be passed as the list of tags to replace on."
                 (orgqda--completing-read-prefix "Old prefix: " (orgqda--tag-prefix-at-point) t)
                 (orgqda--completing-read-prefix "New prefix: " nil nil t)
                 (orgqda--get-tags-for-completion t)))
-  (cl-loop for tag in taglist
+  (cl-loop for (tag) in taglist
            when (string-prefix-p oldprefix tag)
            do (orgqda-rename-tag
                tag
@@ -1916,10 +1916,12 @@ NO-RELOAD means just use previously initialized list."
      orgqda--tag-completion-list
      (if orgqda-completion-mode
          (orgqda-completion--get-tags-list)
-       (hash-table-keys
-        (orgqda--with-current-buffer-if
-            orgqda--originating-buffer
-          (orgqda--get-tags-hash)))))))
+       (mapcar
+        #'list
+        (hash-table-keys
+         (orgqda--with-current-buffer-if
+             orgqda--originating-buffer
+           (orgqda--get-tags-hash))))))))
 
 (defun orgqda--get-prefixes-for-completion (&optional no-reload)
   "Return the current list of tag prefixes for tags in orgqda.
