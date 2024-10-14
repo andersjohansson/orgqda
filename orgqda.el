@@ -1566,9 +1566,10 @@ tags). Checking if MATCH is a tag can be forced with FORCE-SIMPLE."
      ((string-match-p (rx (seq string-start (1+ (seq (regexp org-tag-re) (* "+"))) string-end))
                       match)
       (push `(cl-subsetp ',(split-string match "\\+") tags-list :test #'equal) conds))
-     (t (push (nth 2 (cdr (org-make-tags-matcher match))) conds)))
+     (t (push `(funcall ,(cdr (org-make-tags-matcher match)) todo tags-list level)
+              conds)))
+    ;; TODO, should we compile this as done in org-make-tags-matcher?
     (cons match `(lambda (todo tags-list level)
-                   (setq org-cached-props nil)
                    (and ,@(nreverse conds))))))
 
 ;;;;;; link type for taglist
