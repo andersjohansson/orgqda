@@ -5,7 +5,7 @@
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2024-01-23
+;; Modified: 2024-10-14
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -1235,8 +1235,12 @@ each character in the buffer."
       ((org-inlinetask-in-task-p)
        (if (orgqda-inlinetask-in-degenerate-task-p)
            (funcall orgqda-transform-collected-paragraph-function
-                    (buffer-substring-no-properties
-                     (point) (progn (orgqda--backward-paragraph) (point))))
+                    (progn
+                      (backward-char 1)
+                      (let ((par (org--paragraph-at-point)))
+                        (buffer-substring-no-properties
+                         (org-element-contents-begin par)
+                         (org-element-contents-end par)))))
          (buffer-substring-no-properties
           (save-excursion (org-inlinetask-goto-beginning)
                           (end-of-line) (point))
@@ -1251,21 +1255,6 @@ each character in the buffer."
           (forward-line 1)
           (buffer-substring-no-properties
            (point) (point-max)))))))))
-
-;; inspired by:
-;; http://endlessparentheses.com/meta-binds-part-2-a-peeve-with-paragraphs.html
-;; org-backward-paragraph is better in some sense, but does a little
-;; too much, so we hack around a bit here.
-
-(defun orgqda--backward-paragraph ()
-  "Go back to last blank line, but after headlines."
-  (skip-chars-backward "\n[:blank:]")
-  (if (search-backward-regexp
-       "\n[[:blank:]]*\n[[:blank:]]*" nil t 1)
-      (progn (goto-char (match-end 0))
-             (when (looking-at org-heading-regexp)
-               (forward-line 1)))
-    (goto-char (point-min))))
 
 ;;;;; General helper-functions
 (defun orgqda-get-parent-hl (level)
