@@ -1,11 +1,11 @@
 ;;; orgqda-completion.el --- Annotate, sort and group tag completions with orgqda data  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2021-2022  Anders Johansson
+;; Copyright (C) 2021-2025  Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
-;; Version: 0.3
+;; Version: 0.4
 ;; Created: 2021-07-28
-;; Modified: 2023-02-23
+;; Modified: 2025-11-27
 ;; Package-Requires: ((emacs "28.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.5") (marginalia "0.11"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -93,12 +93,10 @@ Slightly beyond longest tag.")
   "Activate annotations, grouping and sorting for org tag completions.
 
 Note that activating this (local) minor mode does install some
-persistent changes the first time it is invoked by adding the
-completion category ‘org-tags’ to some commands in
-‘marginalia-command-categories’, modifying
-‘marginalia-annotator-registry’, and advising
-‘completion-metadata-get’ (just setting this locally won’t
-work)."
+persistent changes the first time it is invoked by adding the completion
+category ‘org-tags’ to some commands in ‘marginalia-command-categories’,
+modifying ‘marginalia-annotators’, and advising
+‘completion-metadata-get’ (just setting this locally won’t work)."
   :keymap (make-sparse-keymap)
   (if orgqda-completion-mode
       (progn
@@ -117,7 +115,7 @@ work)."
         (add-to-list 'marginalia-command-categories '(orgqda-delete-tag . org-tags))
         (add-to-list 'marginalia-command-categories '(orgqda-rename-tag . org-tags))
 
-        (add-to-list 'marginalia-annotator-registry '(org-tags orgqda-completion-annotate-count orgqda-completion-annotate-all none))
+        (add-to-list 'marginalia-annotators '(org-tags orgqda-completion-annotate-count orgqda-completion-annotate-all none))
 
         (advice-add 'completion-metadata-get :before-until #'orgqda-completion--completion-metadata-get))
     ;; (setf (alist-get 'org-tags marginalia-annotator-registry nil 'remove) nil)
