@@ -1,11 +1,11 @@
 ;;; orgqda-transcript.el --- Interview transcript mode for org-mode -*- lexical-binding: t -*-
 
-;; Copyright (C) 2017-2020 Anders Johansson
+;; Copyright (C) 2017-2026 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2016-09-27
-;; Modified: 2021-11-26
+;; Modified: 2026-09-07
 ;; Package-Requires: ((mplayer-mode "2.0") (emacs "25.1") (org "9.3") (orgqda "0.2"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -257,7 +257,7 @@ Runs only if there are just two names in
 ‘orgqda-transcript-namelist’. Optional STATEMENT is passed to
 ‘orgqda-transcript-insert-parenthesis-speaker’"
   (interactive)
-  (when-let ((name (orgqda-transcript--get-other-name)))
+  (when-let* ((name (orgqda-transcript--get-other-name)))
     (orgqda-transcript-insert-parenthesis-speaker name statement)))
 
 (defun orgqda-transcript-insert-speaker (name)
@@ -268,7 +268,7 @@ Runs only if there are just two names in
 (defun orgqda-transcript-insert-newline-ts-speaker (name)
   "Insert new line and timestamp plus speaker NAME."
   (interactive "MName:")
-  (when-let ((link (orgqda-transcript--get-link)))
+  (when-let* ((link (orgqda-transcript--get-link)))
     (newline)
     (insert link " ")
     (orgqda-transcript-insert-speaker name)))
@@ -374,7 +374,7 @@ Else, move to indentation position of this line."
 (defun orgqda-transcript-insert-link ()
   "Insert a timestamp link which can be followed in ‘mplayer-mode’."
   (interactive)
-  (when-let (ln (orgqda-transcript--get-link)) (insert ln " ")))
+  (when-let*  ((ln (orgqda-transcript--get-link))) (insert ln " ")))
 
 ;;;###autoload
 (defface oqdats-face
@@ -422,7 +422,7 @@ formatting if FORMAT is latex."
 
 Activates when ‘mplayer-mode’ and ‘orgqda-transcript-mode’ are
 active"
-  (when-let (lpl (orgqda-transcript--get-link-plist))
+  (when-let* (lpl (orgqda-transcript--get-link-plist))
     (apply #'org-link-store-props lpl)))
 
 (defun orgqda-transcript--get-link-plist ()
@@ -504,7 +504,7 @@ Name of function is speaker-fn."
 
 (defun orgqda-transcript--get-link ()
   "Create link for current time."
-  (when-let ((linkpl (orgqda-transcript--get-link-plist)))
+  (when-let* ((linkpl (orgqda-transcript--get-link-plist)))
     (org-link-make-string
      (plist-get linkpl :link)
      (plist-get linkpl :description))))
@@ -520,7 +520,7 @@ names, otherwise returns nil"
              (when (search-backward-regexp (orgqda-transcript--speaker-name-re)
                                            (point-at-bol -3) t)
                (match-string 9)))))
-      (when-let ((prevpos (cl-position prev-name orgqda-transcript-namelist :test #'equal)))
+      (when-let* ((prevpos (cl-position prev-name orgqda-transcript-namelist :test #'equal)))
         (nth (mod (1+ prevpos) 2) orgqda-transcript-namelist)))))
 
 (defun orgqda-transcript--speaker-name-re ()

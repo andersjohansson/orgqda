@@ -1,11 +1,11 @@
 ;;; orgqda-helm-tags.el --- New completion for orgqda-mode tags -*- lexical-binding: t -*-
 
-;; Copyright (C) 2017-2020 Anders Johansson
+;; Copyright (C) 2017-2026 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.1
 ;; Created: 2017-02-06
-;; Modified: 2021-06-17
+;; Modified: 2026-09-07
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (orgqda "0.2") (helm "3.6"))
 ;; Keywords: outlines, wp
 ;; URL: http://www.github.com/andersjohansson/orgqda
@@ -287,7 +287,7 @@ Calls ‘orgqda-collect-tagged’."
           (cl-nset-difference orgqda-helm-tags--current-tags delete-tags
                               :test 'string=))
     (dolist (y delete-tags)
-      (when-let ((n (cl-position ; otherwise just fail
+      (when-let* ((n (cl-position ; otherwise just fail
                      y orgqda-helm-tags--comp-list
                      :test (lambda (a b) (string= a (cdr b))))))
         (setq orgqda-helm-tags--comp-list
@@ -441,7 +441,7 @@ the current list for the entry."
 (defun orgqda-helm-tags--update-tag-in-complist (tag)
   "Update display of TAG in completion list."
   (setq orgqda-helm-tags--comp-list
-        (if-let ((n (cl-position
+        (if-let* ((n (cl-position
                      tag orgqda-helm-tags--comp-list
                      :test (lambda (a b) (string= a (cdr b))))))
             (nconc (cl-subseq orgqda-helm-tags--comp-list 0 n)

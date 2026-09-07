@@ -1,11 +1,11 @@
 ;;; orgqda-completion.el --- Annotate, sort and group tag completions with orgqda data  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2021-2025  Anders Johansson
+;; Copyright (C) 2021-2026  Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.4
 ;; Created: 2021-07-28
-;; Modified: 2025-11-27
+;; Modified: 2026-09-07
 ;; Package-Requires: ((emacs "28.1") (org "9.3") (hierarchy "0.6.0") (orgqda "0.5") (marginalia "0.11"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -180,7 +180,7 @@ for sorting and grouping if we are completing org tags."
 TRANSFORM is used as described in Info node ‘(elisp)Programmed Completion’"
   (let* ((pos  (cl-loop with p = -1
                         repeat orgqda-completion-group
-                        do (if-let ((np (string-search orgqda-hierarchy-delimiter tag (1+ p))))
+                        do (if-let* ((np (string-search orgqda-hierarchy-delimiter tag (1+ p))))
                                (setq p np)
                              (cl-return p))
                         finally return p))
@@ -195,7 +195,7 @@ TRANSFORM is used as described in Info node ‘(elisp)Programmed Completion’"
 
 (defun orgqda-completion--sort (taglist)
   "Sort TAGLIST according to ‘orgqda-completion-sort’."
-  (if-let ((get (orgqda--sort-parameter-get orgqda-completion-sort :completion-get #'identity))
+  (if-let* ((get (orgqda--sort-parameter-get orgqda-completion-sort :completion-get #'identity))
            (compare (orgqda--sort-parameter-get orgqda-completion-sort :compare)))
       (cl-sort taglist compare :key get)
     taglist))

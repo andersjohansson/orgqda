@@ -1,11 +1,11 @@
 ;;; orgqda.el --- Qualitative data analysis using org-mode  -*- lexical-binding: t -*-
 
-;; Copyright (C) 2014-2022 Anders Johansson
+;; Copyright (C) 2014-2026 Anders Johansson
 
 ;; Author: Anders Johansson <mejlaandersj@gmail.com>
 ;; Version: 0.5
 ;; Created: 2014-10-12
-;; Modified: 2024-10-14
+;; Modified: 2026-09-07
 ;; Package-Requires: ((emacs "25.1") (org "9.3") (hierarchy "0.6.0"))
 ;; Keywords: outlines, wp
 ;; URL: https://www.gitlab.com/andersjohansson/orgqda
@@ -185,7 +185,7 @@ are needed."
 (defun orgqda--sort-parameter-get (key parameter &optional default)
   "Get sort PARAMETER for KEY or nil or DEFAULT if not found.
 See ‘orgqda-sort-parameters’."
-  (if-let ((a (alist-get key orgqda-sort-parameters))
+  (if-let* ((a (alist-get key orgqda-sort-parameters))
            (p (alist-get parameter a)))
       p
     default))
@@ -683,7 +683,7 @@ children."
       (unless (org-at-heading-p)
         (org-back-to-heading t))
       (dolist (so sortlist)
-        (when-let ((orgqda--current-sorting-args so))
+        (when-let* ((orgqda--current-sorting-args so))
           (if non-recursive
               (orgqda--sort-subtree)
             (org-map-entries #'orgqda--sort-subtree t 'tree))))))
@@ -767,7 +767,7 @@ switching is done and view buffer just returned."
 Stand-in for ‘org-set-tags-command’."
   (interactive)
   (when orgqda-view-mode
-    (when-let ((opbmlink (save-excursion
+    (when-let* ((opbmlink (save-excursion
                            (and (org-back-to-heading)
                                 (search-forward "[[opbm:" (line-end-position) t)
                                 (org-element-context)))))
@@ -900,7 +900,7 @@ Works on all current orgqda files."
 
 (defun orgqda--new-tag-from-new-prefix (oldname newprefix)
   "Get new tagname when renaming OLDNAME with NEWPREFIX."
-  (when-let ((tagleaf
+  (when-let* ((tagleaf
               (car-safe (last (split-string oldname
                                             orgqda-hierarchy-delimiter)))))
     (concat newprefix orgqda-hierarchy-delimiter tagleaf)))
@@ -983,7 +983,7 @@ Numeric prefix arg K defines which tuples to count"
    nil
    (or
     (and orgqda-collect-from-all-files (orgqda-tag-files))
-    (when-let ((bfn
+    (when-let* ((bfn
                 (or (buffer-file-name)
                     (buffer-file-name
                      (buffer-base-buffer)))))
@@ -995,7 +995,7 @@ Numeric prefix arg K defines which tuples to count"
 
 (defun orgqda--get-tag-relations-k (k)
   "Get tag relations for all K tuples of tags at point."
-  (when-let ((taglist (org-get-tags nil t))
+  (when-let* ((taglist (org-get-tags nil t))
              (taglist (sort taglist #'string-lessp))
              (n (length taglist)))
     (orgqda--get-tag-relations-rec taglist n k nil 0)))
@@ -1349,7 +1349,7 @@ tags to exclude."
   (let ((org-use-tag-inheritance orgqda-use-tag-inheritance))
     (orgqda--with-many-files (or (and orgqda-collect-from-all-files
                                 (orgqda-tag-files))
-                           (when-let ((bfn
+                           (when-let* ((bfn
                                        (or (buffer-file-name)
                                            (buffer-file-name
                                             (buffer-base-buffer)))))
@@ -1368,7 +1368,7 @@ In this buffer or in all files in variable ‘orgqda-tag-files’. Optional
 SORT is a symbol from ‘orgqda-sort-parameters’. EXCLUDE-TAGS
 overrides ‘orgqda-exclude-tags’."
   (let ((tl (orgqda--tags-hash-to-alist (orgqda--get-tags-hash exclude-tags))))
-    (if-let ((get (orgqda--sort-parameter-get sort :alist-get #'car))
+    (if-let* ((get (orgqda--sort-parameter-get sort :alist-get #'car))
              (compare (orgqda--sort-parameter-get sort :compare)))
         (cl-sort tl compare :key get)
       tl)))
@@ -1397,7 +1397,7 @@ not loaded with ‘orgqda--get-tags-hash’."
                          (if orgqda-hierarchy-delimiter
                              #'orgqda--hierarchy-parentfn
                            (lambda (_) nil)))
-    (when-let ((compare (orgqda--sort-parameter-get sort :compare))
+    (when-let* ((compare (orgqda--sort-parameter-get sort :compare))
                (get (orgqda--sort-parameter-get sort :data-get #'identity))
                (sortfn (lambda (a b) (funcall compare (funcall get a) (funcall get b)))))
       ;; Possibly sort in two passes for a stable order
@@ -1427,7 +1427,7 @@ STARTTAG is the prefix where the search should start."
              (orgqda--insert-taglist-item
               item filename)
              (when full
-               (when-let ((info (alist-get item taginfo nil nil #'equal)))
+               (when-let* ((info (alist-get item taginfo nil nil #'equal)))
                  (insert (format "/%s/\n" info))))
              (when (and full (not (string=
                                    orgqda-hierarchy-delimiter
@@ -1595,7 +1595,7 @@ tags). Checking if MATCH is a tag can be forced with FORCE-SIMPLE."
             (when (buffer-live-p orgqda--originating-buffer)
               orgqda--originating-buffer)
             (when orgqda-collect-from-all-files
-              (when-let ((tf (car-safe (orgqda-tag-files))))
+              (when-let* ((tf (car-safe (orgqda-tag-files))))
                 (when (file-readable-p tf)
                   (find-file-noselect tf)))))
       (orgqda-collect-tagged tag))))
@@ -1603,7 +1603,7 @@ tags). Checking if MATCH is a tag can be forced with FORCE-SIMPLE."
 (defun orgqda-otag-store-link ()
   "Store a link to a org mode file and tag."
   (when (equal major-mode 'org-mode)
-    (when-let ((oir (org-in-regexp
+    (when-let* ((oir (org-in-regexp
                      (concat "\\(:" org-tag-re "\\):[ \t]*$"))))
       (let* ((fn (if orgqda-taglink-include-filename
                      (concat "::" (buffer-file-name))
@@ -1730,7 +1730,7 @@ Generates a list of \"new\" tags, tags not linked to in this buffer."
   "Renames tag OLDNAME → NEWNAME in current orgqda files.
 If NEWNAME is nil, delete the tag."
   (let (repslist)
-    (if-let ((manyfiles
+    (if-let* ((manyfiles
               (orgqda--with-current-buffer-if orgqda--originating-buffer
                 (and orgqda-collect-from-all-files (orgqda-tag-files)))))
         (orgqda--with-current-buffer-if orgqda--originating-buffer
@@ -1977,7 +1977,7 @@ STRICT only accepts real tag names."
 
 (defun orgqda--tag-prefix-at-point ()
   "Return prefix of tag at point, or nil if none found."
-  (when-let ((tag (orgqda--tag-at-point)))
+  (when-let* ((tag (orgqda--tag-at-point)))
     (when
         (rx-let ((tagpref (group-n 1 (+ (seq (+ alnum) (literal orgqda-hierarchy-delimiter))))))
           (string-match (rx (seq bol (or (seq "{" (? "^") tagpref  "}" eol)
@@ -2032,7 +2032,7 @@ set to ‘orgqda-tag-files’"
 
 (defun orgqda--org-sort-params (sortkey)
   "Get parameteter list for ‘org-sort’ from SORTKEY."
-  (if-let ((get (orgqda--sort-parameter-get
+  (if-let* ((get (orgqda--sort-parameter-get
                  sortkey :buffer-get
                  (lambda () (org-sort-remove-invisible (org-get-heading t t t t)))))
            (compare (orgqda--sort-parameter-get sortkey :compare)))
@@ -2097,7 +2097,7 @@ Coding info is the first line of the matching line for the tag in
 
 (defun orgqda--get-tag-info ()
   "Get tag info for current entry in codebook file."
-  (when-let ((tag (orgqda--otag-at-this-headline)))
+  (when-let* ((tag (orgqda--otag-at-this-headline)))
     (let ((text (substring-no-properties
                  (org-agenda-get-some-entry-text (point-marker) 1))))
       (cons tag (if (string-blank-p text) nil text)))))
@@ -2111,7 +2111,7 @@ Coding info is the first line of the matching line for the tag in
 (defun orgqda-tag-action-at-point ()
   "Invoke suitable action for tag at point in ‘orgqda-mode’."
   (when (and orgqda-mode orgqda-tag-action)
-    (when-let ((tag (orgqda--tag-in-taglist-at-point)))
+    (when-let* ((tag (orgqda--tag-in-taglist-at-point)))
       (cl-case orgqda-tag-action
         (codebook (orgqda-find-tag-in-codebook tag))
         (collect (orgqda-collect-tagged tag))))))
